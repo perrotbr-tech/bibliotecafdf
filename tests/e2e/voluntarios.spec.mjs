@@ -144,9 +144,18 @@ test('A-18 si la red se corta entre el toque y la respuesta, no hay confirmació
 }) => {
   await abrirVoluntarios(page);
 
-  // La escritura sale pero la respuesta nunca llega: la transacción se queda
-  // esperando y a los 5 segundos aparece el aviso de demora.
-  await page.route(HABLA_CON_FIRESTORE, (ruta) => ruta.abort('connectionfailed'));
+  // La petición se queda colgada: ni responde ni falla. Así la espera de más de
+  // cinco segundos está garantizada y no depende de cuánto tarde el SDK en
+  // rendirse, que es justo lo que pasa cuando el teléfono pierde la señal a
+  // mitad de una escritura.
+  let soltarLaPeticion;
+  const colgada = new Promise((listo) => {
+    soltarLaPeticion = listo;
+  });
+  await page.route(HABLA_CON_FIRESTORE, async (ruta) => {
+    await colgada;
+    await ruta.abort('connectionfailed');
+  });
 
   await llenarFormulario(page, { correo: 'cortada@example.com', nombre: 'Red Cortada' });
   await page.getByTestId('agregar-voluntario').click();
@@ -158,6 +167,7 @@ test('A-18 si la red se corta entre el toque y la respuesta, no hay confirmació
 
   // Recién ahora se corta de verdad, para que el SDK deje de reintentar.
   await quedarSinConexion(context);
+  soltarLaPeticion();
 
   await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 40_000 });
   await expect(page.getByText(/quedó agregado/)).toHaveCount(0);
