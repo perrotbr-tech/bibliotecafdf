@@ -11,15 +11,15 @@ import {
   sembrarBaseDemo,
 } from '../ayuda/siembra.mjs';
 import { CLAVE_INTENCION } from '../../docs/js/datos.js';
+import { abrir, entrar } from '../ayuda/navegador.mjs';
 
 // Contra el emulador, el SDK habla por WebChannel: las rutas se reconocen por
 // el nombre del servicio en la dirección, no por un glob de archivo.
 const HABLA_CON_FIRESTORE = (url) => url.href.includes('google.firestore.v1.Firestore');
 
 async function abrirVoluntarios(page, direccion = '/') {
-  await page.goto(direccion);
-  await page.waitForFunction(() => globalThis.__biblioteca !== undefined, { timeout: 20_000 });
-  await page.evaluate((correo) => globalThis.__biblioteca.entrarSimulado(correo), ADMIN);
+  await abrir(page, direccion);
+  await entrar(page, ADMIN);
   await page.getByRole('button', { name: 'Más' }).click();
   await page.getByTestId('abrir-voluntarios').click();
   await expect(page.getByTestId('formulario-voluntario')).toBeVisible();
@@ -283,8 +283,7 @@ test('un administrador desactiva y reactiva a otra persona', async ({ page }) =>
 });
 
 test('una voluntaria sin rol de administrador no ve la pantalla Voluntarios', async ({ page }) => {
-  await page.goto('/');
-  await page.waitForFunction(() => globalThis.__biblioteca !== undefined, { timeout: 20_000 });
+  await abrir(page, '/');
   await page.evaluate((correo) => globalThis.__biblioteca.entrarSimulado(correo), VOLUNTARIA);
   await page.getByRole('button', { name: 'Más' }).click();
 

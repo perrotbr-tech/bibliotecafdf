@@ -6,19 +6,7 @@
 import { expect, test } from '@playwright/test';
 
 import { ADMIN, AJENA, VOLUNTARIA, cambiarActivo, sembrarBaseDemo } from '../ayuda/siembra.mjs';
-
-/** Abre la app y espera a que el módulo principal quede listo. */
-async function abrir(page, direccion = '/') {
-  await page.goto(direccion);
-  await page.waitForFunction(() => globalThis.__biblioteca !== undefined, { timeout: 20_000 });
-}
-
-async function entrar(page, correo, opciones = {}) {
-  await page.evaluate(
-    ([c, o]) => globalThis.__biblioteca.entrarSimulado(c, o),
-    [correo, opciones],
-  );
-}
+import { abrir, entrar } from '../ayuda/navegador.mjs';
 
 test.beforeEach(async () => {
   await sembrarBaseDemo();

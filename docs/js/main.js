@@ -14,7 +14,8 @@ import { clasificarResultado, crearDatos, intencionPendiente, olvidarIntencion }
 import { arrancar } from './firebase.js';
 import { crearReloj, crearRelojDePrueba, instanteDeParametro, vigilarReloj } from './reloj.js';
 import { entrarConGoogle, permisoDe, salir, vigilarPermiso } from './acceso.js';
-import { normalizarCorreo } from './texto.js';
+import { normalizarCorreo, nuevoId } from './texto.js';
+import { inscribirLector } from './operaciones.js';
 
 import { avisar, limpiarAvisos } from './ui/avisos.js';
 import { dibujarBarraInferior, esDestino, ocultarBarraInferior } from './ui/barra-inferior.js';
@@ -28,8 +29,10 @@ import { pantallaInicio } from './vistas/inicio.js';
 import { pantallaPrestar } from './vistas/prestar.js';
 import { pantallaPrestamos } from './vistas/prestamos.js';
 import { pantallaCatalogo } from './vistas/catalogo.js';
+import { pantallaLectores } from './vistas/lectores.js';
 import { pantallaMas } from './vistas/mas.js';
 import { pantallaVoluntarios } from './vistas/voluntarios.js';
+import { cerrarHoja } from './ui/hoja.js';
 
 const VISTA_INICIAL = 'inicio';
 
@@ -40,6 +43,7 @@ const app = {
   reloj: null,
   sesion: null,
   permiso: { estado: 'sin-sesion', correo: null, rol: null, nombre: null },
+  categorias: [],
   vista: VISTA_INICIAL,
   vistaActual: null,
   desmontarVista: () => {},
@@ -58,9 +62,11 @@ function pantalla() {
  * Voluntarios, no Inicio con la dirección mintiendo. Lo que no se reconoce cae
  * en Inicio y la dirección se corrige.
  */
+const VISTAS_DE_MAS = ['voluntarios', 'lectores'];
+
 function vistaDeLaDireccion() {
   const pedida = (globalThis.location?.hash ?? '').replace(/^#/u, '');
-  if (pedida === 'voluntarios' || esDestino(pedida)) return pedida;
+  if (VISTAS_DE_MAS.includes(pedida) || esDestino(pedida)) return pedida;
   return VISTA_INICIAL;
 }
 
@@ -115,7 +121,13 @@ async function principal() {
   }
 
   globalThis.addEventListener('popstate', (evento) => {
-    app.vista = evento.state?.vista ?? VISTA_INICIAL;
+    const vista = evento.state?.vista ?? VISTA_INICIAL;
+    // Una hoja abierta añade su propia entrada al historial. Al cerrarla con
+    // el botón Atrás, la pantalla no cambia y NO se vuelve a dibujar: la hoja
+    // se cierra sola con su propia escucha, y un redibujado borraría lo que la
+    // persona está escribiendo.
+    if (vista === app.vista) return;
+    app.vista = vista;
     dibujar();
   });
 
@@ -222,6 +234,8 @@ function alEntrar() {
   app.soltarConfig();
   app.soltarConfig = app.datos.escucharDocumento(rutas.configApp(), (configuracion) => {
     ponerNombreBiblioteca(configuracion?.nombreBiblioteca ?? NOMBRE_ENTRADA);
+    // Las categorías las necesita el catálogo para sus tejuelos y su filtro.
+    if (Array.isArray(configuracion?.categorias)) app.categorias = configuracion.categorias;
   });
 
   app.soltarReloj();
@@ -308,6 +322,9 @@ function ir(vista, { reemplazar = false } = {}) {
 // ------------------------------------------------------------------- dibujo
 
 function dibujar() {
+  // Cambiar de pantalla cierra cualquier hoja abierta: su contenido es de la
+  // pantalla que se está dejando.
+  cerrarHoja();
   app.desmontarVista();
   app.desmontarVista = () => {};
   app.vistaActual = null;
@@ -347,7 +364,10 @@ function dibujar() {
 
   mostrarBarraSuperior({ visible: true });
   ponerFecha(app.reloj.ahora());
-  dibujarBarraInferior({ actual: app.vista === 'voluntarios' ? 'mas' : app.vista, alIr: (id) => ir(id) });
+  dibujarBarraInferior({
+    actual: VISTAS_DE_MAS.includes(app.vista) ? 'mas' : app.vista,
+    alIr: (id) => ir(id),
+  });
 
   const vista = construirVista();
   if (vista?.nodo) {
@@ -369,10 +389,13 @@ function construirVista() {
     case 'prestamos':
       return pantallaPrestamos();
     case 'catalogo':
-      return pantallaCatalogo();
+      return pantallaCatalogo({ datos: app.datos, permiso: app.permiso, categorias: app.categorias });
+    case 'lectores':
+      return pantallaLectores({ datos: app.datos, permiso: app.permiso });
     case 'mas':
       return pantallaMas({
         permiso: app.permiso,
+        alIrALectores: () => ir('lectores'),
         alIrAVoluntarios: () => ir('voluntarios'),
         alSalir: async () => {
           await salir(app.firebase);
@@ -428,6 +451,33 @@ function exponerAyudasDePrueba() {
     },
     async salir() {
       await salir(app.firebase);
+    },
+    /**
+     * Inscribe un lector sin pasar por la pantalla, con la MISMA operación que
+     * usa el formulario. Es lo que permite probar la concurrencia de verdad
+     * (C-19, C-20 y C-39): cinco altas a la vez, o dos con el mismo nombre.
+     * Solo existe contra el emulador.
+     */
+    inscribirLector: async ({ nombre, telefono = null, operacionId = null } = {}) => {
+      try {
+        const resultado = await inscribirLector({
+          datos: app.datos,
+          permiso: app.permiso,
+          nombre,
+          telefono,
+          avisoDado: true,
+          operacionId: operacionId ?? nuevoId(),
+        });
+        return {
+          esExito: resultado.esExito === true,
+          estado: resultado.estado,
+          mensaje: resultado.mensaje,
+          operacionId: resultado.operacionId,
+          valor: resultado.valor ?? null,
+        };
+      } catch (error) {
+        return { esExito: false, estado: 'rechazado', mensaje: error.message, operacionId, valor: null };
+      }
     },
     contadores: () => app.datos.contadores.valores(),
     reiniciarContadores: () => app.datos.contadores.reiniciar(),

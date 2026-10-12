@@ -1,25 +1,41 @@
-// Más: lo que no cabe en la barra. En esta etapa, Voluntarios (solo
-// administrador) y Cerrar sesión.
+// Más: lo que no cabe en la barra. En esta etapa, Lectores (cualquier
+// voluntario), Voluntarios (solo administrador) y Cerrar sesión.
 import { el } from '../ui/dom.js';
 
-export function pantallaMas({ permiso, alIrAVoluntarios, alSalir }) {
-  const opciones = [];
+function opcion({ nombre, detalle, prueba, alAbrir }) {
+  return el('li', { clase: 'lista__fila' }, [
+    el('div', { clase: 'lista__principal' }, [
+      el('p', { clase: 'lista__nombre', texto: nombre }),
+      el('p', { clase: 'lista__detalle', texto: detalle }),
+    ]),
+    el('button', {
+      clase: 'boton boton--secundario',
+      type: 'button',
+      texto: 'Abrir',
+      'data-prueba': prueba,
+      al: { click: alAbrir },
+    }),
+  ]);
+}
+
+export function pantallaMas({ permiso, alIrALectores, alIrAVoluntarios, alSalir }) {
+  const opciones = [
+    opcion({
+      nombre: 'Lectores',
+      detalle: 'Buscar, inscribir y ver sus datos',
+      prueba: 'abrir-lectores',
+      alAbrir: alIrALectores,
+    }),
+  ];
 
   if (permiso.rol === 'admin') {
     opciones.push(
-      el('li', { clase: 'lista__fila' }, [
-        el('div', { clase: 'lista__principal' }, [
-          el('p', { clase: 'lista__nombre', texto: 'Voluntarios' }),
-          el('p', { clase: 'lista__detalle', texto: 'Quién puede entrar a la app' }),
-        ]),
-        el('button', {
-          clase: 'boton boton--secundario',
-          type: 'button',
-          texto: 'Abrir',
-          'data-prueba': 'abrir-voluntarios',
-          al: { click: alIrAVoluntarios },
-        }),
-      ]),
+      opcion({
+        nombre: 'Voluntarios',
+        detalle: 'Quién puede entrar a la app',
+        prueba: 'abrir-voluntarios',
+        alAbrir: alIrAVoluntarios,
+      }),
     );
   }
 
@@ -36,8 +52,8 @@ export function pantallaMas({ permiso, alIrAVoluntarios, alSalir }) {
       ]),
     ]),
 
-    opciones.length > 0 && el('p', { clase: 'titulo-seccion', texto: 'Administración' }),
-    opciones.length > 0 && el('ul', { clase: 'lista' }, opciones),
+    el('p', { clase: 'titulo-seccion', texto: 'La biblioteca' }),
+    el('ul', { clase: 'lista' }, opciones),
 
     el('p', { clase: 'titulo-seccion', texto: 'Sesión' }),
     el('button', {

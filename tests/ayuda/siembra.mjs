@@ -43,8 +43,10 @@ export async function limpiarBase() {
   for (const ruta of [rutas.configApp(), rutas.configContadores(), rutas.configControl()]) {
     await base.doc(ruta).delete();
   }
-  const voluntarios = await base.collection(rutas.voluntarios()).get();
-  await Promise.all(voluntarios.docs.map((d) => d.ref.delete()));
+  for (const coleccion of [rutas.voluntarios(), rutas.libros(), rutas.lectores(), rutas.lectoresClave()]) {
+    const documentos = await base.collection(coleccion).get();
+    await Promise.all(documentos.docs.map((uno) => uno.ref.delete()));
+  }
 }
 
 /**
@@ -52,7 +54,7 @@ export async function limpiarBase() {
  * prueba.
  * @param {{voluntarios?: Array<{correo:string,nombre:string,rol?:string,activo?:boolean}>, bloqueo?:object|null}} opciones
  */
-export async function sembrarBaseDemo({ voluntarios = [], bloqueo = null } = {}) {
+export async function sembrarBaseDemo({ voluntarios = [], libros = [], lectores = [], bloqueo = null } = {}) {
   const { db: base, FieldValue: campos } = await baseDemo();
   await limpiarBase();
   await limpiarCuentas();
@@ -74,6 +76,90 @@ export async function sembrarBaseDemo({ voluntarios = [], bloqueo = null } = {})
     ...voluntarios,
   ];
   for (const persona of gente) await ponerVoluntario(persona);
+  for (const libro of libros) await ponerLibro(libro);
+  for (const lector of lectores) await ponerLector(lector);
+}
+
+/** Un libro ya en el catálogo, puesto sin pasar por la app. */
+export async function ponerLibro({
+  codigo,
+  titulo = `Libro ${codigo}`,
+  autor = 'Alguien',
+  categoria = 'Infantil',
+  baja = false,
+  prestamoAbierto = null,
+  vecesPrestado = 0,
+}) {
+  const { db: base, FieldValue: campos } = await baseDemo();
+  await base.doc(rutas.libro(codigo)).set({
+    codigo,
+    titulo,
+    autor,
+    categoria,
+    baja,
+    prestamoAbierto,
+    vecesPrestado,
+    creadoEn: campos.serverTimestamp(),
+    creadoPor: 'prueba',
+    creacionId: 'a'.repeat(32),
+  });
+}
+
+/** Un lector con su documento de clave y el contador al día. */
+export async function ponerLector({ id, nombre, clave = null, telefono = null }) {
+  const { db: base, FieldValue: campos } = await baseDemo();
+  const { claveDeNombre } = await import('../../docs/js/texto.js');
+  const laClave = clave ?? claveDeNombre(nombre);
+  const comunes = { creadoEn: campos.serverTimestamp(), creadoPor: 'prueba', creacionId: 'b'.repeat(32) };
+  await base.doc(rutas.lector(id)).set({
+    nombre,
+    clave: laClave,
+    telefono,
+    avisoDatos: null,
+    fusionadoEn: null,
+    esDestinoFusion: false,
+    ...comunes,
+  });
+  await base.doc(rutas.lectorClave(laClave)).set({ lector: id, ...comunes });
+  const numero = Number(String(id).slice(1));
+  const contadores = await base.doc(rutas.configContadores()).get();
+  if ((contadores.data()?.ultimoLector ?? 0) < numero) {
+    await base.doc(rutas.configContadores()).update({ ultimoLector: numero, ultimoLectorId: id });
+  }
+}
+
+export async function leerLibro(codigo) {
+  const { db: base } = await baseDemo();
+  const documento = await base.doc(rutas.libro(codigo)).get();
+  return documento.exists ? documento.data() : null;
+}
+
+export async function leerLector(id) {
+  const { db: base } = await baseDemo();
+  const documento = await base.doc(rutas.lector(id)).get();
+  return documento.exists ? documento.data() : null;
+}
+
+export async function leerClave(clave) {
+  const { db: base } = await baseDemo();
+  const documento = await base.doc(rutas.lectorClave(clave)).get();
+  return documento.exists ? documento.data() : null;
+}
+
+export async function leerContadores() {
+  const { db: base } = await baseDemo();
+  return (await base.doc(rutas.configContadores()).get()).data() ?? null;
+}
+
+export async function listarLectores() {
+  const { db: base } = await baseDemo();
+  const documentos = await base.collection(rutas.lectores()).get();
+  return documentos.docs.map((uno) => ({ id: uno.id, ...uno.data() }));
+}
+
+export async function contarLibros() {
+  const { db: base } = await baseDemo();
+  return (await base.collection(rutas.libros()).count().get()).data().count;
 }
 
 export async function ponerVoluntario({ correo, nombre, rol = 'voluntario', activo = true, creacionId = null }) {
@@ -104,4 +190,60 @@ export async function contarVoluntarios() {
 export async function cambiarActivo(correo, activo) {
   const { db: base } = await baseDemo();
   await base.doc(rutas.voluntario(correo)).update({ activo });
+}
+
+/**
+ * Siembra masiva para las pruebas de carga: libros y lectores generados.
+ *
+ * Usa `BulkWriter` porque son once mil documentos: con lotes de 500 tardaría
+ * minutos. Los nombres son sintéticos y numerados a propósito: en este
+ * repositorio no hay nombres de lectores reales (AGENTS.md).
+ */
+export async function sembrarVolumen({ libros = 0, lectores = 0 } = {}) {
+  const { db: base, FieldValue: campos } = await baseDemo();
+  const { claveDeNombre } = await import('../../docs/js/texto.js');
+  const escritor = base.bulkWriter();
+  const marca = campos.serverTimestamp();
+  const comunes = { creadoEn: marca, creadoPor: 'carga-inicial', creacionId: 'c'.repeat(32) };
+
+  const categorias = CONFIG_APP_INICIAL.categorias;
+  for (let i = 1; i <= libros; i += 1) {
+    const categoria = categorias[i % categorias.length];
+    const codigo = `${categoria.prefijo}${String(i).padStart(4, '0')}`;
+    void escritor.set(base.doc(rutas.libro(codigo)), {
+      codigo,
+      titulo: `Título número ${i} de la biblioteca`,
+      autor: `Autor ${i % 300}`,
+      categoria: categoria.nombre,
+      baja: i % 97 === 0,
+      prestamoAbierto: i % 11 === 0 ? `prestamo-${i}` : null,
+      vecesPrestado: i % 7,
+      ...comunes,
+    });
+  }
+
+  for (let i = 1; i <= lectores; i += 1) {
+    const id = `L${String(i).padStart(4, '0')}`;
+    const nombre = `Lectora Numero ${i}`;
+    const clave = claveDeNombre(nombre);
+    void escritor.set(base.doc(rutas.lector(id)), {
+      nombre,
+      clave,
+      telefono: i % 3 === 0 ? null : `569${String(10000000 + i).slice(0, 8)}`,
+      avisoDatos: null,
+      fusionadoEn: null,
+      esDestinoFusion: false,
+      ...comunes,
+    });
+    void escritor.set(base.doc(rutas.lectorClave(clave)), { lector: id, ...comunes });
+  }
+
+  await escritor.close();
+  if (lectores > 0) {
+    await base.doc(rutas.configContadores()).update({
+      ultimoLector: lectores,
+      ultimoLectorId: `L${String(lectores).padStart(4, '0')}`,
+    });
+  }
+  return { libros, lectores };
 }

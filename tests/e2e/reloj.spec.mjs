@@ -3,11 +3,11 @@
 import { expect, test } from '@playwright/test';
 
 import { VOLUNTARIA, sembrarBaseDemo } from '../ayuda/siembra.mjs';
+import { abrir, entrar } from '../ayuda/navegador.mjs';
 
 async function abrirYEntrar(page, direccion = '/') {
-  await page.goto(direccion);
-  await page.waitForFunction(() => globalThis.__biblioteca !== undefined, { timeout: 20_000 });
-  await page.evaluate((correo) => globalThis.__biblioteca.entrarSimulado(correo), VOLUNTARIA);
+  await abrir(page, direccion);
+  await entrar(page, VOLUNTARIA);
   await expect(page.locator('#barra-inferior')).toBeVisible();
 }
 
