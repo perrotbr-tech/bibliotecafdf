@@ -2,10 +2,14 @@
 
 Revisión 1.1 · 12-10-2026 (America/Santiago) · rama `etapa-1`
 
-**SHA entregado para la contraprueba:** `f191a6cbd6ad3b80c4a51c7b1f2b8787d7401e74`
-(`f191a6c`), el último commit de código de `etapa-1`. Ese es el commit exacto
-que debe revisar Codex y el que debe publicarse en ensayo. Los datos completos
-de la entrega están en la sección 10.
+**SHA entregado:** `231c4ff`, el último commit de código de `etapa-1`, con la
+integración continua en verde en sus seis suites. Es el que debe publicarse en
+ensayo. Los datos completos de la entrega están en la sección 10.
+
+**No hubo contraprueba externa.** El dueño decidió trabajar solo en esta sesión,
+así que la revisión del diff la hizo quien escribió el código. Está en la
+sección 2.3, con sus quince hallazgos corregidos y con la advertencia de que no
+sustituye a una mirada ajena.
 
 **Estado: las 39 pruebas automatizables de la etapa están escritas y ejecutadas,
 y pasan.** A-31 es manual y queda para el dueño.
@@ -112,13 +116,13 @@ conserva lo escrito. Está dicho así en el propio archivo de prueba.
 revisar-repositorio: sin hallazgos
 
 ### npm run prueba:unidad
-# tests 63
-# pass 63
+# tests 69
+# pass 69
 # fail 0
 
 ### npm run prueba:reglas        (firebase emulators:exec, demo-biblioteca)
-# tests 37
-# pass 37
+# tests 39
+# pass 39
 # fail 0
 
 ### npm run prueba:scripts       (firebase emulators:exec, demo-biblioteca)
@@ -127,13 +131,13 @@ revisar-repositorio: sin hallazgos
 # fail 0
 
 ### npm run prueba:e2e           (Playwright, Chromium, contra el emulador)
-32 passed (1.3m)
+36 passed (1.4m)
 
 ### npm run prueba:carga
-2 passed (6.2s)
+2 passed (5.8s)
 ```
 
-**141 pruebas, 141 en verde, 0 en rojo.** Ninguna se saltó ni se desactivó. Las
+**153 pruebas, 153 en verde, 0 en rojo.** Ninguna se saltó ni se desactivó. Las
 seis suites corren juntas en la integración continua sobre el commit entregado.
 
 ### 2.2.1 Escenarios adversos contra las reglas
@@ -166,9 +170,77 @@ mismo, con lo que siempre queda al menos un administrador activo.
 construyendo, y una revisión del propio implementador no es independiente
 (AGENTS.md). Codex tiene que buscar los suyos.
 
-### 2.3 Qué encontraron las pruebas
+### 2.3 Qué encontró la revisión del diff
 
-Tres fallos reales de la app, corregidos con su prueba. Se dejan anotados porque
+Con el dueño decidiendo que no habría revisor externo, se hizo aquí una pasada
+sistemática sobre todo el diff, **leyéndolo como revisor y no como autor**.
+Encontró 15 hallazgos y todos quedaron corregidos con su prueba. Por gravedad:
+
+**Caídas y pérdida de datos**
+
+1. **Una petición con un `%` suelto mataba el servidor estático completo.**
+   Verificado en vivo: `curl /%` y el proceso no vuelve. Es el servidor de
+   `npm start` y el que Playwright levanta, así que un escáner, un favicon o un
+   dedo torcido abortaba la corrida entera. Ahora una dirección que no se
+   entiende responde 404 y nada que llegue por la red tumba el servidor.
+2. **La lista de voluntarios se redibujaba con cada evento de metadatos**,
+   soltando el botón recién tocado y perdiendo la intención estable de esa fila.
+   Es el mismo fallo que ya se había corregido en la escucha del permiso y que
+   se repetía en la otra escucha.
+3. **Una muestra de hora en vuelo resucitaba después de invalidarla:** perder la
+   conexión a mitad de una sincronización se deshacía solo cuando llegaba la
+   respuesta tardía. Ahora cada invalidación abre una época y la muestra vieja
+   se descarta.
+
+**Avisos que mentían**
+
+4. **La intención solo se olvidaba al tener éxito.** Un conflicto o un permiso
+   denegado dejaban una alarma anotada, y la siguiente apertura avisaba sobre
+   algo ya resuelto. Ahora solo se conserva cuando de verdad quedó la duda.
+5. **La clave de la intención no tenía ámbito ni se borraba al cerrar sesión:**
+   la intención de una cuenta le reaparecía a la siguiente en la misma pestaña.
+6. **El aviso de «sin conexión» quedaba colgado** sobre Inicio y Catálogo,
+   pantallas que no guardan nada.
+7. **Quien quedaba en «Sin acceso» se quedaba ahí para siempre**, aunque el
+   administrador lo reactivara: la escucha muere con el permiso denegado y nadie
+   la recreaba. Ahora hay «Volver a comprobar».
+
+**Reglas**
+
+8. **`inicioJuego` entraba con solo `is string`:** sin formato `AAAA-B` y sin el
+   candado que el contrato §8 exige una vez cerrada una temporada.
+9. **El orden de las ramas gastaba accesos de más.** Ver la sección 4.
+
+**El informe mismo**
+
+10. **`reconexiones` no se incrementaba en ninguna parte** y
+    **`lecturasDeReglasEstimadas` era un duplicado del contador de documentos**,
+    pero los dos se publicaban en este informe como medición. Ahora se cuentan
+    de verdad, con el coste por operación declarado en `datos.js`.
+
+**Lo demás**
+
+11. `scripts/arrancar-local.mjs` usaba Admin SDK sin verificar los hosts del
+    emulador, que es justo lo que AGENTS.md exige antes de usarlo.
+12. Un enlace a `#voluntarios` abría Inicio con la dirección mintiendo, y se
+    tragaba el primer Atrás.
+13. A-26 comprobaba solo el alto de los controles: la regla es 44 × 44.
+14. La lista de descartes del reloj crecía sin tope mientras durara la sesión.
+15. La hoja emergente eran 85 líneas, más marcado y estilos, que ninguna
+    pantalla de esta etapa abría. Se retiró.
+
+Y la corrección del punto 12 introdujo un fallo nuevo que cazó su propia prueba:
+al arrancar, el primer aviso de sesión llega en nulo y borraba la pantalla
+pedida en la dirección antes de que nadie entrara.
+
+**Esta revisión tampoco es independiente.** La hizo quien escribió el código.
+Que haya encontrado quince cosas no dice que no queden más: dice que una segunda
+mirada rinde, y que una mirada ajena rendiría otro tanto.
+
+### 2.3.1 Qué encontraron las pruebas al construir
+
+Antes de esa revisión, las propias pruebas de extremo a extremo ya habían
+destapado tres fallos reales mientras se construía. Se dejan anotados porque
 dos de ellos se van a repetir en las etapas siguientes:
 
 1. **Un corte de red echaba a la gente de su cuenta.** La escucha del permiso
@@ -202,7 +274,7 @@ Medida en la integración continua, contra el emulador, en el commit entregado:
 
 | Medición | Límite del documento | Medido |
 |---|---|---|
-| Lista de 202 voluntarios, procesador a un cuarto | menos de 1 s | **640 ms** |
+| Lista de 202 voluntarios, procesador a un cuarto | menos de 1 s | **672 ms** |
 | Lecturas de una apertura de sesión | menos de 10 | **4 documentos del servidor** |
 
 Contadores de `datos.js` en una apertura de sesión:
@@ -212,12 +284,18 @@ documentosDelServidor: 4      lecturasDeTransaccion: 1
 eventosDeCache: 0             reintentosDeTransaccion: 0
 cambiosDeMetadatos: 0         consultasVacias: 0
 documentosModificadosPorEscucha: 0   reconexiones: 0
-lecturasDeReglasEstimadas: 1
+lecturasDeReglasEstimadas: 5
 ```
 
-Y al abrir la lista de 202 voluntarios: `documentosDelServidor: 4`,
-`documentosModificadosPorEscucha: 201`, `eventosDeCache: 1`, el resto en cero.
-La escucha suma los documentos que cambiaron, no toda la lista en cada evento.
+Los 5 accesos de reglas estimados se desglosan así: uno por cada una de las dos
+escuchas que abre la sesión (el propio voluntario y `config/app`), uno por la
+lectura de la muestra de hora, y dos por la escritura de esa muestra. Cuadra con
+la tabla de la sección 4.
+
+Y al abrir la lista de 202 voluntarios: `documentosDelServidor: 6`,
+`documentosModificadosPorEscucha: 202`, `eventosDeCache: 2`, `reconexiones: 1`,
+`lecturasDeTransaccion: 2`, `lecturasDeReglasEstimadas: 9`. La escucha suma los
+documentos que cambiaron, no toda la lista en cada evento.
 
 **Telemetría no es facturación** (contrato §8). Estos contadores son del
 cliente: no incluyen las lecturas que consume la evaluación de reglas aunque la
@@ -227,9 +305,17 @@ garantía de rendimiento en producción.
 
 ## 4. Consultas a otros documentos en las reglas, e índices
 
-Cada `get()` se hace una sola vez y su resultado se pasa como argumento a las
-funciones que lo examinan, en vez de repetir la llamada. El conteo es por
-análisis del archivo, sin suponer ahorro por caché:
+Dos cosas sostienen estos números, y las dos están en el archivo a propósito:
+cada `get()` se hace una sola vez y su resultado se pasa como argumento a las
+funciones que lo examinan; y **cada rama comprueba primero la forma de la
+escritura, que es gratis, y solo entonces consulta otros documentos**. Además la
+rama de la muestra de hora va antes que la del administrador, por ser la más
+frecuente y la más barata.
+
+El orden importa y no es cosmético: con las consultas al principio, una
+sincronización de hora pagaba también los accesos de la rama del administrador
+antes de que esa rama fallara por la forma. El conteo es por análisis del
+archivo, sin suponer ahorro por caché:
 
 | Operación | Documentos consultados | Accesos |
 |---|---|---|
@@ -300,6 +386,16 @@ Las cinco primeras las aprobaste antes de construir; el resto son de detalle.
     abrir el PR. También cancela la corrida anterior de la misma rama.
 15. **El plazo de cinco segundos de A-18 se prueba en unidad, no en el
     navegador.** Explicado en §2.1.
+16. **La hoja emergente se retiró** en vez de dejarla sin ejercitar: ninguna
+    pantalla de esta etapa abre una. Vuelve en la etapa que la use, con sus
+    pruebas.
+17. **`inicioJuego` se endureció más allá de lo que pedía la Etapa 1.** La etapa
+    solo pide «respetando tipos y largos», pero el campo entraba sin formato y
+    sin el candado del contrato §8. Son dos líneas de reglas y cierran un hueco
+    que si no sobreviviría hasta la Etapa 5. No es implementar el juego por
+    anticipado: es no dejar la puerta abierta.
+18. **No hay contraprueba externa.** El dueño decidió trabajar solo en esta
+    sesión. En reemplazo se hizo la revisión de §2.3, que no es independiente.
 
 ## 6. Pruebas manuales pendientes para el dueño
 
@@ -331,12 +427,12 @@ Las cinco primeras las aprobaste antes de construir; el resto son de detalle.
 - **Las reglas no reproducen la normalización del cliente.** Comprueban forma,
   permisos y enlaces. Que el correo guardado sea el normalizado lo garantiza el
   cliente y lo cubren las pruebas de unidad.
-- **La hoja emergente está construida pero ninguna pantalla la abre.** Base §9
-  exige que retenga el foco, lo devuelva al cerrar y que el botón Atrás la
-  cierre. El componente está escrito y conectado al historial, pero la Etapa 1
-  no tiene ninguna pantalla que use una hoja: el formulario de Voluntarios va en
-  línea. Esa mitad de la regla del botón Atrás queda **sin ejercitar** hasta que
-  una etapa siguiente abra la primera hoja.
+- **La hoja emergente no existe todavía.** Base §9 exige que retenga el foco, lo
+  devuelva al cerrar y que el botón Atrás la cierre. Esta etapa no tiene ninguna
+  pantalla que use una hoja —el formulario de Voluntarios va en línea—, así que
+  el componente se retiró en vez de dejarlo sin ejercitar. Vuelve en la etapa que
+  abra la primera hoja, con sus pruebas. Esa mitad de la regla del botón Atrás
+  queda pendiente hasta entonces.
 - **Después de cinco minutos sin actividad la barra dice «Hora pendiente».** Es
   lo que manda el contrato §2: la muestra caduca a los cinco minutos y se
   resincroniza «antes de operar» o al volver a primer plano. Como esta etapa no
@@ -351,7 +447,13 @@ Las cinco primeras las aprobaste antes de construir; el resto son de detalle.
 
 ## 8. Qué debe desplegar o configurar el dueño, paso a paso
 
-1. **Pasar el SHA a Codex** para la contraprueba, con este informe.
+1. **Decidir qué pasa con la contraprueba.** El flujo de `AGENTS.md` pide un
+   revisor separado del implementador, y esta entrega no lo tuvo: la revisión de
+   §2.3 la hizo quien escribió el código. Si quieres recuperar esa red, basta
+   con abrir otra herramienta —Cursor sirve— en una sesión que no conozca este
+   razonamiento, darle el SHA y el texto de «Cómo pedir la contraprueba» de
+   `LEEME-ARRANQUE-BIBLIOTECA.md`. Lo que no sirve es pegarle estas conclusiones
+   como punto de partida: ahí se pierde justo lo que la hace valer.
 2. **Crear los dos proyectos de Firebase** (real y ensayo), gratuitos y
    separados, con Firestore en modo de producción y región
    `southamerica-west1`, activar el inicio de sesión con Google y agregar el
@@ -410,8 +512,8 @@ Cuatro cosas del repositorio que conviene saber:
 | Dato | Valor |
 |---|---|
 | Rama | `etapa-1` |
-| SHA entregado | `f191a6cbd6ad3b80c4a51c7b1f2b8787d7401e74` (`f191a6c`) |
-| Corrida de integración continua en verde | `f191a6c`, las seis suites |
+| SHA entregado | `231c4ff` y lo que siga en la rama; el informe se actualiza con cada ronda |
+| Corrida de integración continua en verde | `231c4ff`, las seis suites |
 | Node | 22.22.0 (local) y 22 en la integración continua |
 | npm | 10.9.4 |
 | Java | OpenJDK 21.0.12.1 local; Temurin 21 en la integración continua |
@@ -424,7 +526,7 @@ Cuatro cosas del repositorio que conviene saber:
 | @playwright/test | 1.56.1 |
 | Chromium | 141.0.7390.37 |
 | Proyecto usado | `demo-biblioteca`, solo emulador |
-| Pruebas ejecutadas | **141**: 63 unidad, 37 reglas (26 de los casos + 11 adversas), 7 scripts, 32 extremo a extremo, 2 carga |
+| Pruebas ejecutadas | **153**: 69 unidad, 39 reglas (28 de los casos + 11 adversas), 7 scripts, 36 extremo a extremo, 2 carga |
 | Pruebas en rojo | ninguna |
 | Casos del documento cubiertos | 39 de 39 automatizables; A-31 es manual |
 | Datos personales versionados | ninguno; el escáner pasa sin hallazgos |
