@@ -8,7 +8,7 @@
 import { after, before, beforeEach, test } from 'node:test';
 
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 
 import {
   ADMIN,
@@ -20,6 +20,7 @@ import {
   abrirEntorno,
   bloqueoMantenimiento,
   comoCuenta,
+  loteDeAlta,
   sembrarBase,
 } from '../ayuda/reglas.mjs';
 import { BIB } from '../../docs/js/config-publica.js';
@@ -194,6 +195,58 @@ test('EXTRA una escritura que no cambia nada tampoco pasa sin hora del servidor'
       modificadoEn: new Date('2026-10-10T18:00:00Z'),
     }),
   );
+});
+
+test('EXTRA una cuenta ajena o desactivada no inscribe lectores con el lote completo', async () => {
+  // El lote está bien armado: los tres documentos, el enlace cerrado y la
+  // hora del servidor. Lo único que falta es ser voluntario activo.
+  for (const correo of [AJENA, INACTIVO]) {
+    await entorno.clearFirestore();
+    await sembrarBase(entorno);
+    await assertFails(loteDeAlta(comoCuenta(entorno, correo), correo).commit(), correo);
+  }
+  // Y con el correo sin verificar, tampoco.
+  await entorno.clearFirestore();
+  await sembrarBase(entorno);
+  await assertFails(
+    loteDeAlta(comoCuenta(entorno, VOLUNTARIA, { verificado: false }), VOLUNTARIA).commit(),
+  );
+});
+
+test('EXTRA el permiso de esta biblioteca no inscribe lectores en otra', async () => {
+  await entorno.withSecurityRulesDisabled(async (contexto) => {
+    const base = contexto.firestore();
+    await base.doc('bibliotecas/otra/config/control').set({ bloqueo: null });
+    await base.doc('bibliotecas/otra/config/contadores').set({
+      ultimoPrestamo: 0,
+      ultimoLector: 0,
+      ultimoPrestamoId: null,
+      ultimoLectorId: null,
+    });
+    // La misma cuenta, pero voluntaria solo de `principal`.
+  });
+
+  const db = comoCuenta(entorno, ADMIN);
+  const lote = writeBatch(db);
+  lote.set(doc(db, 'bibliotecas/otra/lectores/L001'), {
+    nombre: 'Rafaela Toledo',
+    clave: 'rafaela toledo',
+    telefono: null,
+    avisoDatos: { fecha: serverTimestamp(), por: ADMIN },
+    fusionadoEn: null,
+    esDestinoFusion: false,
+    creadoEn: serverTimestamp(),
+    creadoPor: ADMIN,
+    creacionId: ID('a'),
+  });
+  lote.set(doc(db, 'bibliotecas/otra/lectoresClave/rafaela toledo'), {
+    lector: 'L001',
+    creadoEn: serverTimestamp(),
+    creadoPor: ADMIN,
+    creacionId: ID('b'),
+  });
+  lote.update(doc(db, 'bibliotecas/otra/config/contadores'), { ultimoLector: 1, ultimoLectorId: 'L001' });
+  await assertFails(lote.commit());
 });
 
 test('EXTRA con mantenimiento vigente tampoco se toca config/app', async () => {

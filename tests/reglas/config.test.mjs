@@ -2,7 +2,7 @@
 import { after, before, beforeEach, test } from 'node:test';
 
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 
 import {
   ADMIN,
@@ -78,19 +78,29 @@ test('juegoCerradoAlgunaVez es inmutable desde el cliente en esta etapa', async 
   await assertFails(updateDoc(doc(db, RUTAS.app), { juegoCerradoAlgunaVez: true, ...metadatos() }));
 });
 
-test('ni el administrador escribe config/contadores o config/control desde la app', async () => {
+// La Etapa 2 abrió una rendija en `config/contadores` —`ultimoLector` de N a
+// N+1 dentro del alta de un lector, probado en `lectores.test.mjs`—. Lo que
+// esta prueba sostiene es que ahí no cabe nada más: el contador de préstamos
+// sigue cerrado hasta la Etapa 3, y el control no se escribe nunca desde la app.
+test('de config/contadores la app solo puede subir ultimoLector; el control, nada', async () => {
   const db = comoCuenta(entorno, ADMIN);
   await assertFails(updateDoc(doc(db, RUTAS.contadores), { ultimoPrestamo: 1, ...metadatos() }));
+  await assertFails(updateDoc(doc(db, RUTAS.contadores), { ultimoPrestamo: 1 }));
+  await assertFails(updateDoc(doc(db, RUTAS.contadores), { ultimoPrestamoId: 'p1' }));
+  // Subir el contador de lectores sin crear el lector tampoco: el enlace del
+  // contrato §3 no cierra.
+  await assertFails(updateDoc(doc(db, RUTAS.contadores), { ultimoLector: 1, ultimoLectorId: 'L001' }));
+  await assertFails(deleteDoc(doc(db, RUTAS.contadores)));
+
   await assertFails(updateDoc(doc(db, RUTAS.control), { bloqueo: bloqueoMantenimiento() }));
   await assertFails(setDoc(doc(db, RUTAS.control), { bloqueo: null }));
 });
 
 test('A-12 una ruta que no figura en las reglas queda denegada', async () => {
   const db = comoCuenta(entorno, ADMIN);
+  // `libros`, `lectores` y `lectoresClave` salieron de esta lista en la
+  // Etapa 2: ahora tienen reglas propias y sus pruebas al lado.
   for (const ruta of [
-    `bibliotecas/${BIB}/libros/INF001`,
-    `bibliotecas/${BIB}/lectores/L001`,
-    `bibliotecas/${BIB}/lectoresClave/ana`,
     `bibliotecas/${BIB}/prestamos/p1`,
     `bibliotecas/${BIB}/temporadas/2026-5`,
     `bibliotecas/${BIB}/calendario/2026-10-10`,
@@ -101,7 +111,7 @@ test('A-12 una ruta que no figura en las reglas queda denegada', async () => {
     await assertFails(getDoc(doc(db, ruta)));
     await assertFails(setDoc(doc(db, ruta), { algo: 1 }));
   }
-  for (const coleccion of [`bibliotecas/${BIB}/libros`, `bibliotecas/${BIB}/prestamos`, 'bibliotecas']) {
+  for (const coleccion of [`bibliotecas/${BIB}/prestamos`, 'bibliotecas']) {
     await assertFails(getDocs(collection(db, coleccion)));
   }
 });

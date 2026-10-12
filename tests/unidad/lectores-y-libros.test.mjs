@@ -21,6 +21,21 @@ import {
   prepararBusquedaDeLector,
   prepararBusquedaDeLibro,
 } from '../../docs/js/texto.js';
+import { idDeLector } from '../../docs/js/config-publica.js';
+
+// ------------------------------------------------- el identificador del lector
+
+test('el identificador del lector es L más el correlativo, con tres cifras mínimo', () => {
+  // La misma fórmula está escrita en las reglas de seguridad. Si discreparan,
+  // el enlace del contador no cerraría y el alta se denegaría, así que estas
+  // igualdades son el contrato entre el cliente y el servidor.
+  assert.equal(idDeLector(1), 'L001');
+  assert.equal(idDeLector(99), 'L099');
+  assert.equal(idDeLector(100), 'L100');
+  assert.equal(idDeLector(999), 'L999');
+  assert.equal(idDeLector(1000), 'L1000');
+  assert.equal(idDeLector(1204), 'L1204');
+});
 
 // --------------------------------------------------------------- la clave
 

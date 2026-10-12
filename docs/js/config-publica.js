@@ -49,7 +49,22 @@ export const rutas = {
   configControl: () => `bibliotecas/${BIB}/config/control`,
   voluntarios: () => `bibliotecas/${BIB}/voluntarios`,
   voluntario: (correo) => `bibliotecas/${BIB}/voluntarios/${correo}`,
+  libros: () => `bibliotecas/${BIB}/libros`,
+  libro: (codigo) => `bibliotecas/${BIB}/libros/${codigo}`,
+  lectores: () => `bibliotecas/${BIB}/lectores`,
+  lector: (id) => `bibliotecas/${BIB}/lectores/${id}`,
+  lectoresClave: () => `bibliotecas/${BIB}/lectoresClave`,
+  lectorClave: (clave) => `bibliotecas/${BIB}/lectoresClave/${clave}`,
 };
+
+/**
+ * Identificador de un lector: `L` más el correlativo con al menos tres cifras.
+ * Lo construyen igual el cliente, las reglas y los scripts; si discrepan, el
+ * enlace del contador no cierra y la transacción se deniega.
+ */
+export function idDeLector(numero) {
+  return `L${String(numero).padStart(3, '0')}`;
+}
 
 /** Valores iniciales de `config/app`, según la Etapa 1. */
 export const CONFIG_APP_INICIAL = {
