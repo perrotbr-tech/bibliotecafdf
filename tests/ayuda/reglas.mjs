@@ -28,8 +28,14 @@ export const AJENA = 'nadie@example.com';
 
 export const ID = (letra) => String(letra).repeat(32).slice(0, 32);
 
-/** Entorno de pruebas con las reglas del repositorio. */
-export async function abrirEntorno() {
+/**
+ * Entorno de pruebas con las reglas del repositorio.
+ *
+ * `limpiar` vacía Firestore al abrirlo, que es lo que quieren las pruebas de
+ * reglas. Las pruebas de los scripts lo abren con `limpiar: false`: ahí la base
+ * ya está sembrada con Admin SDK y borrarla sería borrar la prueba.
+ */
+export async function abrirEntorno({ limpiar = true } = {}) {
   const entorno = await initializeTestEnvironment({
     projectId: PROYECTO,
     firestore: {
@@ -38,7 +44,7 @@ export async function abrirEntorno() {
       rules: await readFile(join(RAIZ, 'firestore.rules'), 'utf8'),
     },
   });
-  await entorno.clearFirestore();
+  if (limpiar) await entorno.clearFirestore();
   return entorno;
 }
 

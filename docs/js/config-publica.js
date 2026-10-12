@@ -55,6 +55,12 @@ export const rutas = {
   lector: (id) => `bibliotecas/${BIB}/lectores/${id}`,
   lectoresClave: () => `bibliotecas/${BIB}/lectoresClave`,
   lectorClave: (clave) => `bibliotecas/${BIB}/lectoresClave/${clave}`,
+  // Los préstamos no tienen pantallas ni reglas de cliente hasta la Etapa 3.
+  // La ruta existe desde la Etapa 2 porque la carga inicial los escribe con
+  // Admin SDK, que no pasa por reglas.
+  prestamos: () => `bibliotecas/${BIB}/prestamos`,
+  prestamo: (id) => `bibliotecas/${BIB}/prestamos/${id}`,
+  temporadas: () => `bibliotecas/${BIB}/temporadas`,
 };
 
 /**

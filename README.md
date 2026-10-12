@@ -75,13 +75,41 @@ y `prueba:carga` no corren; las de unidad, reglas y scripts sí.
 # y el primer administrador.
 npx firebase emulators:exec --project demo-biblioteca --only auth,firestore \
   "node scripts/inicializar.mjs --correo tu@correo.cl --nombre 'Tu Nombre'"
+
+# Carga inicial. Primero se simula: valida todo y no escribe nada.
+npx firebase emulators:exec --project demo-biblioteca --only auth,firestore \
+  "node scripts/cargar-datos.mjs --archivo datos/carga.json --simular"
+# Y después se carga, solo si la simulación no rechazó nada y las colecciones
+# de negocio están vacías. Para cargar encima: --reemplazar, que respalda y
+# verifica antes de borrar.
+npx firebase emulators:exec --project demo-biblioteca --only auth,firestore \
+  "node scripts/cargar-datos.mjs --archivo datos/carga.json --cargar"
+
+# Respaldo verificable: queda en datos/respaldo-AAAAMMDD-HHMM.json.
+npx firebase emulators:exec --project demo-biblioteca --only auth,firestore \
+  "node scripts/respaldar.mjs"
+
+# Reponer un respaldo en una base vacía (o con --reemplazar, encima).
+npx firebase emulators:exec --project demo-biblioteca --only auth,firestore \
+  "node scripts/restaurar.mjs --archivo datos/respaldo-20261012-0530.json"
 ```
 
-El script se niega a escribir en un proyecto que no empiece con `demo-` salvo
-que se le pase `--confirmo-proyecto-real`, y se niega a correr contra un
+Los cuatro se niegan a escribir en un proyecto que no empiece con `demo-` salvo
+que se les pase `--confirmo-proyecto-real`, y se niegan a correr contra un
 proyecto demo si no están definidos `FIRESTORE_EMULATOR_HOST` y
 `FIREBASE_AUTH_EMULATOR_HOST`. Esa bandera la usa el dueño en su computador,
 nunca el agente.
+
+La carga, el respaldo y la restauración toman el **bloqueo de mantenimiento**
+mientras trabajan: mientras está puesto, la app no escribe —lo deniegan las
+reglas— y se puede seguir consultando. Si uno de esos trabajos se corta a mitad,
+el bloqueo **queda puesto a propósito**: una base incompleta no se reabre sola.
+El mensaje de error indica el token y el manifiesto de `datos/` con lo que
+alcanzó a escribirse; desde ahí se reanuda con `--reanudar`, o se repone un
+respaldo. Los identificadores de la carga son deterministas, así que reanudar
+reescribe los mismos documentos en vez de duplicarlos. Para soltar un bloqueo a
+mano, cuando ya se comprobó que la base está íntegra:
+`node scripts/respaldar.mjs --liberar --token <el token del mensaje>`.
 
 `scripts/revisar-repositorio.mjs` falla si encuentra versionado algo de
 `datos/`, un archivo con forma de llave de servicio, o un teléfono chileno que
@@ -110,7 +138,9 @@ docs/          la app publicada
                vistas/ y ui/
 firestore.rules
 tests/         unidad/, reglas/, scripts/, e2e/, carga/, ayuda/, fixtures/
-scripts/       inicializar, revisar-repositorio, servir, arrancar-local
+scripts/       inicializar, cargar-datos, respaldar, restaurar,
+               revisar-repositorio, servir, arrancar-local
+  comun/       destino, mantenimiento, manifiesto, biblioteca, datos-exportados
 specs/         la especificación; manda sobre el código
 informes/      un informe por etapa
 ```

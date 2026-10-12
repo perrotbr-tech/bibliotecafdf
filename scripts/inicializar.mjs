@@ -18,40 +18,12 @@ import { CONFIG_APP_INICIAL, rutas } from '../docs/js/config-publica.js';
 import { diaEnChile, temporadaDe } from '../docs/js/fechas.js';
 import { esCorreoValido, esNombreValido, normalizarCorreo, normalizarNombre, nuevoId } from '../docs/js/texto.js';
 
-export const PROYECTO_DEMO = 'demo-biblioteca';
+// La comprobación del destino se mudó a `comun/destino.mjs` en la Etapa 2,
+// porque la carga, el respaldo y la restauración necesitan la misma. Se
+// reexporta para no cambiar quien ya la importaba de aquí.
+import { PROYECTO_DEMO, comprobarDestino } from './comun/destino.mjs';
 
-/**
- * Comprueba a qué proyecto se va a escribir. Devuelve el proyecto o lanza con
- * la razón por la que no se puede seguir.
- */
-export function comprobarDestino({ proyecto, confirmaProyectoReal, entorno = process.env }) {
-  const esDemo = proyecto.startsWith('demo-');
-  if (esDemo) {
-    const faltan = [];
-    if (!entorno.FIRESTORE_EMULATOR_HOST) faltan.push('FIRESTORE_EMULATOR_HOST');
-    if (!entorno.FIREBASE_AUTH_EMULATOR_HOST) faltan.push('FIREBASE_AUTH_EMULATOR_HOST');
-    if (faltan.length > 0) {
-      throw new Error(
-        `El proyecto ${proyecto} es de emulador, pero falta ${faltan.join(' y ')}. ` +
-          'Arranca los emuladores o usa `npm run inicializar` dentro de `firebase emulators:exec`.',
-      );
-    }
-    return { proyecto, destino: 'emulador' };
-  }
-  if (!confirmaProyectoReal) {
-    throw new Error(
-      `${proyecto} no es un proyecto de emulador. Si de verdad quieres escribir ahí, ` +
-        'agrega --confirmo-proyecto-real. El agente no usa esta bandera.',
-    );
-  }
-  if (entorno.FIRESTORE_EMULATOR_HOST || entorno.FIREBASE_AUTH_EMULATOR_HOST) {
-    throw new Error(
-      'Hay variables de emulador definidas y se pidió un proyecto real. ' +
-        'Quítalas para no escribir en el lugar equivocado.',
-    );
-  }
-  return { proyecto, destino: 'real' };
-}
+export { PROYECTO_DEMO, comprobarDestino };
 
 /**
  * Escribe los cuatro documentos que faltan. Devuelve el informe de lo que creó
