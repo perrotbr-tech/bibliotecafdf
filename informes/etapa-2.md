@@ -2,14 +2,13 @@
 
 Revisión 1.1 · 12-10-2026 (America/Santiago) · rama `etapa-2`
 
-**SHA entregado:** `2b556c6`, el último commit de código de `etapa-2`. Este
-informe va encima y no toca una línea de código. Los datos completos de la
-entrega están en la sección 10.
+**SHA entregado:** `d5a8e69`, el último commit de código de `etapa-2`. Los datos
+completos de la entrega están en la sección 10.
 
 **No hubo contraprueba externa.** El dueño decidió trabajar solo en esta sesión,
 así que no hay una mirada ajena sobre este código. Lo digo una vez y no lo
 disimulo: una revisión del propio implementador no es una contraprueba
-(AGENTS.md). Lo que sí hay son 316 pruebas ejecutadas, y varias de ellas
+(AGENTS.md). Lo que sí hay son 318 pruebas ejecutadas, y varias de ellas
 encontraron errores reales mientras se construía; están en la sección 2.3.
 
 **Estado: los 43 casos del documento están escritos y ejecutados, y pasan.** No
@@ -52,7 +51,7 @@ con 736 ms.
   reanudable. Debajo, `scripts/comun/` con el destino, el bloqueo de
   mantenimiento, el manifiesto, el recorrido de la biblioteca y la serialización
   canónica.
-- **Pruebas**: 138 de unidad, 72 de reglas, 24 de scripts, 76 de extremo a
+- **Pruebas**: 140 de unidad, 72 de reglas, 24 de scripts, 76 de extremo a
   extremo y 6 de carga.
 
 ## 2. Casos de prueba
@@ -117,8 +116,8 @@ revisar-repositorio: sin hallazgos
 
 ### npm run prueba:unidad
 ```
-# tests 138
-# pass 138
+# tests 140
+# pass 140
 # fail 0
 ```
 
@@ -245,7 +244,18 @@ que arreglar.
 y **encontró algo real por el camino**: los textos de ayuda de los formularios
 usaban «9 1234 5678» como ejemplo de celular, que puede ser el número de una
 persona. Ahora los ejemplos usan el prefijo `5690000` de los fixtures, que no es
-de nadie. Es exactamente para lo que está ese escáner.
+de nadie.
+
+Y encontró algo peor, que es un error del escáner mismo: **no miraba los
+archivos nuevos**. Listaba con `git ls-files`, que solo lista lo versionado, de
+modo que un archivo recién escrito —el que está a punto de entrar al
+repositorio, que es justo el que hay que revisar— se le escapaba. Por eso el
+teléfono de ejemplo pasó el escáner en local y la integración continua lo
+rechazó al commit siguiente, cuando el archivo ya estaba versionado: la corrida
+29 de `etapa-2` (`2b556c6`) **falló**, y la 30 (`644f9c0`) pasó porque ese
+commit traía el arreglo. Ahora el escáner lista también lo no versionado,
+respetando `.gitignore`, y tiene dos pruebas nuevas: una con un archivo nuevo
+sin versionar y otra que comprueba que `datos/` sigue fuera de su alcance.
 `datos/` sigue fuera del repositorio, con los respaldos y los manifiestos que
 generaron las pruebas y las corridas a mano. Ningún nombre ni teléfono real vive
 en el código ni en la página publicada; los teléfonos de los fixtures empiezan
@@ -475,8 +485,9 @@ Ninguna de estas la puede hacer el agente, y ninguna está hecha.
 | Dato | Valor |
 |---|---|
 | Rama | `etapa-2` |
-| SHA entregado | `2b556c6`, el último commit de código; este informe va encima sin tocar código |
-| Commits de la etapa | `84c0e64` puras · `6e351fd` reglas · `33decf6` scripts · `2b556c6` pantallas y concurrencia |
+| SHA entregado | `d5a8e69`, el último commit de código de la rama |
+| Commits de la etapa | `84c0e64` puras · `6e351fd` reglas · `33decf6` scripts · `2b556c6` pantallas y concurrencia · `644f9c0` informe · `d5a8e69` repaso del diff |
+| Corridas de integración continua | 26, 27, 28 y 30 en verde; la **29 falló** por el escáner (sección 2.4) y la 31 corre sobre el SHA entregado |
 | Node | 22.22.0 (local) y 22 en la integración continua |
 | npm | 10.9.4 |
 | Java | OpenJDK 21.0.12.1 local; Temurin 21 en la integración continua |
@@ -489,7 +500,7 @@ Ninguna de estas la puede hacer el agente, y ninguna está hecha.
 | @playwright/test | 1.56.1 |
 | Chromium | 141.0.7390.37 |
 | Proyecto usado | `demo-biblioteca`, solo emulador |
-| Pruebas ejecutadas | **316**: 138 unidad, 72 reglas, 24 scripts, 76 extremo a extremo, 6 carga |
+| Pruebas ejecutadas | **318**: 140 unidad, 72 reglas, 24 scripts, 76 extremo a extremo, 6 carga |
 | Pruebas en rojo | ninguna |
 | Casos del documento cubiertos | **43 de 43**, todos automatizados y ejecutados |
 | Límites del documento no cumplidos | abrir con 5.000 libros y 3.000 lectores (sección 3) |

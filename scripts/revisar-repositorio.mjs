@@ -47,12 +47,25 @@ const CONTENIDOS_DE_LLAVE = [
   { patron: /"private_key"\s*:\s*"/, motivo: 'campo private_key' },
 ];
 
-/** Devuelve la lista de archivos a revisar, relativos a la raíz. */
+/**
+ * Devuelve la lista de archivos a revisar, relativos a la raíz.
+ *
+ * Incluye los archivos NUEVOS que todavía no están versionados —`--others`—
+ * respetando `.gitignore` —`--exclude-standard`—, y ahí está el punto: el
+ * escáner existe para mirar lo que está a punto de entrar al repositorio, y
+ * durante la Etapa 2 se le escapó un teléfono de ejemplo justamente porque el
+ * archivo que lo traía aún no estaba versionado. Con `datos/` y
+ * `node_modules/` no hay riesgo: los excluye `.gitignore`.
+ */
 export async function listarArchivos(raiz) {
   try {
-    const { stdout } = await ejecutar('git', ['-C', raiz, 'ls-files', '-z'], { maxBuffer: 64 * 1024 * 1024 });
-    const versionados = stdout.split('\0').filter(Boolean);
-    if (versionados.length > 0) return versionados;
+    const { stdout } = await ejecutar(
+      'git',
+      ['-C', raiz, 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
+      { maxBuffer: 64 * 1024 * 1024 },
+    );
+    const delRepositorio = [...new Set(stdout.split('\0').filter(Boolean))];
+    if (delRepositorio.length > 0) return delRepositorio;
   } catch {
     // No es un repositorio git (por ejemplo, la carpeta temporal de la prueba
     // A-29): se recorre el árbol completo.

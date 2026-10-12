@@ -6,9 +6,11 @@
 // en el código fuente, así que el escáner no se delata a sí mismo.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 
 import { revisarRepositorio } from '../../scripts/revisar-repositorio.mjs';
 
@@ -22,6 +24,21 @@ const CREDENCIAL = '{ "type": ' + '"service_account" }';
 
 async function carpetaTemporal() {
   return await mkdtemp(join(tmpdir(), 'revisar-repo-'));
+}
+
+const ejecutar = promisify(execFile);
+
+/** Git con una identidad propia: la del entorno puede no estar configurada. */
+function ejecutarGit(raiz, argumentos) {
+  return ejecutar('git', ['-C', raiz, ...argumentos], {
+    env: {
+      ...process.env,
+      GIT_AUTHOR_NAME: 'Prueba',
+      GIT_AUTHOR_EMAIL: 'prueba@example.com',
+      GIT_COMMITTER_NAME: 'Prueba',
+      GIT_COMMITTER_EMAIL: 'prueba@example.com',
+    },
+  });
 }
 
 test('A-29 un archivo con un teléfono chileno no ficticio hace fallar al escáner', async (t) => {
@@ -97,5 +114,40 @@ test('A-29 una llave de servicio hace fallar al escáner, por nombre y por conte
 
 test('A-29 el propio repositorio pasa el escáner', async () => {
   const raiz = join(import.meta.dirname, '..', '..');
+  assert.deepEqual(await revisarRepositorio(raiz), []);
+});
+
+test('A-29 un archivo NUEVO, todavía sin versionar, también se revisa', async (t) => {
+  // Esto se le escapó al escáner en la Etapa 2: `git ls-files` lista solo lo
+  // versionado, así que un archivo recién escrito —el que está a punto de
+  // entrar al repositorio, que es justo el que hay que mirar— no se revisaba.
+  // La integración continua lo encontró al commit siguiente.
+  const raiz = await carpetaTemporal();
+  t.after(() => rm(raiz, { recursive: true, force: true }));
+
+  await ejecutarGit(raiz, ['init', '-q']);
+  await writeFile(join(raiz, 'versionado.txt'), 'nada que ver\n', 'utf8');
+  await ejecutarGit(raiz, ['add', 'versionado.txt']);
+  // Y ahora el archivo nuevo, sin añadir al índice.
+  await writeFile(join(raiz, 'nuevo.js'), `const ayuda = 'Llama al ${NO_FICTICIO}';\n`, 'utf8');
+
+  const hallazgos = await revisarRepositorio(raiz);
+  assert.equal(hallazgos.length, 1);
+  assert.equal(hallazgos[0].archivo, 'nuevo.js');
+  assert.match(hallazgos[0].motivo, /teléfono chileno que no es ficticio/);
+});
+
+test('A-29 lo que .gitignore excluye no se revisa, aunque esté ahí', async (t) => {
+  // `datos/` vive fuera del repositorio y trae nombres y teléfonos reales: el
+  // escáner no tiene por qué mirarlo, y no debe fallar por su contenido.
+  const raiz = await carpetaTemporal();
+  t.after(() => rm(raiz, { recursive: true, force: true }));
+
+  await ejecutarGit(raiz, ['init', '-q']);
+  await writeFile(join(raiz, '.gitignore'), 'datos/\n', 'utf8');
+  await ejecutarGit(raiz, ['add', '.gitignore']);
+  await mkdir(join(raiz, 'datos'), { recursive: true });
+  await writeFile(join(raiz, 'datos', 'respaldo.json'), `{"telefono":"${NO_FICTICIO}"}\n`, 'utf8');
+
   assert.deepEqual(await revisarRepositorio(raiz), []);
 });
