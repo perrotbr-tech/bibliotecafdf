@@ -2,9 +2,10 @@
 
 Revisión 1.1 · 12-10-2026 (America/Santiago) · rama `etapa-1`
 
-**SHA entregado para la contraprueba:** el último commit de `etapa-1`. Se anota
-en la sección 9 apenas queda empujado; ese es el commit exacto que debe revisar
-Codex y el que debe publicarse en ensayo.
+**SHA entregado para la contraprueba:** el código de la etapa está en
+`e0287ca03d80326980547071415ff0ca3f223524`. El commit que debe revisar Codex y
+el que debe publicarse en ensayo es **el último de la rama `etapa-1`**, que es
+este mismo con el SHA anotado: el único cambio entre ambos es esta línea.
 
 > **Lo primero, porque cambia cómo se lee todo lo demás:** las pruebas de
 > extremo a extremo y de carga están **escritas pero NO ejecutadas**. El
@@ -318,7 +319,8 @@ Las cinco primeras las aprobaste antes de construir; el resto son de detalle.
 | Dato | Valor |
 |---|---|
 | Rama | `etapa-1` |
-| SHA entregado | se anota al empujar; es el último commit de la rama |
+| SHA del código | `e0287ca03d80326980547071415ff0ca3f223524` |
+| SHA a contraprobar | el último commit de `etapa-1` (este, con el SHA anotado) |
 | Node | 22.22.0 |
 | npm | 10.9.4 |
 | Java | OpenJDK 21.0.12.1 (Temurin en la integración continua) |
