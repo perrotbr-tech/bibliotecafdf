@@ -39,7 +39,7 @@ export function abrirFichaDeLibro({ datos, permiso, categorias, libros, libro })
                 libros,
                 libro,
                 alGuardar: () => cerrarHoja(),
-              }).nodo,
+              }),
             });
           },
         },

@@ -216,5 +216,12 @@ export async function borrarColeccion(db, nombre, { lote = 300 } = {}) {
     for (const instantanea of consulta.docs) escritura.delete(instantanea.ref);
     await escritura.commit();
     borrados += consulta.size;
+    // Si una pasada no avanza, algo impide borrar y hay que detenerse: un
+    // bucle que gira para siempre con el mantenimiento puesto es peor que un
+    // error.
+    const quedan = await coleccion.limit(lote).get();
+    if (quedan.size === consulta.size && quedan.docs[0]?.id === consulta.docs[0]?.id) {
+      throw new Error(`No se pudo borrar ${nombre}: la colección no avanza (${quedan.size} documentos).`);
+    }
   }
 }

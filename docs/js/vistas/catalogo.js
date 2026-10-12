@@ -21,7 +21,7 @@ import {
 } from '../listas.js';
 import { el, pintar } from '../ui/dom.js';
 import { cargando, error as estadoError, vacio } from '../ui/estados.js';
-import { abrirHoja } from '../ui/hoja.js';
+import { abrirHoja, cerrarHoja } from '../ui/hoja.js';
 
 import { abrirFichaDeLibro } from './libro.js';
 import { formularioDeLibro } from './libro-formulario.js';
@@ -87,8 +87,8 @@ export function pantallaCatalogo({ datos, permiso, categorias: categoriasInicial
                   permiso,
                   categorias,
                   libros,
-                  alGuardar: () => {},
-                }).nodo,
+                  alGuardar: () => cerrarHoja(),
+                }),
               }),
           },
         })
@@ -204,6 +204,10 @@ export function pantallaCatalogo({ datos, permiso, categorias: categoriasInicial
 
   // -------------------------------------------------------------- escuchas
 
+  // El catálogo escucha `config/app` por su cuenta: necesita las categorías
+  // para las fichas del filtro y para el color de cada tejuelo, y no puede
+  // recibirlas desde fuera, porque eso obligaría a volver a dibujar la
+  // pantalla y borraría lo que la persona está escribiendo.
   const soltarConfig = datos.escucharDocumento(rutas.configApp(), (configuracion) => {
     const nuevas = configuracion?.categorias;
     if (!Array.isArray(nuevas)) return;

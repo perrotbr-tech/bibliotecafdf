@@ -116,12 +116,10 @@ export function formularioDeInscripcion({ datos, permiso, alGuardar }) {
     { deshabilitadoAlTerminar: () => !datos.hayRed() },
   );
 
+  // Abierto sin conexión, el botón nace deshabilitado; si la red se cae con el
+  // formulario abierto, el intento responde «Sin conexión: no se puede
+  // guardar».
   if (!datos.hayRed()) boton.disabled = true;
 
-  return {
-    nodo,
-    reflejarRed: () => {
-      boton.disabled = !datos.hayRed();
-    },
-  };
+  return nodo;
 }

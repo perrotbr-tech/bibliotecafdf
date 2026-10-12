@@ -8,7 +8,7 @@ import { rutas } from '../config-publica.js';
 import { FILAS_POR_TANDA, filtrarLectores, porTandas, prepararLectores } from '../listas.js';
 import { el, pintar } from '../ui/dom.js';
 import { cargando, error as estadoError, vacio } from '../ui/estados.js';
-import { abrirHoja } from '../ui/hoja.js';
+import { abrirHoja, cerrarHoja } from '../ui/hoja.js';
 
 import { abrirFichaDeLector } from './lector.js';
 import { formularioDeInscripcion } from './inscribir-lector.js';
@@ -45,7 +45,7 @@ export function pantallaLectores({ datos, permiso }) {
         abrirHoja({
           titulo: 'Inscribir lector',
           prueba: 'hoja-inscribir',
-          contenido: formularioDeInscripcion({ datos, permiso, alGuardar: () => {} }).nodo,
+          contenido: formularioDeInscripcion({ datos, permiso, alGuardar: () => cerrarHoja() }),
         }),
     },
   });

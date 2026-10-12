@@ -44,9 +44,16 @@ const rutaDeControl = () => rutas.configControl();
 /** Borra todos los documentos de la biblioteca salvo el control, en lotes. */
 export async function vaciarBiblioteca(db, { lote = LOTE } = {}) {
   let borrados = 0;
+  let cuantosHabia = Number.POSITIVE_INFINITY;
   for (;;) {
     const documentos = (await recorrer(db)).filter(({ ruta }) => ruta !== rutaDeControl());
     if (documentos.length === 0) return borrados;
+    // Una pasada que no reduce la cuenta significa que algo impide borrar: se
+    // detiene en vez de girar para siempre con el mantenimiento puesto.
+    if (documentos.length >= cuantosHabia) {
+      throw new Error(`No se pudo vaciar la biblioteca: quedan ${documentos.length} documentos y no bajan.`);
+    }
+    cuantosHabia = documentos.length;
     for (let desde = 0; desde < documentos.length; desde += lote) {
       const escritura = db.batch();
       for (const { ruta } of documentos.slice(desde, desde + lote)) escritura.delete(db.doc(ruta));

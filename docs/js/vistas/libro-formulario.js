@@ -134,9 +134,11 @@ export function formularioDeLibro({ datos, permiso, categorias, libros, libro = 
     { deshabilitadoAlTerminar: () => !datos.hayRed() },
   );
 
+  // Abierto sin conexión, el botón nace deshabilitado. Si la red se cae con el
+  // formulario ya abierto, el botón sigue tocable y el intento responde «Sin
+  // conexión: no se puede guardar», que dice más que un botón apagado sin
+  // explicación.
   if (!datos.hayRed()) boton.disabled = true;
 
-  return { nodo, reflejarRed: () => {
-    boton.disabled = !datos.hayRed();
-  } };
+  return nodo;
 }
