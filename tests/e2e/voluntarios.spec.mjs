@@ -12,6 +12,11 @@ import {
 } from '../ayuda/siembra.mjs';
 import { CLAVE_INTENCION } from '../../docs/js/datos.js';
 
+// Contra el emulador, el SDK habla por WebChannel: las rutas se reconocen por
+// el nombre del servicio en la dirección, no por un glob de archivo.
+const HABLA_CON_FIRESTORE = (url) => url.href.includes('google.firestore.v1.Firestore');
+const ESCRIBE_EN_FIRESTORE = (url) => url.href.includes('google.firestore.v1.Firestore/Write');
+
 async function abrirVoluntarios(page, direccion = '/') {
   await page.goto(direccion);
   await page.waitForFunction(() => globalThis.__biblioteca !== undefined, { timeout: 20_000 });
@@ -108,7 +113,7 @@ test('A-18 si la red se corta entre el toque y la respuesta, no hay confirmació
 
   // La escritura sale, pero la respuesta nunca llega: se demora y después
   // falla. Así aparece «Confirmando… no cierres la app».
-  await page.route('**/*Firestore/Commit*', async (ruta) => {
+  await page.route(ESCRIBE_EN_FIRESTORE, async (ruta) => {
     await new Promise((listo) => setTimeout(listo, 6000));
     await ruta.abort('connectionfailed');
   });
@@ -130,7 +135,7 @@ test('A-39 si la comprobación tampoco se puede hacer, no se afirma que no se gu
   await abrirVoluntarios(page);
   await llenarFormulario(page, { correo: 'dudosa@example.com', nombre: 'Dudosa' });
 
-  await page.route('**/*Firestore/*', (ruta) => ruta.abort('connectionfailed'));
+  await page.route(HABLA_CON_FIRESTORE, (ruta) => ruta.abort('connectionfailed'));
   await page.getByTestId('agregar-voluntario').click();
 
   const mensaje = page.getByTestId('error-formulario');
@@ -145,7 +150,7 @@ test('A-19 si la escritura sí se había aplicado, al volver se reconoce y no se
   await llenarFormulario(page, { correo: 'aplicada@example.com', nombre: 'Sí Quedó' });
 
   // Se corta todo lo que habla con Firestore: la app no puede confirmar.
-  await page.route('**/*Firestore/*', (ruta) => ruta.abort('connectionfailed'));
+  await page.route(HABLA_CON_FIRESTORE, (ruta) => ruta.abort('connectionfailed'));
   await page.getByTestId('agregar-voluntario').click();
   await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 30_000 });
 
@@ -162,7 +167,7 @@ test('A-19 si la escritura sí se había aplicado, al volver se reconoce y no se
     creacionId: intencion.operacionId,
   });
 
-  await page.unroute('**/*Firestore/*');
+  await page.unroute(HABLA_CON_FIRESTORE);
   await page.reload();
   await page.waitForFunction(() => globalThis.__biblioteca !== undefined, { timeout: 20_000 });
   await page.evaluate((correo) => globalThis.__biblioteca.entrarSimulado(correo), ADMIN);
@@ -175,11 +180,11 @@ test('A-20 si la escritura no se aplicó, al volver se dice que no se guardó', 
   await abrirVoluntarios(page);
   await llenarFormulario(page, { correo: 'perdida@example.com', nombre: 'No Quedó' });
 
-  await page.route('**/*Firestore/*', (ruta) => ruta.abort('connectionfailed'));
+  await page.route(HABLA_CON_FIRESTORE, (ruta) => ruta.abort('connectionfailed'));
   await page.getByTestId('agregar-voluntario').click();
   await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 30_000 });
 
-  await page.unroute('**/*Firestore/*');
+  await page.unroute(HABLA_CON_FIRESTORE);
   await page.reload();
   await page.waitForFunction(() => globalThis.__biblioteca !== undefined, { timeout: 20_000 });
   await page.evaluate((correo) => globalThis.__biblioteca.entrarSimulado(correo), ADMIN);
@@ -192,14 +197,14 @@ test('A-36 si el documento lo creó otra operación, no se presenta como éxito 
   await abrirVoluntarios(page);
   await llenarFormulario(page, { correo: 'ajena@example.com', nombre: 'De Otro' });
 
-  await page.route('**/*Firestore/*', (ruta) => ruta.abort('connectionfailed'));
+  await page.route(HABLA_CON_FIRESTORE, (ruta) => ruta.abort('connectionfailed'));
   await page.getByTestId('agregar-voluntario').click();
   await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 30_000 });
 
   // Otra persona, en otro teléfono, creó ese mismo correo.
   await ponerVoluntario({ correo: 'ajena@example.com', nombre: 'De Otro', creacionId: 'c'.repeat(32) });
 
-  await page.unroute('**/*Firestore/*');
+  await page.unroute(HABLA_CON_FIRESTORE);
   await page.reload();
   await page.waitForFunction(() => globalThis.__biblioteca !== undefined, { timeout: 20_000 });
   await page.evaluate((correo) => globalThis.__biblioteca.entrarSimulado(correo), ADMIN);

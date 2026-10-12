@@ -64,18 +64,30 @@ export function esAdministrador(permiso) {
   return permiso?.estado === 'adentro' && permiso.rol === 'admin';
 }
 
+/** Un error de la escucha que significa de verdad «ya no tienes acceso». */
+export function esPerdidaDeAcceso(error) {
+  return String(error?.code ?? '').includes('permission-denied');
+}
+
 /**
  * Escucha el documento del voluntario y avisa cada vez que cambia el permiso.
- * Si a alguien lo desactivan con la app abierta, la siguiente lectura ya llega
+ * Si a alguien lo desactivan con la app abierta, la siguiente lectura llega
  * denegada y la app pasa a «Sin acceso» sin un error sin tratar (A-15).
+ *
+ * Un corte de red NO es una pérdida de acceso: eso se avisa aparte y la sesión
+ * se conserva. Si no, bastaría quedarse sin señal para que la app echara a
+ * alguien de su propia cuenta.
  *
  * Devuelve la función que suelta la escucha.
  */
-export function vigilarPermiso({ datos, sesion, alCambiar }) {
+export function vigilarPermiso({ datos, sesion, alCambiar, alFallar = null }) {
   const correo = normalizarCorreo(sesion.email);
   return datos.escucharDocumento(
     rutas.voluntario(correo),
     (documento) => alCambiar(permisoDe({ sesion, documento })),
-    () => alCambiar(permisoDe({ sesion, documento: null })),
+    (error) => {
+      if (esPerdidaDeAcceso(error)) alCambiar(permisoDe({ sesion, documento: null }));
+      else alFallar?.(error);
+    },
   );
 }

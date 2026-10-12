@@ -22,6 +22,8 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['github']] : [['list']],
   use: {
     baseURL: DIRECCION_SITIO,
+    // Las pantallas marcan sus piezas con `data-prueba`, no con `data-testid`.
+    testIdAttribute: 'data-prueba',
     // Teléfono Android de referencia. Las pruebas que miden 320 px fijan su
     // propio viewport.
     viewport: { width: 360, height: 740 },

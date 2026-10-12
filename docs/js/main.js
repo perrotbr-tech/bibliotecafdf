@@ -185,6 +185,11 @@ async function alCambiarSesion(usuario) {
       if (entraAhora) alEntrar();
       dibujar();
     },
+    alFallar: (fallo) => {
+      // Un problema de red no cierra la sesión de nadie.
+      avisar('No se pudo comprobar tu acceso ahora. Revisa tu conexión.', 'error', { id: 'permiso' });
+      console.warn('La escucha del permiso falló', fallo?.code ?? fallo);
+    },
   });
 }
 
