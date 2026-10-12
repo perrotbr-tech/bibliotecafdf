@@ -79,7 +79,11 @@ test('A-24 contra el emulador, ?ahora= mueve la fecha de la barra', async ({ pag
 
 test('A-24 un valor que no se entiende se ignora y se usa la hora del servidor', async ({ page }) => {
   await abrirYEntrar(page, '/?ahora=el%20s%C3%A1bado');
+  // Con el parámetro ignorado, la hora sale del servidor: hay que esperar a
+  // que llegue la muestra antes de preguntar por ella.
+  await expect(page.locator('#fecha-hoy')).not.toHaveText('Hora pendiente', { timeout: 20_000 });
   await expect(page.locator('#fecha-hoy')).not.toHaveText('sábado 10 de octubre de 2026');
+
   const estado = await page.evaluate(() => globalThis.__biblioteca.reloj());
   expect(estado.hayHora).toBe(true);
 });

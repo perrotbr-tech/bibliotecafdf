@@ -114,8 +114,16 @@ test('A-17 sin conexión los botones de escritura quedan deshabilitados y se avi
  * tráfico para que la escritura no llegue, y después se corta la conexión para
  * que el SDK deje de reintentar.
  */
-async function cortarLaRed(page, context) {
+async function bloquearFirestore(page) {
   await page.route(HABLA_CON_FIRESTORE, (ruta) => ruta.abort('connectionfailed'));
+}
+
+/**
+ * Se queda sin conexión DESPUÉS del toque, nunca antes: sin conexión la app
+ * deshabilita los botones de escritura (A-17), así que no habría toque que
+ * dejar a medias.
+ */
+async function quedarSinConexion(context) {
   await context.setOffline(true);
 }
 
@@ -143,11 +151,13 @@ test('A-18 si la red se corta entre el toque y la respuesta, no hay confirmació
   await llenarFormulario(page, { correo: 'cortada@example.com', nombre: 'Red Cortada' });
   await page.getByTestId('agregar-voluntario').click();
 
-  await expect(page.getByTestId('agregar-voluntario')).toBeDisabled();
+  // Mientras la transacción no termina, el botón dice «Guardando…» y no acepta
+  // otro toque; a los 5 segundos aparece el aviso de demora.
+  await expect(page.getByTestId('agregar-voluntario')).toHaveText('Guardando…');
   await expect(page.getByText('Confirmando… no cierres la app')).toBeVisible({ timeout: 20_000 });
 
   // Recién ahora se corta de verdad, para que el SDK deje de reintentar.
-  await context.setOffline(true);
+  await quedarSinConexion(context);
 
   await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 40_000 });
   await expect(page.getByText(/quedó agregado/)).toHaveCount(0);
@@ -162,8 +172,9 @@ test('A-39 si la comprobación tampoco se puede hacer, no se afirma que no se gu
   await abrirVoluntarios(page);
   await llenarFormulario(page, { correo: 'dudosa@example.com', nombre: 'Dudosa' });
 
-  await cortarLaRed(page, context);
+  await bloquearFirestore(page);
   await page.getByTestId('agregar-voluntario').click();
+  await quedarSinConexion(context);
 
   const mensaje = page.getByTestId('error-formulario');
   await expect(mensaje).toBeVisible({ timeout: 40_000 });
@@ -177,8 +188,9 @@ test('A-19 si la escritura sí se había aplicado, al volver se reconoce y no se
   await abrirVoluntarios(page);
   await llenarFormulario(page, { correo: 'aplicada@example.com', nombre: 'Sí Quedó' });
 
-  await cortarLaRed(page, context);
+  await bloquearFirestore(page);
   await page.getByTestId('agregar-voluntario').click();
+  await quedarSinConexion(context);
   await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 40_000 });
 
   // La intención quedó anotada: solo identificadores, nada personal.
@@ -206,8 +218,9 @@ test('A-20 si la escritura no se aplicó, al volver se dice que no se guardó', 
   await abrirVoluntarios(page);
   await llenarFormulario(page, { correo: 'perdida@example.com', nombre: 'No Quedó' });
 
-  await cortarLaRed(page, context);
+  await bloquearFirestore(page);
   await page.getByTestId('agregar-voluntario').click();
+  await quedarSinConexion(context);
   await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 40_000 });
 
   await devolverLaRed(page, context);
@@ -222,8 +235,9 @@ test('A-36 si el documento lo creó otra operación, no se presenta como éxito 
   await abrirVoluntarios(page);
   await llenarFormulario(page, { correo: 'ajena@example.com', nombre: 'De Otro' });
 
-  await cortarLaRed(page, context);
+  await bloquearFirestore(page);
   await page.getByTestId('agregar-voluntario').click();
+  await quedarSinConexion(context);
   await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 40_000 });
 
   // Otra persona, en otro teléfono, creó ese mismo correo.

@@ -178,8 +178,18 @@ async function alCambiarSesion(usuario) {
     datos: app.datos,
     sesion: usuario,
     alCambiar: (permiso) => {
-      const entraAhora = permiso.estado === 'adentro' && app.permiso.estado !== 'adentro';
-      const perdioAcceso = permiso.estado !== 'adentro' && app.permiso.estado === 'adentro';
+      const antes = app.permiso;
+      const entraAhora = permiso.estado === 'adentro' && antes.estado !== 'adentro';
+      const perdioAcceso = permiso.estado !== 'adentro' && antes.estado === 'adentro';
+      // La escucha también avisa por cambios de metadatos, por ejemplo al
+      // perder la conexión. Si el permiso es el mismo, NO se vuelve a dibujar:
+      // un redibujado borraría lo que la persona está escribiendo.
+      const cambio =
+        antes.estado !== permiso.estado ||
+        antes.rol !== permiso.rol ||
+        antes.correo !== permiso.correo ||
+        antes.nombre !== permiso.nombre;
+
       app.permiso = permiso;
 
       if (perdioAcceso) {
@@ -187,7 +197,7 @@ async function alCambiarSesion(usuario) {
         olvidarTodo({ conservarPermiso: true });
       }
       if (entraAhora) alEntrar();
-      dibujar();
+      if (cambio) dibujar();
     },
     alFallar: (fallo) => {
       // Un problema de red no cierra la sesión de nadie.
