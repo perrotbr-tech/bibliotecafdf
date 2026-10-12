@@ -3,7 +3,9 @@ name: Pruebas
 on:
   pull_request:
   push:
-    branches: [main]
+    # En cada solicitud de cambios, como pide la Etapa 1. También al empujar una
+    # rama de etapa, para no tener que abrir el PR solo para ver las pruebas.
+    branches: [main, 'etapa-*']
 
 permissions:
   contents: read
