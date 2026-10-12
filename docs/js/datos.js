@@ -242,11 +242,15 @@ export function crearDatos({ db, sdk, red = globalThis.navigator, contadores = c
     let avisoDemora = null;
     if (alTardar) avisoDemora = setTimeout(() => alTardar(MENSAJES.demora), MS_PARA_AVISAR_DEMORA);
 
+    // Los reintentos se cuentan al final: el primer intento no es un reintento,
+    // y una transacción que falla también deja su cuenta correcta.
+    let intentos = 0;
+
     try {
       const valor = await sdk.runTransaction(
         db,
         async (transaccion) => {
-          contadores.sumar('reintentosDeTransaccion');
+          intentos += 1;
           return await cuerpo(transaccion, {
             leer: async (ruta) => {
               const instantanea = await transaccion.get(sdk.doc(db, ruta));
@@ -260,8 +264,6 @@ export function crearDatos({ db, sdk, red = globalThis.navigator, contadores = c
         },
         { maxAttempts: MAX_INTENTOS_TRANSACCION },
       );
-      // El primer intento no es un reintento.
-      contadores.sumar('reintentosDeTransaccion', -1);
       return { estado: 'exito', mensaje: MENSAJES.exito, operacionId, valor, esExito: true };
     } catch (error) {
       // Un conflicto que vio la propia transacción: mensaje concreto, sin
@@ -283,6 +285,7 @@ export function crearDatos({ db, sdk, red = globalThis.navigator, contadores = c
       return { estado: clasificado.resultado, mensaje: clasificado.mensaje, esExito: clasificado.esExito, operacionId, error };
     } finally {
       if (avisoDemora) clearTimeout(avisoDemora);
+      contadores.sumar('reintentosDeTransaccion', Math.max(0, intentos - 1));
     }
   }
 

@@ -10,6 +10,11 @@ on:
 permissions:
   contents: read
 
+# Un empujón nuevo a la misma rama deja sin sentido la corrida anterior.
+concurrency:
+  group: pruebas-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pruebas:
     runs-on: ubuntu-latest

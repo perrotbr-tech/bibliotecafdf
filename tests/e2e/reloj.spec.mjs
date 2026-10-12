@@ -16,12 +16,15 @@ test.beforeEach(async () => {
 });
 
 test('A-22 con el reloj del teléfono adelantado tres días, la barra muestra la fecha real', async ({ page }) => {
-  // Se adelanta el reloj del navegador antes de cargar la app.
-  await page.addInitScript(() => {
+  await abrirYEntrar(page);
+
+  // Se adelanta el reloj del teléfono DESPUÉS de entrar, para no pelear con la
+  // caducidad del token de la sesión, que es otro asunto. Lo que se prueba es
+  // que la hora de la app no sale de aquí.
+  await page.evaluate(() => {
     const TresDias = 3 * 24 * 60 * 60 * 1000;
     const RelojReal = Date;
-    // eslint-disable-next-line no-global-assign
-    Date = class extends RelojReal {
+    globalThis.Date = class extends RelojReal {
       constructor(...argumentos) {
         super(...(argumentos.length === 0 ? [RelojReal.now() + TresDias] : argumentos));
       }
@@ -30,8 +33,8 @@ test('A-22 con el reloj del teléfono adelantado tres días, la barra muestra la
       }
     };
   });
-
-  await abrirYEntrar(page);
+  await page.evaluate(() => globalThis.__biblioteca.invalidarReloj('se movió el reloj del teléfono'));
+  await page.evaluate(() => globalThis.__biblioteca.sincronizarReloj());
 
   const estado = await page.evaluate(() => globalThis.__biblioteca.reloj());
   expect(estado.hayHora).toBe(true);
