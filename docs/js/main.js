@@ -234,8 +234,16 @@ function alEntrar() {
   app.soltarConfig();
   app.soltarConfig = app.datos.escucharDocumento(rutas.configApp(), (configuracion) => {
     ponerNombreBiblioteca(configuracion?.nombreBiblioteca ?? NOMBRE_ENTRADA);
-    // Las categorías las necesita el catálogo para sus tejuelos y su filtro.
-    if (Array.isArray(configuracion?.categorias)) app.categorias = configuracion.categorias;
+    // Las categorías las necesita el catálogo para sus fichas y sus tejuelos.
+    // La escucha avisa también por cambios de metadatos —al perder o recuperar
+    // la conexión—, así que se compara antes de avisar: repintar los filtros
+    // sin que hayan cambiado soltaría el foco de quien está filtrando.
+    if (!Array.isArray(configuracion?.categorias)) return;
+    const antes = JSON.stringify(app.categorias);
+    const ahora = JSON.stringify(configuracion.categorias);
+    if (antes === ahora) return;
+    app.categorias = configuracion.categorias;
+    app.vistaActual?.alCambiarCategorias?.(app.categorias);
   });
 
   app.soltarReloj();

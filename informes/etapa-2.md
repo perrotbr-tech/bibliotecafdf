@@ -7,14 +7,24 @@ línea y la sección 10 se actualizan con cada ronda, así que lo que se ensaya 
 el último commit de la rama; el informe no toca código. Los datos completos de
 la entrega están en la sección 10.
 
-**No hubo contraprueba externa.** El dueño decidió trabajar solo en esta sesión,
-así que no hay una mirada ajena sobre este código. Lo digo una vez y no lo
-disimulo: una revisión del propio implementador no es una contraprueba
-(AGENTS.md). Lo que sí hay son 318 pruebas ejecutadas, y varias de ellas
-encontraron errores reales mientras se construía; están en la sección 2.3.
+**Hubo contraprueba externa.** La hizo una sesión distinta sobre `f64b78f`, y su
+informe está en `informes/contraprueba-etapa-2.md`. Corrió las seis suites en
+otra máquina, revisó las zonas del encargo y entregó **tres hallazgos**: uno a
+corregir antes de producción y dos menores. Los tres están corregidos en este
+SHA, con prueba automatizada cada uno. La sección 2.4 los detalla junto a los
+quince que encontró la revisión del diff antes de esa contraprueba.
+
+**Lo que la contraprueba confirmó sin hallazgos**, y que es tan importante como
+lo que encontró: el enlace bidireccional del contador —no halló ninguna
+secuencia que cree dos lectores con la misma clave, ni un lector sin clave, ni
+un contador subido sin lector—, la identidad de la operación en el reintento, el
+cálculo de cuatro préstamos del fixture hecho a mano, los bordes del cambio de
+hora, la cuenta de 10 accesos verificada a mano, la cobertura real de los 43
+casos y que no hay nada de las etapas 3 a 7 adelantado.
 
 **Estado: los 43 casos del documento están escritos y ejecutados, y pasan.** No
-queda ninguno pendiente de automatizar. Lo que queda es del dueño: la prueba de
+queda ninguno pendiente de automatizar, y los dieciocho hallazgos de las dos
+revisiones están corregidos. Lo que queda es del dueño: la prueba de
 humo en el proyecto de ensayo (sección 6) y la carga de los datos reales.
 
 **Un límite del documento NO se cumple, y conviene leerlo antes de nada:** abrir
@@ -40,7 +50,7 @@ con 736 ms.
   cambiar nombre, agregar libro, editar libro y dar de baja. Cada una con la
   forma de guardar de la Etapa 1 —transacción, botón bloqueado, éxito solo con
   respuesta del servidor, comprobación por identidad si el resultado queda
-  incierto— y el alta con su propio reintento, que la sección 2.3 explica.
+  incierto— y el alta con su propio reintento, que la sección 2.4 explica.
 - **Pantallas**: Catálogo con buscador, fichas de categoría, selector de estado,
   40 filas y «Mostrar más»; ficha de libro; agregar y editar libro; Lectores
   dentro de «Más»; ficha de lector; inscribir lector con su casilla obligatoria;
@@ -53,7 +63,7 @@ con 736 ms.
   reanudable. Debajo, `scripts/comun/` con el destino, el bloqueo de
   mantenimiento, el manifiesto, el recorrido de la biblioteca y la serialización
   canónica.
-- **Pruebas**: 140 de unidad, 72 de reglas, 24 de scripts, 76 de extremo a
+- **Pruebas**: 143 de unidad, 72 de reglas, 25 de scripts, 81 de extremo a
   extremo y 6 de carga.
 
 ## 2. Casos de prueba
@@ -118,8 +128,8 @@ revisar-repositorio: sin hallazgos
 
 ### npm run prueba:unidad
 ```
-# tests 140
-# pass 140
+# tests 143
+# pass 143
 # fail 0
 ```
 
@@ -132,15 +142,20 @@ revisar-repositorio: sin hallazgos
 
 ### npm run prueba:scripts (firebase emulators:exec, demo-biblioteca)
 ```
-# tests 24
-# pass 24
+# tests 25
+# pass 25
 # fail 0
 ```
 
 ### npm run prueba:e2e (Playwright, Chromium, contra el emulador)
 ```
-76 passed (1.8m)
+81 passed (1.9m)
 ```
+
+Antes de la primera corrida hace falta `npx playwright install chromium`. La
+contraprueba lo encontró por el camino difícil: su primer `npm test` dio las
+cuatro primeras suites en verde y dejó e2e y carga sin correr por falta del
+binario. Ya está dicho en el README.
 
 ### npm run prueba:carga
 ```
@@ -180,8 +195,9 @@ dueño en un teléfono real, y sigue pendiente.
 
 ### 2.3 Qué encontraron las pruebas al construir
 
-No es una lista de cosas que podrían pasar: es lo que falló de verdad y hubo
-que arreglar.
+Esto es lo que falló mientras se construía, antes de las dos revisiones. No es
+una lista de cosas que podrían pasar: es lo que falló de verdad y hubo que
+arreglar.
 
 1. **Un alta que pierde la carrera del contador termina en
    `permission-denied`, no en un aborto reintentable.** Esto es lo más
@@ -240,7 +256,131 @@ que arreglar.
    «AnaMaría» comparten clave y «Ana María» no. Y `INFO0281X` es un código
    válido según base §5: hasta 4 letras, 3 o 4 dígitos y una letra final.
 
-### 2.4 Comprobaciones estáticas
+### 2.4 Las dos revisiones del código, y lo que encontraron
+
+Esta etapa pasó por dos miradas después de que las pruebas estuvieran en verde:
+una revisión del diff completo hecha por el implementador —que NO es una
+contraprueba, y así quedó dicho— y la contraprueba externa de otra sesión. La
+primera encontró quince cosas; la segunda, tres. Las dieciocho están corregidas
+en este SHA, y cada una dejó su prueba.
+
+**Lo que encontró la revisión del diff.** Las cinco primeras podían perder o
+corromper datos, y son las que más importan:
+
+1. **Un carácter de control se convertía en «ñ».** La clave de un nombre
+   protege la ñ con un carácter de control mientras quita los diacríticos, y
+   ese carácter no se limpiaba antes: un nombre con un `\u0001` daba la misma
+   clave que uno con ñ. Dos personas distintas colapsaban en un solo documento
+   de clave, y las reglas no podían verlo porque solo comprueban la FORMA de la
+   clave. Los controles ahora salen primero.
+2. **Dos respaldos del mismo minuto se pisaban.** El nombre del archivo tenía
+   precisión de minutos y se escribía sin comprobar si ya existía. El caso que
+   importa es reintentar un `--reemplazar` que falló: el archivo pisado era la
+   única copia de los datos que acababan de borrarse. Ahora el nombre lleva
+   segundos y la escritura no sobrescribe nada: si el archivo existe, prueba
+   `-2`, `-3`.
+3. **Había un hueco escribible entre el respaldo y el borrado.** El respaldo
+   previo de `--reemplazar` tomaba y soltaba su propio bloqueo, y recién
+   entonces el reemplazo tomaba el suyo. En ese intervalo la app podía escribir,
+   y esos documentos se borraban sin figurar en el respaldo verificado: justo la
+   «copia incoherente mientras otra persona escribe» que el contrato §6
+   prohíbe. Ahora el respaldo previo corre DENTRO del bloqueo de quien lo pide,
+   con su token.
+4. **La restauración soltaba el candado con una escritura directa**, sin
+   comprobar el token, de modo que podía borrar el bloqueo de otro trabajo. Y si
+   fallaba al cerrar el manifiesto justo después, el mensaje aseguraba que el
+   mantenimiento seguía puesto cuando ya no lo estaba. Ahora el manifiesto se
+   cierra antes y el candado se suelta con `liberar`, que comprueba el token.
+5. **Un alta denegada de verdad decía «Inténtalo de nuevo».** El reintento del
+   alta trataba cualquier `permission-denied` como carrera perdida, así que con
+   el mantenimiento puesto o con una cuenta recién desactivada se gastaban tres
+   transacciones y se invitaba a repetir algo que no podía funcionar. Ahora se
+   distingue mirando el contador: si no se movió, no hubo carrera, y el mensaje
+   es el que corresponde —incluido uno propio para el mantenimiento—.
+
+Y las diez siguientes, por orden de lo que se nota:
+
+6. **Un libro de baja no se podía reactivar.** La pantalla de confirmación
+   prometía «Se puede volver a activar editándolo» y el formulario de edición no
+   tenía la casilla: el libro quedaba atrapado fuera de «Disponibles» para
+   siempre. Las reglas sí permitían el cambio; la pantalla no lo ofrecía.
+7. **Las escrituras de esta etapa no anotaban su intención**, así que la
+   recuperación tras recargar del contrato §3 —que la Etapa 1 construyó— nunca
+   se enteraba de ellas. Ahora la anotan cuatro de las cinco. La quinta, el alta
+   de un lector, NO la anota, y es deliberado: lo único que la localiza es su
+   clave de nombre, y una clave es el nombre normalizado, que el contrato
+   prohíbe guardar en `sessionStorage`. Esa asimetría queda declarada aquí y en
+   el código.
+8. **El catálogo repintaba sus filtros con cada evento de metadatos.** Escuchaba
+   `config/app` por su cuenta, sin el filtro de «no cambió nada» que su otra
+   escucha sí tenía: una pérdida de señal bastaba para soltar el foco de quien
+   estaba filtrando y volver a preparar los cinco mil libros. Ahora la escucha
+   es una sola, la de `main.js`, que avisa solo cuando las categorías de verdad
+   cambian; y si la categoría filtrada desaparece de los ajustes, el filtro
+   vuelve a «Todas» en vez de dejar una lista vacía sin explicación.
+9. **Los seis colores del tejuelo eran hexadecimales fijos sin tema oscuro.**
+   En un teléfono en modo oscuro, el catálogo mostraba seis manchas casi blancas
+   —las únicas de la pantalla—, mientras el color de reserva, que sí usaba
+   tokens, se adaptaba bien. Ahora son tokens con sus valores oscuros.
+10. **Un `devuelto` que no fuera booleano se tragaba en silencio.** Un «si» de
+    texto se convertía en falso, el préstamo quedaba abierto y el libro
+    aparecía prestado para siempre. Los libros ya rechazaban una `baja` no
+    booleana; los préstamos ahora también.
+11. **Una fecha disparatada hacía caminar el calendario entero.** Un `vence`
+    mal tecleado como `9999-10-17` pasaba la validación de formato y la cuenta
+    de sábados recorría tres millones de días, en el paso que solo debía validar
+    y no escribir nada. La cuenta ahora corta en el tope que le interesa a quien
+    pregunta.
+12. **Un catálogo vacío decía que la búsqueda no encontró nada.** Una biblioteca
+    sin libros todavía no es una búsqueda sin resultados, y aconsejar «prueba
+    con menos palabras» a quien no escribió nada no ayuda. La lista de lectores
+    ya distinguía los dos vacíos; el catálogo no.
+13. **La hoja emergente se apilaba.** Abrir el formulario de teléfono desde la
+    ficha de un lector dejaba dos hojas vivas, entradas muertas de historial y
+    un formulario tapando la lista que lo abrió. Ahora una hoja reemplaza a la
+    anterior y solo la primera añade una entrada.
+14. **`prepararLibros` calculaba un prefijo que nadie leía**: cinco mil
+    expresiones regulares por evento de escucha para un campo que solo
+    comprobaba su propia prueba. Fuera.
+15. **Dos bucles de borrado podían girar para siempre** si un borrado no
+    avanzaba, con el mantenimiento puesto. Ahora una pasada que no reduce la
+    cuenta se detiene con un error que dice cuántos documentos quedan.
+
+**Lo que encontró la contraprueba externa**, con su criterio de corrección
+cumplido en los tres casos:
+
+- **H-01, a corregir antes de producción.** La carga comparaba una huella del
+  contenido antes de reanudar, y la restauración solo comparaba la RUTA del
+  archivo. Sustituir el contenido de ese archivo por otro respaldo —mismo
+  nombre— y reanudar dejaba una base híbrida: documentos del primer respaldo ya
+  escritos, los del segundo pendientes. Ahora el manifiesto de la restauración
+  guarda el SHA-256 del respaldo y lo compara. La prueba que lo fija está en
+  `tests/scripts/respaldo.test.mjs`, y se comprobó que **falla sin la
+  corrección y pasa con ella**.
+- **H-02, menor.** El mismo hallazgo que el número 5 de la lista de arriba, que
+  la revisión del diff había encontrado horas antes y ya estaba corregido. La
+  contraprueba añadió un caso que faltaba: cuando la cuenta pierde el permiso,
+  ni el contador se puede leer, y ahí también hay que devolver la denegación tal
+  cual en vez de reetiquetarla como carrera.
+- **H-03, menor, sobre este informe.** El «1,04 ms por documento» se presentaba
+  como dato de la etapa sin anclarlo a la máquina. En la del revisor dio 0,67.
+  La sección 3 ahora dice de dónde sale cada cifra y qué parte es del diseño.
+
+**Y una cosa que la contraprueba señaló sin llamarla hallazgo**, con razón: una
+prueba se llamaba «una hoja dentro de otra se cierra de a una con Atrás», y lo
+que la hoja hace es reemplazar, no apilar. El nombre describía mal el
+comportamiento. Cambiado.
+
+**Lo que se revisó y se decidió NO cambiar**, para que quede dicho: el recorrido
+de la biblioteca pregunta por subcolecciones documento por documento, y eso son
+unas 11.000 llamadas extra en una base de 11.000 documentos. Es el precio de que
+el respaldo no se pueda saltar una subcolección en silencio, que es lo que el
+contrato §6 exige; el modelo de esta app no usa ninguna, pero el respaldo no
+puede dar eso por supuesto. Para la biblioteca real —unos 250 documentos— son
+250 llamadas que no se notan, y el volumen de 11.000 solo existe en la prueba de
+carga, que no respalda.
+
+### 2.5 Comprobaciones estáticas
 
 `scripts/revisar-repositorio.mjs` pasa sin hallazgos sobre el commit entregado,
 y **encontró algo real por el camino**: los textos de ayuda de los formularios
@@ -280,6 +420,11 @@ sin que cambie nada del código.
 | Abrir Lectores, 100 lectores (tamaño real) | 498 ms | 304–500 | 1.000 ms | **Sí** |
 | Abrir Catálogo, 5.000 libros | 5.225 ms | 5.206–6.158 | 1.000 ms | **No** |
 | Abrir Lectores, 3.000 lectores | 2.935 ms | 2.496–3.124 | 1.000 ms | **No** |
+
+Las mismas medidas en la máquina de la contraprueba, para que se vea cuánto
+depende del host: Catálogo 150 → 407 ms; Lectores 100 → 166 ms; Catálogo 5.000 →
+3.373 ms; Lectores 3.000 → 1.695 ms; tecla del catálogo → 9 ms; tecla de
+lectores → 5 ms. Los veredictos no cambian.
 | Abrir Voluntarios, 202 voluntarios, en frío | 580 ms | 437–794 | 1.000 ms | **A veces**; otra corrida dio 1.098 ms de mediana |
 | La misma lista con los documentos ya en el SDK | 510 ms | 445–629 | — | referencia |
 
@@ -291,8 +436,16 @@ normalización al filtro, cada tecla pasaría de milisegundos a casi un segundo;
 una prueba de unidad que vigila ese orden de magnitud.
 
 **El límite de apertura no se cumple al volumen de la etapa, y no es algo que se
-arregle afinando.** Abrir cuesta **1,04 ms por documento**, proporcional al
-tamaño de la colección, porque la pantalla la lee en vivo. El desglose, medido:
+arregle afinando.** Abrir cuesta **1,04 ms por documento EN ESTE CONTENEDOR**,
+proporcional al tamaño de la colección, porque la pantalla la lee en vivo.
+
+Ese milisegundo no es una constante del diseño, y conviene no citarlo como tal:
+la contraprueba midió lo mismo en otra máquina y le dio **0,67 ms por
+documento**, con aperturas entre un 35 % y un 40 % más rápidas (Catálogo 5.000:
+3.373 ms en vez de 5.225). Lo que sí es del diseño, y se reproduce en las dos
+máquinas, es la FORMA: la apertura crece en proporción al número de documentos,
+el límite por tecla se cumple con holgura y el de apertura a 5.000 no se cumple
+en ninguna de las dos. El desglose, medido aquí:
 
 - El emulador entrega esos 5.000 documentos al **Admin SDK en 330 ms**, sin
   reglas, sin navegador y sin freno.
@@ -427,7 +580,11 @@ Ninguna de estas la puede hacer el agente, y ninguna está hecha.
 - **Nada se ha probado en un proyecto real.** Todo corre contra
   `demo-biblioteca` en el emulador. El agente no despliega, no lee credenciales
   de producción y no fusiona a `main` (AGENTS.md).
-- **No hay contraprueba independiente de esta etapa.**
+- **La contraprueba revisó el SHA `f64b78f`, no este.** Sus tres hallazgos están
+  corregidos aquí, y su propio informe lo pide expresamente: «tras corregir,
+  contraprobar de nuevo el mismo SHA de corrección; no bastan afirmaciones
+  documentales». Esa segunda pasada está pendiente, y es corta: son tres
+  hallazgos con prueba cada uno.
 - **El catálogo no escala más allá de unos mil documentos**, por tiempo y por
   cuota (sección 3).
 - **Las reglas no comprueban dos cosas, a propósito y declarado en su
@@ -489,7 +646,7 @@ Ninguna de estas la puede hacer el agente, y ninguna está hecha.
 | Rama | `etapa-2` |
 | SHA entregado | `dcd9e5f`, el último commit de código; encima solo va este informe |
 | Commits de la etapa | `84c0e64` puras · `6e351fd` reglas · `33decf6` scripts · `2b556c6` pantallas y concurrencia · `644f9c0` informe · `d5a8e69` repaso del diff · `dcd9e5f` el escáner y los archivos nuevos |
-| Corridas de integración continua | 26, 27, 28 y 30 en verde; la **29 falló** por el escáner (sección 2.4) y la 31 corre sobre el SHA entregado |
+| Corridas de integración continua | 26, 27, 28 y 30 en verde; la **29 falló** por el escáner (sección 2.5) y la 31 corre sobre el SHA entregado |
 | Node | 22.22.0 (local) y 22 en la integración continua |
 | npm | 10.9.4 |
 | Java | OpenJDK 21.0.12.1 local; Temurin 21 en la integración continua |
@@ -502,9 +659,11 @@ Ninguna de estas la puede hacer el agente, y ninguna está hecha.
 | @playwright/test | 1.56.1 |
 | Chromium | 141.0.7390.37 |
 | Proyecto usado | `demo-biblioteca`, solo emulador |
-| Pruebas ejecutadas | **318**: 140 unidad, 72 reglas, 24 scripts, 76 extremo a extremo, 6 carga |
+| Pruebas ejecutadas | **327**: 143 unidad, 72 reglas, 25 scripts, 81 extremo a extremo, 6 carga |
 | Pruebas en rojo | ninguna |
 | Casos del documento cubiertos | **43 de 43**, todos automatizados y ejecutados |
 | Límites del documento no cumplidos | abrir con 5.000 libros y 3.000 lectores (sección 3) |
 | Datos personales versionados | ninguno; el escáner pasa sin hallazgos |
-| Contraprueba independiente | **no hubo** |
+| Contraprueba independiente | **sí**, sobre `f64b78f`, en `informes/contraprueba-etapa-2.md`; tres hallazgos, los tres corregidos |
+| Hallazgos de las dos revisiones | 18 en total: 15 de la revisión del diff y 3 de la contraprueba; todos corregidos con prueba |
+| Pendiente de la contraprueba | la segunda pasada sobre el SHA de las correcciones |

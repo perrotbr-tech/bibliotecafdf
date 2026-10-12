@@ -85,9 +85,15 @@ export function sustituirUnaPasada(plantilla, valores) {
  * `pena`: por eso la ñ se protege antes de descomponer.
  */
 export function claveDeNombre(nombre) {
-  // A forma compuesta primero: una «ñ» escrita como n + tilde combinante tiene
-  // que llegar entera a la protección de abajo.
-  let texto = String(nombre ?? '').normalize('NFC').toLowerCase();
+  // Los caracteres de control salen PRIMERO, y esto no es un detalle: la marca
+  // que protege la ñ más abajo es ella misma un carácter de control, así que un
+  // nombre que trajera uno terminaba convertido en «ñ» —«a\u0001b» daba la
+  // misma clave que «añb»— y dos personas distintas colapsaban en una. Lo
+  // encontró la revisión del diff de la Etapa 2.
+  //
+  // A forma compuesta después: una «ñ» escrita como n + tilde combinante tiene
+  // que llegar entera a esa protección.
+  let texto = escaparTexto(nombre).normalize('NFC').toLowerCase();
   texto = texto.replace(/ı/gu, 'i');
   // La ñ se aparta mientras se quitan los diacríticos, y vuelve después.
   const MARCA = '\u0001';

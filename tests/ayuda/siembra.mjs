@@ -247,3 +247,9 @@ export async function sembrarVolumen({ libros = 0, lectores = 0 } = {}) {
   }
   return { libros, lectores };
 }
+
+/** Cambia las categorías de `config/app`, como lo haría otro teléfono. */
+export async function cambiarCategorias(categorias) {
+  const { db: base } = await baseDemo();
+  await base.doc(rutas.configApp()).update({ categorias });
+}

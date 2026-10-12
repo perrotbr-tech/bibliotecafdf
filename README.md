@@ -64,9 +64,15 @@ npm run prueba:carga    # volumen y mediciones
 Cada prueba automatizada lleva en su nombre el identificador del caso del
 documento de la etapa (`A-01`, `A-18`, …), así se puede ir del informe al código.
 
-Las pruebas de extremo a extremo necesitan que el navegador descargue el SDK de
-Firebase desde `www.gstatic.com`. En una red que bloquee ese host, `prueba:e2e`
-y `prueba:carga` no corren; las de unidad, reglas y scripts sí.
+Antes de la primera corrida de `prueba:e2e` o `prueba:carga` hace falta el
+navegador: `npx playwright install chromium`. Sin él, Playwright falla con
+«Executable doesn't exist» y esas dos suites no corren aunque todo lo demás
+pase.
+
+Las pruebas de navegador bajan el SDK de Firebase desde `www.gstatic.com`, como
+la app en producción. En una red que bloquee ese host, `tests/ayuda/navegador.mjs`
+sirve los mismos archivos de la misma versión desde `node_modules/firebase` y lo
+anuncia en la salida; lo que no queda probado así es la descarga real.
 
 ## Scripts de administración
 

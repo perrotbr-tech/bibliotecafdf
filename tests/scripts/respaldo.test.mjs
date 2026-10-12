@@ -7,7 +7,7 @@
 // las dos mitades queden en el mismo lugar.
 import { after, before, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, writeFile } from 'node:fs/promises';
+import { copyFile, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { assertFails } from '@firebase/rules-unit-testing';
@@ -28,6 +28,21 @@ import {
   vaciar,
 } from '../ayuda/scripts.mjs';
 import { abrirEntorno, comoCuenta, loteDeAlta } from '../ayuda/reglas.mjs';
+
+/** Un libro puesto sin pasar por reglas, para cambiar el contenido del respaldo. */
+async function ponerLibroSinReglas(base, campos, codigo) {
+  await base.doc(rutas.libro(codigo)).set({
+    codigo,
+    titulo: `Libro ${codigo}`,
+    autor: '',
+    categoria: 'Infantil',
+    baja: false,
+    prestamoAbierto: null,
+    vecesPrestado: 0,
+    creadoEn: campos.serverTimestamp(),
+    creadoPor: 'prueba',
+  });
+}
 
 let db;
 let FieldValue;
@@ -307,4 +322,59 @@ test('C-41 un corte a mitad de la restauración deja la base cerrada y el manifi
   assert.equal(JSON.parse(await readFile(rutaManifiesto, 'utf8')).estado, 'terminado');
   assert.equal((await db.doc(rutas.configControl()).get()).data().bloqueo, null);
   assert.ok((await db.doc(rutas.libro('INF006')).get()).exists);
+});
+
+test('H-01 reanudar con OTRO respaldo en la misma ruta se detiene, no mezcla dos bases', async () => {
+  // Lo pidió la contraprueba de la Etapa 2: la carga comparaba una huella del
+  // contenido y la restauración solo la ruta, así que sustituir el archivo por
+  // otro respaldo con el mismo nombre dejaba una base híbrida —documentos del
+  // respaldo A ya escritos, los del B pendientes—. Esta prueba falla sin la
+  // comprobación de huella y pasa con ella.
+  await sembrarNegocio(db, FieldValue);
+  const salida = archivoEn('respaldo-h01.json');
+  await respaldar({ db, FieldValue, proyecto, por: DUENO, salida });
+
+  // Un segundo respaldo, con un libro más: contenido distinto.
+  await ponerLibroSinReglas(db, FieldValue, 'INF008');
+  const otro = archivoEn('respaldo-h01-otro.json');
+  await respaldar({ db, FieldValue, proyecto, por: DUENO, salida: otro });
+
+  // Se corta una restauración del primero.
+  await vaciar(db);
+  const rutaManifiesto = manifiestoEn('manifiesto-h01.json');
+  const cortada = baseQueCortaEnElLote(db, 2);
+  const error = await restaurar({
+    db: cortada,
+    FieldValue,
+    Timestamp,
+    proyecto,
+    archivo: salida,
+    por: DUENO,
+    lote: 2,
+    rutaManifiesto,
+  }).catch((capturado) => capturado);
+  assert.match(error.message, /corte simulado/u);
+
+  // Y ahora se pone el OTRO respaldo en la misma ruta y se pide reanudar.
+  await copyFile(otro, salida);
+  await assert.rejects(
+    () =>
+      restaurar({
+        db,
+        FieldValue,
+        Timestamp,
+        proyecto,
+        archivo: salida,
+        por: DUENO,
+        reanudar: true,
+        lote: 2,
+        rutaManifiesto,
+      }),
+    /es de otro respaldo/u,
+  );
+
+  // La base quedó como estaba: a medias y cerrada, sin mezclar.
+  const bloqueo = (await db.doc(rutas.configControl()).get()).data().bloqueo;
+  assert.equal(bloqueo.tipo, 'mantenimiento');
+  assert.equal((await db.doc(rutas.libro('INF008')).get()).exists, false);
 });

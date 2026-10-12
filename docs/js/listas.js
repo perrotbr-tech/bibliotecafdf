@@ -55,17 +55,20 @@ export const TEXTO_DE_ESTADO = {
 };
 
 /**
- * Prepara los libros para la pantalla: texto de búsqueda, estado, prefijo de
- * su categoría y orden por código.
+ * Prepara los libros para la pantalla: texto de búsqueda, estado y orden por
+ * código.
+ *
+ * Llevaba también el prefijo de la categoría, que nadie leía: el color del
+ * tejuelo sale de `claseDeTejuelo` y el código sugerido, de `categorias`. Eran
+ * cinco mil expresiones regulares por evento de escucha para nada, y la
+ * revisión del diff lo hizo notar.
  */
-export function prepararLibros(documentos, { categorias = [] } = {}) {
-  const prefijos = new Map(categorias.map((una) => [una?.nombre, una?.prefijo]));
+export function prepararLibros(documentos) {
   return [...(documentos ?? [])]
     .map((libro) => ({
       ...libro,
       codigo: libro.codigo ?? libro.id ?? '',
       estado: estadoDeLibro(libro),
-      prefijo: prefijos.get(libro.categoria) ?? PARTES_DE_CODIGO.exec(normalizarCodigo(libro.codigo ?? libro.id))?.[1] ?? '',
       busqueda: prepararBusquedaDeLibro(libro),
     }))
     .sort((uno, otro) => compararCodigos(uno.codigo, otro.codigo));

@@ -310,7 +310,11 @@ test('la ficha del lector se cierra con Atrás y no se sale de Lectores', async 
   await expect(page.getByTestId('lectores')).toBeVisible();
 });
 
-test('una hoja dentro de otra se cierra de a una con Atrás', async ({ page }) => {
+test('abrir una hoja desde otra la REEMPLAZA, y un Atrás vuelve a la lista', async ({ page }) => {
+  // El nombre importa: la hoja no se apila, se reemplaza, y por eso un solo
+  // Atrás devuelve a la lista y no a la ficha. Es una decisión, no un
+  // descuido, y la contraprueba de la Etapa 2 hizo notar que el nombre
+  // anterior —«se cierra de a una»— describía mal lo que pasa.
   await sembrarBaseDemo({ lectores: [{ id: 'L001', nombre: 'Rafaela Toledo' }] });
   await abrirLectores(page);
   await page.getByTestId('lector-L001').click();

@@ -216,7 +216,14 @@ export function validar(archivo, { hoy = diaEnChile(new Date()) } = {}) {
       rechazos.push(`El préstamo ${numero} vence el ${vence}, antes de salir el ${salio}.`);
       continue;
     }
-    const devuelto = prestamo?.devuelto === true;
+    // `devuelto` tiene que ser un booleano, como `baja` en los libros: un
+    // «si» de texto convertido en falso dejaría un préstamo devuelto marcado
+    // como abierto, y el libro aparecería prestado para siempre.
+    if (typeof prestamo?.devuelto !== 'boolean') {
+      rechazos.push(`El préstamo ${numero} no dice si está devuelto: trae «${prestamo?.devuelto}».`);
+      continue;
+    }
+    const devuelto = prestamo.devuelto;
     const devolvio = prestamo?.devolvio ?? null;
     if (devolvio !== null) {
       if (!esDiaValido(String(devolvio))) {
@@ -247,9 +254,11 @@ export function validar(archivo, { hoy = diaEnChile(new Date()) } = {}) {
     }
 
     if (!esSabado(vence)) advertir('vence-no-sabado', `El préstamo ${numero} vence el ${vence}, que no es sábado.`);
-    const sabados = sabadosEntre(salio, vence);
+    // El tope es uno más que el máximo: con eso basta para saber que se pasó,
+    // y no se camina un calendario entero por una fecha mal tecleada.
+    const sabados = sabadosEntre(salio, vence, PLAZO_MAXIMO_SABADOS + 1);
     if (sabados > PLAZO_MAXIMO_SABADOS) {
-      advertir('plazo-largo', `El préstamo ${numero} abarca ${sabados} sábados.`);
+      advertir('plazo-largo', `El préstamo ${numero} abarca ${sabados} sábados o más.`);
     }
 
     salidasPorLibro.set(libro, [...(salidasPorLibro.get(libro) ?? []), { numero, salio }]);
@@ -480,7 +489,6 @@ export async function cargar({
     );
   }
 
-  let respaldoPrevio = null;
   if (modo === 'reemplazar' && !reanudar) {
     // Contrato §6: una recarga de negocio no pasa por encima de temporadas ya
     // cerradas, porque esas fotografías resumen préstamos que cambiarían.
@@ -491,7 +499,6 @@ export async function cargar({
           'describiendo datos que ya no existen. Este script no lo hace.',
       );
     }
-    respaldoPrevio = await respaldar({ db, FieldValue, proyecto, por });
   }
 
   const escrituras = construir({ limpio: informe.limpio, marcaDeServidor: FieldValue.serverTimestamp() });
@@ -515,7 +522,14 @@ export async function cargar({
   const puesto = await mantenimiento.tomarOReusar(db, FieldValue, { por, token: reanudar ? manifiesto.token : token });
   manifiesto.token = puesto;
   await guardarJson(rutaManifiesto, manifiesto);
+  let respaldoPrevio = null;
   try {
+    // El respaldo previo va DENTRO de nuestro bloqueo y con nuestro token: si
+    // lo tomara y lo soltara por su cuenta, entre el respaldo verificado y el
+    // borrado quedaría un hueco en que la app puede escribir.
+    if (modo === 'reemplazar' && !reanudar) {
+      respaldoPrevio = await respaldar({ db, FieldValue, proyecto, por, token: puesto });
+    }
     if (modo === 'reemplazar' && manifiesto.hechos.length === 0) {
       for (const coleccion of COLECCIONES_DE_NEGOCIO) await borrarColeccion(db, coleccion);
     }

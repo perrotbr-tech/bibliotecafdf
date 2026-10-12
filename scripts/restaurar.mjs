@@ -144,22 +144,29 @@ export async function restaurar({
     );
   }
 
-  let respaldoPrevio = null;
-  if (reemplazar && !reanudar) {
-    respaldoPrevio = await respaldar({ db, FieldValue, proyecto, por });
-  }
-
   const token = mantenimiento.nuevoToken();
   const nuevo = crearManifiesto({
     trabajo: TRABAJO,
     token,
     proyecto,
     origen: archivo,
+    // La huella es el propio SHA-256 del respaldo. Comparar solo la RUTA no
+    // basta: dos respaldos distintos pueden llegar con el mismo nombre de
+    // archivo —o uno puede reemplazar al otro— y reanudar mezclaría las dos
+    // bases. La carga ya cerraba este camino; la contraprueba de la Etapa 2
+    // hizo notar que la restauración no (H-01).
+    huella: respaldo.hash,
     total: respaldo.documentos.length,
   });
   const manifiesto = reanudar ? await abrirManifiesto(rutaManifiesto, nuevo) : nuevo;
   if (manifiesto.origen !== archivo) {
     throw new Error(`El manifiesto es de ${manifiesto.origen} y se pidió reanudar con ${archivo}.`);
+  }
+  if (reanudar && manifiesto.huella !== nuevo.huella) {
+    throw new Error(
+      `El manifiesto ${rutaManifiesto} es de otro respaldo: su contenido no es el de ${archivo}. ` +
+        'Revísalo antes de reanudar, o repón el respaldo completo sin --reanudar.',
+    );
   }
 
   // Al reanudar se reusa el bloqueo que quedó puesto, no se toma otro: el
@@ -172,7 +179,15 @@ export async function restaurar({
   });
   manifiesto.token = puesto;
   await guardarJson(rutaManifiesto, manifiesto);
+  let respaldoPrevio = null;
   try {
+    // El respaldo previo va DENTRO de nuestro bloqueo y con nuestro token: si
+    // lo tomara y lo soltara por su cuenta, entre el respaldo verificado y el
+    // borrado quedaría un hueco en que la app puede escribir, y esos
+    // documentos se perderían sin figurar en el archivo.
+    if (reemplazar && !reanudar) {
+      respaldoPrevio = await respaldar({ db, FieldValue, proyecto, por, token: puesto });
+    }
     if (reemplazar && manifiesto.hechos.length === 0) await vaciarBiblioteca(db, { lote });
 
     // El control se repone AHORA, conservando nuestro candado en su sitio: así
@@ -193,11 +208,14 @@ export async function restaurar({
       throw new Error(`La restauración no quedó idéntica:\n  - ${problemas.join('\n  - ')}`);
     }
 
-    // Normalizar el bloqueo a nulo es lo último, y de paso libera el
-    // mantenimiento: el contrato §6 pide no trasladar el candado de otra base.
-    await db.doc(rutaDeControl()).update({ bloqueo: null });
-
+    // El manifiesto se cierra ANTES de soltar el candado: si cerrarlo falla, la
+    // base sigue bloqueada y el mensaje de error dice la verdad.
     await cerrarManifiesto(rutaManifiesto, manifiesto);
+
+    // Y lo último es soltar el candado, que de paso normaliza el bloqueo a nulo
+    // como pide el contrato §6. Se suelta con `liberar`, que comprueba el
+    // token: un `update` directo habría borrado el candado de otro trabajo.
+    await mantenimiento.liberar(db, puesto);
     return {
       archivo,
       escritos,

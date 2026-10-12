@@ -2,8 +2,16 @@
 // C-36, más el foco y el botón Atrás de la hoja.
 import { expect, test } from '@playwright/test';
 
-import { ADMIN, VOLUNTARIA, leerLibro, ponerLibro, sembrarBaseDemo } from '../ayuda/siembra.mjs';
+import {
+  ADMIN,
+  VOLUNTARIA,
+  cambiarCategorias,
+  leerLibro,
+  ponerLibro,
+  sembrarBaseDemo,
+} from '../ayuda/siembra.mjs';
 import { abrir, entrar } from '../ayuda/navegador.mjs';
+import { CLAVE_INTENCION } from '../../docs/js/datos.js';
 
 const LIBROS = [
   { codigo: 'INF003', titulo: 'El arca de Noé', autor: 'Ana Pardo', categoria: 'Infantil' },
@@ -309,4 +317,116 @@ test('C-36 un título de una sola palabra de 60 letras no saca la página de anc
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
   expect(sobraEnFicha, 'la ficha tampoco').toBeLessThanOrEqual(0);
+});
+
+test('un libro de baja se puede reactivar editándolo, como promete la confirmación', async ({ page }) => {
+  // La pantalla de confirmación dice «Se puede volver a activar editándolo», y
+  // hasta que la revisión del diff lo encontró, esa promesa era falsa: el
+  // formulario de edición no tenía la casilla y el libro quedaba atrapado.
+  await sembrarBaseDemo({ libros: [{ ...LIBROS[0], baja: true }] });
+  await abrir(page, '/');
+  await entrar(page, ADMIN);
+  await page.getByRole('button', { name: 'Catálogo' }).click();
+  await expect(page.getByTestId('libro-INF003')).toBeVisible();
+
+  await page.getByTestId('libro-INF003').click();
+  await expect(page.getByTestId('estado-libro')).toHaveText('De baja');
+  await expect(page.getByTestId('dar-de-baja')).toBeDisabled();
+
+  await page.getByTestId('editar-libro').click();
+  await expect(page.getByTestId('libro-baja')).toBeChecked();
+  await page.getByTestId('libro-baja').uncheck();
+  await page.getByTestId('guardar-libro').click();
+
+  await expect.poll(async () => (await leerLibro('INF003')).baja).toBe(false);
+  // Y vuelve a contarse como disponible.
+  await page.getByTestId('filtro-estado-disponibles').click();
+  await expect(page.getByTestId('libro-INF003')).toBeVisible();
+});
+
+test('un catálogo vacío dice que está vacío, no que la búsqueda no encontró nada', async ({ page }) => {
+  await sembrarBaseDemo();
+  await abrir(page, '/');
+  await entrar(page, ADMIN);
+  await page.getByRole('button', { name: 'Catálogo' }).click();
+  await expect(page.getByTestId('catalogo')).toBeVisible();
+
+  await expect(page.getByText('Todavía no hay libros en el catálogo.')).toBeVisible();
+  await expect(page.getByText('Usa «Agregar libro» para poner el primero.')).toBeVisible();
+  // Con algo escrito, el mensaje sí es el de la búsqueda.
+  await page.getByTestId('buscar-libro').fill('zzz');
+  await expect(page.getByText('No se encontró ningún libro')).toBeVisible();
+});
+
+test('la intención de agregar un libro queda anotada y se resuelve al confirmar', async ({ page }) => {
+  // Contrato §3: si el teléfono se recarga a mitad de la escritura, la app
+  // tiene que poder releer el servidor y decir qué pasó. Sin la intención
+  // anotada, la recuperación nunca se enteraba de las escrituras de esta etapa.
+  await abrirCatalogo(page);
+  await page.getByTestId('agregar-libro').click();
+  await page.getByTestId('libro-codigo').fill('INF777');
+  await page.getByTestId('libro-titulo').fill('Un libro para la intención');
+
+  const sinResolver = page.waitForFunction(
+    (clave) => globalThis.sessionStorage.getItem(clave) !== null,
+    CLAVE_INTENCION,
+  );
+  await page.getByTestId('guardar-libro').click();
+  // Mientras la escritura va en camino, la intención está anotada con su ruta.
+  const anotada = await sinResolver.then(() =>
+    page.evaluate((clave) => JSON.parse(globalThis.sessionStorage.getItem(clave) ?? 'null'), CLAVE_INTENCION),
+  );
+  expect(anotada.tipo).toBe('alta');
+  expect(anotada.ruta).toContain('libros/INF777');
+  expect(anotada.operacionId).toMatch(/^[0-9a-f]{32}$/u);
+
+  // Y al confirmar se olvida: no queda una alarma para la próxima apertura.
+  await expect(page.getByText('Libro agregado')).toBeVisible();
+  await expect
+    .poll(() => page.evaluate((clave) => globalThis.sessionStorage.getItem(clave), CLAVE_INTENCION))
+    .toBeNull();
+});
+
+test('C-27 un cambio de categorías en config/app no borra lo escrito ni suelta el foco', async ({ page }) => {
+  // El otro camino de C-27, que la contraprueba hizo notar que no tenía prueba
+  // propia: el teléfono del administrador cambia las categorías en Ajustes
+  // mientras alguien está filtrando el catálogo. Antes, cada evento de esa
+  // escucha —incluidos los de metadatos— repintaba las fichas y soltaba el
+  // foco; ahora solo repinta cuando las categorías de verdad cambian.
+  await abrirCatalogo(page);
+  const buscador = page.getByTestId('buscar-libro');
+  await buscador.click();
+  await buscador.fill('arca');
+  await expect(page.getByTestId('libro-INF003')).toBeVisible();
+
+  await cambiarCategorias([
+    { nombre: 'Infantil', prefijo: 'INF' },
+    { nombre: 'Teología', prefijo: 'TEO' },
+    { nombre: 'Biografías', prefijo: 'BIO' },
+  ]);
+
+  // La ficha nueva aparece…
+  await expect(page.getByTestId('filtro-categoria-Biografías')).toBeVisible();
+  // …y lo que la persona estaba escribiendo sigue ahí, con el foco puesto.
+  await expect(buscador).toHaveValue('arca');
+  await expect(buscador).toBeFocused();
+  await expect(page.getByTestId('libro-INF003')).toBeVisible();
+});
+
+test('si la categoría filtrada desaparece de los ajustes, el filtro vuelve a Todas', async ({ page }) => {
+  await abrirCatalogo(page);
+  await page.getByTestId('filtro-categoria-Teología').click();
+  await expect(page.getByTestId('libro-TEO006')).toBeVisible();
+  await expect(page.getByTestId('libro-INF003')).toBeHidden();
+
+  // El administrador quita esa categoría en otro teléfono.
+  await cambiarCategorias([
+    { nombre: 'Infantil', prefijo: 'INF' },
+    { nombre: 'Hombres y mujeres', prefijo: 'HM' },
+  ]);
+
+  // Sin esto, el filtro seguiría puesto en una categoría que ya no existe y la
+  // lista se quedaría vacía sin explicación.
+  await expect(page.getByTestId('filtro-categoria-todas')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('libro-INF003')).toBeVisible();
 });

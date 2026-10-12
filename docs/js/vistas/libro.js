@@ -49,7 +49,10 @@ export function abrirFichaDeLibro({ datos, permiso, categorias, libros, libro })
         type: 'button',
         texto: 'Dar de baja',
         'data-prueba': 'dar-de-baja',
+        // Ya de baja no hay nada que dar de baja; para reactivarlo está
+        // «Editar», que ahora trae la casilla.
         disabled: libro.baja === true,
+        title: libro.baja === true ? 'Ya está de baja. Para reactivarlo, usa Editar' : '',
         al: {
           click: () =>
             abrirHoja({

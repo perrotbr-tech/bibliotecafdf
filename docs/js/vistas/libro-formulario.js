@@ -10,7 +10,7 @@ import { agregarLibro, editarLibro } from '../operaciones.js';
 import { codigoSugerido, nuevoId } from '../texto.js';
 import { avisar } from '../ui/avisos.js';
 import { prepararBotonGuardar } from '../ui/boton-guardar.js';
-import { campoSelect, campoTexto, errorDeFormulario } from '../ui/campos.js';
+import { campoCasilla, campoSelect, campoTexto, errorDeFormulario } from '../ui/campos.js';
 import { el } from '../ui/dom.js';
 
 const AVISO = 'libro';
@@ -49,6 +49,13 @@ export function formularioDeLibro({ datos, permiso, categorias, libros, libro = 
     maxlength: 80,
   });
 
+  // Un libro nuevo nunca nace de baja; uno que ya está de baja tiene que poder
+  // volver, y la pantalla de confirmación lo promete: «Se puede volver a
+  // activar editándolo». Sin esta casilla la promesa era falsa y el libro
+  // quedaba atrapado. Lo encontró la revisión del diff de la Etapa 2.
+  const baja = esEdicion ? campoCasilla({ id: 'libro-baja', etiqueta: 'Está de baja: no se presta' }) : null;
+  if (baja && libro.baja === true) baja.control.checked = true;
+
   const fallo = errorDeFormulario('error-libro');
 
   // El código sugerido sale del mayor de la categoría más uno. Se recalcula al
@@ -77,6 +84,7 @@ export function formularioDeLibro({ datos, permiso, categorias, libros, libro = 
     codigo.nodo,
     titulo.nodo,
     autor.nodo,
+    baja?.nodo,
     fallo.nodo,
     boton,
   ]);
@@ -85,7 +93,7 @@ export function formularioDeLibro({ datos, permiso, categorias, libros, libro = 
   // La intención vive mientras el formulario no cambie: un reintento con los
   // mismos datos conserva su identidad, y uno distinto estrena la suya.
   let operacionId = null;
-  for (const entrada of [categoria.control, codigo.control, titulo.control, autor.control]) {
+  for (const entrada of [categoria.control, codigo.control, titulo.control, autor.control, baja?.control].filter(Boolean)) {
     entrada.addEventListener('input', () => {
       operacionId = null;
       fallo.limpiar();
@@ -109,7 +117,7 @@ export function formularioDeLibro({ datos, permiso, categorias, libros, libro = 
           alTardar: (texto) => avisar(texto, 'atencion', { id: AVISO }),
         };
         const resultado = esEdicion
-          ? await editarLibro({ ...comun, libro, baja: libro.baja === true })
+          ? await editarLibro({ ...comun, libro, baja: baja.marcada })
           : await agregarLibro({ ...comun, codigo: codigo.control.value });
 
         if (resultado.esExito) {

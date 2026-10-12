@@ -29,7 +29,7 @@ import {
   verificarReferencias,
 } from './comun/biblioteca.mjs';
 import { ESQUEMA, hashCanonico } from './comun/datos-exportados.mjs';
-import { CARPETA_DATOS, guardarJson, leerJson, marcaDeArchivo } from './comun/manifiesto.mjs';
+import { CARPETA_DATOS, guardarJsonSinPisar, leerJson, marcaDeArchivo } from './comun/manifiesto.mjs';
 import { PROYECTO_DEMO, abrirBase } from './comun/destino.mjs';
 import * as mantenimiento from './comun/mantenimiento.mjs';
 
@@ -109,28 +109,51 @@ export async function verificar(archivo, { db = null } = {}) {
   return respaldo;
 }
 
+/** Exporta, guarda y verifica, con el bloqueo ya puesto por quien llama. */
+async function exportarVerificado({ db, proyecto, archivo, instante, token }) {
+  // El control acaba de cambiar para tomar el bloqueo: lo que se exporta es la
+  // base CON el bloqueo puesto. El archivo lo guarda con `bloqueo: null`, para
+  // no trasladar un candado a otra base.
+  const documentos = await recorrer(db);
+  await mantenimiento.comprobar(db, token);
+  const respaldo = armarRespaldo({ proyecto, documentos, generadoEn: instante });
+  // Sin pisar: un respaldo no sobrescribe a otro ni por una colisión de reloj.
+  const escrito = await guardarJsonSinPisar(archivo, respaldo);
+  await verificar(escrito, { db });
+  await mantenimiento.comprobar(db, token);
+  return { archivo: escrito, total: respaldo.total, conteos: respaldo.conteos, hash: respaldo.hash };
+}
+
 /**
  * Toma mantenimiento, exporta, guarda y verifica. Devuelve el archivo y el
- * informe. Lo usan `restaurar.mjs` y `cargar-datos.mjs` antes de reemplazar.
+ * informe.
+ *
+ * `token` es la pieza que usan `restaurar.mjs` y `cargar-datos.mjs`: cuando
+ * pasan el suyo, este respaldo NO toma ni suelta el bloqueo, porque entre el
+ * respaldo verificado y el borrado que viene después no puede haber un hueco en
+ * que la app escriba. Con el bloqueo propio —el respaldo semanal del dueño— se
+ * toma y se suelta aquí. Ese hueco lo encontró la revisión del diff.
  */
-export async function respaldar({ db, FieldValue, proyecto, por, salida = null, instante = new Date() }) {
+export async function respaldar({
+  db,
+  FieldValue,
+  proyecto,
+  por,
+  salida = null,
+  instante = new Date(),
+  token = null,
+}) {
   const archivo = salida ?? join(CARPETA_DATOS, `respaldo-${marcaDeArchivo(instante)}.json`);
-  const token = mantenimiento.nuevoToken();
 
-  const informe = await mantenimiento.conMantenimiento(db, FieldValue, { por, token }, async (puesto) => {
-    // El control acaba de cambiar para tomar el bloqueo: lo que se exporta es
-    // la base CON el bloqueo puesto, y así queda en el archivo. La
-    // restauración lo normaliza a nulo para no trasladar un candado.
-    const documentos = await recorrer(db);
-    await mantenimiento.comprobar(db, puesto);
-    const respaldo = armarRespaldo({ proyecto, documentos, generadoEn: instante });
-    await guardarJson(archivo, respaldo);
-    await verificar(archivo, { db });
-    await mantenimiento.comprobar(db, puesto);
-    return { archivo, total: respaldo.total, conteos: respaldo.conteos, hash: respaldo.hash };
-  });
+  if (token !== null) {
+    await mantenimiento.comprobar(db, token);
+    return await exportarVerificado({ db, proyecto, archivo, instante, token });
+  }
 
-  return informe;
+  const propio = mantenimiento.nuevoToken();
+  return await mantenimiento.conMantenimiento(db, FieldValue, { por, token: propio }, (puesto) =>
+    exportarVerificado({ db, proyecto, archivo, instante, token: puesto }),
+  );
 }
 
 async function principal() {

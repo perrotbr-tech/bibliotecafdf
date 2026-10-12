@@ -208,12 +208,21 @@ export function esSabado(dia) {
   return diaDeLaSemana(dia) === 6;
 }
 
-/** Cuántos sábados hay entre dos días, contando el final y no el principio. */
-export function sabadosEntre(desde, hasta) {
+/**
+ * Cuántos sábados hay entre dos días, contando el final y no el principio.
+ *
+ * `tope` corta la cuenta: quien pregunta solo quiere saber si el plazo pasa de
+ * cuatro sábados, y un `vence` mal tecleado como `9999-10-17` haría caminar
+ * tres millones de días. Si se alcanza el tope, el resultado es el tope.
+ */
+export function sabadosEntre(desde, hasta, tope = Number.POSITIVE_INFINITY) {
   if (hasta < desde) return 0;
   let cuantos = 0;
   for (let dia = diaDesplazado(desde, 1); dia <= hasta; dia = diaDesplazado(dia, 1)) {
-    if (esSabado(dia)) cuantos += 1;
+    if (esSabado(dia)) {
+      cuantos += 1;
+      if (cuantos >= tope) return cuantos;
+    }
   }
   return cuantos;
 }

@@ -300,3 +300,42 @@ test('el enlace de los contadores apunta al documento del número, o a nulo', ()
   assert.equal(otros.ultimoLectorId, null);
   assert.equal(otros.ultimoPrestamoId, null);
 });
+
+test('un «devuelto» que no es booleano se rechaza, como la baja de un libro', () => {
+  // Un «si» de texto se convertía en falso sin decir nada, y ese préstamo
+  // devuelto quedaba abierto: el libro aparecía prestado para siempre.
+  for (const valor of ['si', 'no', 1, 0, null, undefined]) {
+    const archivo = archivoBase();
+    archivo.prestamos[0].devuelto = valor;
+    assert.match(soloRechazos(archivo).join(' '), /no dice si está devuelto/u, JSON.stringify(valor));
+  }
+  // Los dos booleanos sí pasan.
+  for (const valor of [true, false]) {
+    const archivo = archivoBase();
+    archivo.prestamos[0].devuelto = valor;
+    archivo.prestamos[0].devolvio = valor ? '2026-10-10' : null;
+    assert.deepEqual(soloRechazos(archivo), [], String(valor));
+  }
+});
+
+test('el nombre de un respaldo lleva segundos y no pisa un archivo que exista', async () => {
+  const { marcaDeArchivo, guardarJsonSinPisar } = await import('../../scripts/comun/manifiesto.mjs');
+  const { mkdtemp, rm, readdir } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+
+  // Con precisión de minutos, dos respaldos del mismo minuto caían en el mismo
+  // archivo: el segundo pisaba al primero, que podía ser la única copia de los
+  // datos que el reemplazo acababa de borrar.
+  assert.match(marcaDeArchivo(new Date(2026, 9, 12, 5, 30, 12)), /^20261012-053012$/u);
+
+  const carpeta = await mkdtemp(join(tmpdir(), 'respaldo-sin-pisar-'));
+  try {
+    const ruta = join(carpeta, 'respaldo.json');
+    assert.equal(await guardarJsonSinPisar(ruta, { uno: 1 }), ruta);
+    assert.equal(await guardarJsonSinPisar(ruta, { dos: 2 }), join(carpeta, 'respaldo-2.json'));
+    assert.equal(await guardarJsonSinPisar(ruta, { tres: 3 }), join(carpeta, 'respaldo-3.json'));
+    assert.deepEqual((await readdir(carpeta)).sort(), ['respaldo-2.json', 'respaldo-3.json', 'respaldo.json']);
+  } finally {
+    await rm(carpeta, { recursive: true, force: true });
+  }
+});

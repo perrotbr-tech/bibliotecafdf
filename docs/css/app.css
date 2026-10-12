@@ -25,6 +25,23 @@
   --plata: #9ba6af;
   --bronce: #b8743c;
 
+  /* Un color por categoría para el tejuelo del código. Son tokens, como todo
+     lo demás, para que el tema oscuro los pueda redefinir: antes eran seis
+     hexadecimales claros fijos y en modo oscuro quedaban seis manchas blancas.
+     Lo encontró la revisión del diff de la Etapa 2. */
+  --tejuelo-1-fondo: #dceadf;
+  --tejuelo-1-texto: #1d5a3a;
+  --tejuelo-2-fondo: #dde6f3;
+  --tejuelo-2-texto: #1f4472;
+  --tejuelo-3-fondo: #f6e7d7;
+  --tejuelo-3-texto: #7a4b16;
+  --tejuelo-4-fondo: #ece0f1;
+  --tejuelo-4-texto: #5a2d70;
+  --tejuelo-5-fondo: #fae3e6;
+  --tejuelo-5-texto: #7d2733;
+  --tejuelo-6-fondo: #e3eff1;
+  --tejuelo-6-texto: #1f5560;
+
   --radio: 14px;
   --toque: 44px;
   --paso: 12px;
@@ -56,6 +73,18 @@
     --plata: #bac4cc;
     --bronce: #d08d55;
     --sombra: 0 8px 28px rgb(0 0 0 / 50%);
+    --tejuelo-1-fondo: #1b3326;
+    --tejuelo-1-texto: #9ad9b4;
+    --tejuelo-2-fondo: #1a2941;
+    --tejuelo-2-texto: #a8c6ef;
+    --tejuelo-3-fondo: #3a2c18;
+    --tejuelo-3-texto: #e2bc85;
+    --tejuelo-4-fondo: #2e2039;
+    --tejuelo-4-texto: #cfaade;
+    --tejuelo-5-fondo: #3a1f24;
+    --tejuelo-5-texto: #eda9b2;
+    --tejuelo-6-fondo: #16323a;
+    --tejuelo-6-texto: #9fd0dc;
 
     color-scheme: dark;
   }
@@ -80,6 +109,18 @@
   --plata: #bac4cc;
   --bronce: #d08d55;
   --sombra: 0 8px 28px rgb(0 0 0 / 50%);
+  --tejuelo-1-fondo: #1b3326;
+  --tejuelo-1-texto: #9ad9b4;
+  --tejuelo-2-fondo: #1a2941;
+  --tejuelo-2-texto: #a8c6ef;
+  --tejuelo-3-fondo: #3a2c18;
+  --tejuelo-3-texto: #e2bc85;
+  --tejuelo-4-fondo: #2e2039;
+  --tejuelo-4-texto: #cfaade;
+  --tejuelo-5-fondo: #3a1f24;
+  --tejuelo-5-texto: #eda9b2;
+  --tejuelo-6-fondo: #16323a;
+  --tejuelo-6-texto: #9fd0dc;
 
   color-scheme: dark;
 }
@@ -549,12 +590,12 @@ button:focus-visible {
   text-align: center;
 }
 
-.tejuelo--1 { background: #dceadf; color: #1d5a3a; }
-.tejuelo--2 { background: #dde6f3; color: #1f4472; }
-.tejuelo--3 { background: #f6e7d7; color: #7a4b16; }
-.tejuelo--4 { background: #ece0f1; color: #5a2d70; }
-.tejuelo--5 { background: #fae3e6; color: #7d2733; }
-.tejuelo--6 { background: #e3eff1; color: #1f5560; }
+.tejuelo--1 { background: var(--tejuelo-1-fondo); color: var(--tejuelo-1-texto); }
+.tejuelo--2 { background: var(--tejuelo-2-fondo); color: var(--tejuelo-2-texto); }
+.tejuelo--3 { background: var(--tejuelo-3-fondo); color: var(--tejuelo-3-texto); }
+.tejuelo--4 { background: var(--tejuelo-4-fondo); color: var(--tejuelo-4-texto); }
+.tejuelo--5 { background: var(--tejuelo-5-fondo); color: var(--tejuelo-5-texto); }
+.tejuelo--6 { background: var(--tejuelo-6-fondo); color: var(--tejuelo-6-texto); }
 
 .etiqueta--disponible {
   background: var(--accent-soft);

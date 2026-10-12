@@ -13,12 +13,20 @@ import { dirname, join } from 'node:path';
 
 export const CARPETA_DATOS = join(import.meta.dirname, '..', '..', 'datos');
 
-/** Nombre de archivo con la marca de tiempo local: `respaldo-20261012-0530`. */
+/**
+ * Nombre de archivo con la marca de tiempo local: `respaldo-20261012-053012`.
+ *
+ * Lleva SEGUNDOS a propósito. Con precisión de minutos, dos respaldos del mismo
+ * minuto caían en el mismo archivo y el segundo pisaba al primero: el caso que
+ * importa es reintentar un `--reemplazar` que falló, donde el archivo pisado es
+ * la única copia de los datos que ya se borraron. Lo encontró la revisión del
+ * diff de la Etapa 2.
+ */
 export function marcaDeArchivo(instante = new Date()) {
   const doble = (n) => String(n).padStart(2, '0');
   return (
     `${instante.getFullYear()}${doble(instante.getMonth() + 1)}${doble(instante.getDate())}` +
-    `-${doble(instante.getHours())}${doble(instante.getMinutes())}`
+    `-${doble(instante.getHours())}${doble(instante.getMinutes())}${doble(instante.getSeconds())}`
   );
 }
 
@@ -30,6 +38,30 @@ export async function guardarJson(ruta, valor) {
 
 export async function leerJson(ruta) {
   return JSON.parse(await readFile(ruta, 'utf8'));
+}
+
+/**
+ * Guarda sin pisar nada: si el archivo existe, prueba `-2`, `-3`, y así. Es el
+ * cinturón del nombre con segundos, para que un respaldo no pueda sobrescribir
+ * a otro ni por una colisión de reloj. Devuelve la ruta que de verdad escribió.
+ */
+export async function guardarJsonSinPisar(ruta, valor, { intentos = 50 } = {}) {
+  await mkdir(dirname(ruta), { recursive: true });
+  const cuerpo = `${JSON.stringify(valor, null, 2)}\n`;
+  const punto = ruta.lastIndexOf('.');
+  const base = punto > 0 ? ruta.slice(0, punto) : ruta;
+  const extension = punto > 0 ? ruta.slice(punto) : '';
+
+  for (let numero = 1; numero <= intentos; numero += 1) {
+    const candidata = numero === 1 ? ruta : `${base}-${numero}${extension}`;
+    try {
+      await writeFile(candidata, cuerpo, { encoding: 'utf8', flag: 'wx' });
+      return candidata;
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+    }
+  }
+  throw new Error(`No se pudo guardar ${ruta}: ya existen ${intentos} archivos con ese nombre.`);
 }
 
 /**

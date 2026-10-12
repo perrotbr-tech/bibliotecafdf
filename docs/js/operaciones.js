@@ -14,7 +14,7 @@
 // haberlo dejado tomado por otra persona.
 
 import { idDeLector, rutas } from './config-publica.js';
-import { ErrorDeNegocio } from './datos.js';
+import { ErrorDeNegocio, olvidarIntencion, recordarIntencion } from './datos.js';
 import {
   MENSAJE_NOMBRE_CORTO,
   claveDeNombre,
@@ -45,6 +45,7 @@ export const INTENTOS_DE_ALTA = 3;
 
 export const MENSAJES_DE_OPERACION = {
   intentaloDeNuevo: 'No se pudo inscribir ahora. Inténtalo de nuevo',
+  enMantenimiento: 'La biblioteca está en mantenimiento. Vuelve a intentarlo cuando termine',
   codigoRepetido: 'El código ya existe',
   codigoInvalido: 'El código va con 2 a 4 letras y 3 o 4 números, como INF028',
   tituloInvalido: 'El título va de 2 a 120 caracteres',
@@ -58,6 +59,34 @@ export const MENSAJES_DE_OPERACION = {
 
 /** «Ya existe: Rafaela Toledo. Búscalo en la lista» (etapa 2 §Pantallas). */
 export const yaExiste = (nombre) => `Ya existe: ${nombre}. Búscalo en la lista`;
+
+/**
+ * Anota la intención antes de escribir, para que una recarga a mitad de camino
+ * se pueda resolver releyendo el servidor (contrato §3).
+ *
+ * En `sessionStorage` va SOLO el identificador de la operación, el tipo, la
+ * ruta y los identificadores necesarios. Nunca nombres ni teléfonos: por eso
+ * estas cuatro operaciones se anotan —sus rutas son un código de libro o un
+ * `L001`, que no son datos de nadie— y el alta de un lector NO, porque lo único
+ * que la localiza es su clave de nombre, y una clave es el nombre normalizado.
+ * Esa asimetría es deliberada y está declarada en el informe.
+ */
+function anotarIntencion({ tipo, ruta, identificadores, operacionId }) {
+  recordarIntencion({ operacionId, tipo, ruta, identificadores });
+}
+
+/**
+ * Resuelve la intención según el resultado. Se conserva SOLO si quedó la duda:
+ * un conflicto, un permiso denegado o un «sin conexión» ya están resueltos, y
+ * dejarla anotada haría que la próxima apertura avisara de algo ya sabido.
+ */
+function resolverIntencion(resultado) {
+  if (resultado?.estado !== 'indeterminado') olvidarIntencion();
+  return resultado;
+}
+
+/** Envuelve una escritura para resolver su intención cuando termine. */
+const resolverIntencionDe = (promesa) => promesa.then(resolverIntencion);
 
 // ---------------------------------------------------------------- lectores
 
@@ -74,6 +103,9 @@ export async function inscribirLector({ datos, permiso, nombre, telefono = null,
   const clave = claveDeNombre(nombreLimpio);
 
   for (let intento = 1; intento <= INTENTOS_DE_ALTA; intento += 1) {
+    // `registro` recoge qué contador leyó el intento. Si la escritura se
+    // deniega, ese número es lo que permite saber si de verdad hubo carrera.
+    const registro = {};
     const resultado = await unIntentoDeAlta({
       datos,
       permiso,
@@ -82,13 +114,15 @@ export async function inscribirLector({ datos, permiso, nombre, telefono = null,
       telefono: telefonoLimpio.telefono,
       operacionId,
       alTardar,
+      registro,
     });
     if (resultado.estado !== 'denegado') return resultado;
 
-    // Una denegación en un alta puede ser una de dos cosas, y se distinguen
-    // mirando los datos, no adivinando: si la clave YA está tomada, otra
-    // persona se quedó con el nombre y eso es el «Ya existe» del servidor; si
-    // sigue libre, lo que se movió fue el contador y toca reintentar.
+    // Una denegación en un alta puede ser tres cosas, y se distinguen mirando
+    // los datos, no adivinando.
+    //
+    // 1. La clave YA está tomada: otra persona se quedó con el nombre, y eso
+    //    es el «Ya existe» del servidor.
     const leida = await datos.leerDelServidor(rutas.lectorClave(clave));
     if (leida.estado === 'ok' && leida.existe) {
       const vigente = await datos.leerDelServidor(rutas.lector(leida.datos.lector));
@@ -99,6 +133,34 @@ export async function inscribirLector({ datos, permiso, nombre, telefono = null,
         mensaje: yaExiste(vigente.datos?.nombre ?? leida.datos.lector),
       };
     }
+
+    // 2. El contador NO se movió: entonces no hubo carrera, y reintentar es
+    //    pedirle a la persona que repita algo que no puede funcionar. Pasa con
+    //    el mantenimiento puesto o con una cuenta recién desactivada, y hasta
+    //    que la revisión del diff lo encontró se le decía «Inténtalo de nuevo».
+    const contadores = await datos.leerDelServidor(rutas.configContadores());
+
+    // Si ni leer el contador se puede, esto no es una carrera: es una cuenta
+    // que perdió el permiso —desactivada a mitad de la operación— y se
+    // devuelve la denegación tal cual, sin reetiquetarla. Lo pidió así la
+    // contraprueba de la Etapa 2 (H-02).
+    if (contadores.estado === 'denegada') return resultado;
+
+    const sigueIgual =
+      contadores.estado === 'ok' &&
+      registro.ultimoLectorLeido !== undefined &&
+      Number(contadores.datos?.ultimoLector ?? -1) === registro.ultimoLectorLeido;
+    if (sigueIgual) {
+      const control = await datos.leerDelServidor(rutas.configControl());
+      const bloqueado = control.estado === 'ok' && (control.datos?.bloqueo ?? null) !== null;
+      return {
+        ...resultado,
+        mensaje: bloqueado ? MENSAJES_DE_OPERACION.enMantenimiento : resultado.mensaje,
+      };
+    }
+
+    // 3. Se movió el contador: fue una carrera. Se reintenta con el mismo
+    //    `operacionId` y un contador recién leído.
     if (intento === INTENTOS_DE_ALTA) {
       // Se acabaron los intentos. El estado NO se deja en «denegado»: no fue
       // una falta de permiso, fue una carrera perdida, y conviene que el
@@ -110,7 +172,7 @@ export async function inscribirLector({ datos, permiso, nombre, telefono = null,
   throw new Error('inscribirLector: el bucle de intentos terminó sin resultado');
 }
 
-function unIntentoDeAlta({ datos, permiso, nombreLimpio, clave, telefono, operacionId, alTardar }) {
+function unIntentoDeAlta({ datos, permiso, nombreLimpio, clave, telefono, operacionId, alTardar, registro = {} }) {
   return datos.guardar({
     tipo: 'alta',
     operacionId,
@@ -128,7 +190,9 @@ function unIntentoDeAlta({ datos, permiso, nombreLimpio, clave, telefono, operac
 
       // El correlativo se resuelve DENTRO del intento: si este se aborta, el
       // siguiente vuelve a leer el contador y puede salir otro número.
-      const numero = Number(contadores.data().ultimoLector ?? 0) + 1;
+      const leido = Number(contadores.data().ultimoLector ?? 0);
+      registro.ultimoLectorLeido = leido;
+      const numero = leido + 1;
       const id = idDeLector(numero);
       const marca = ahoraDelServidor();
 
@@ -173,8 +237,9 @@ export function cambiarTelefono({ datos, lector, telefono, operacionId, alTardar
   const limpio = normalizarTelefono(telefono);
   if (!limpio.ok) throw new ErrorDeNegocio(limpio.motivo);
   const ruta = rutas.lector(lector.id);
+  anotarIntencion({ tipo: 'cambio', ruta, identificadores: [lector.id], operacionId });
 
-  return datos.guardar({
+  return resolverIntencionDe(datos.guardar({
     tipo: 'cambio',
     operacionId,
     alTardar,
@@ -199,7 +264,7 @@ export function cambiarTelefono({ datos, lector, telefono, operacionId, alTardar
         },
       };
     },
-  });
+  }));
 }
 
 /**
@@ -215,8 +280,9 @@ export function cambiarNombre({ datos, permiso, lector, nombre, operacionId, alT
   if (!esNombreDeLectorValido(nombreLimpio)) throw new ErrorDeNegocio(MENSAJE_NOMBRE_CORTO);
   const claveNueva = claveDeNombre(nombreLimpio);
   const ruta = rutas.lector(lector.id);
+  anotarIntencion({ tipo: 'cambio', ruta, identificadores: [lector.id], operacionId });
 
-  return datos.guardar({
+  return resolverIntencionDe(datos.guardar({
     tipo: 'cambio',
     operacionId,
     alTardar,
@@ -257,7 +323,7 @@ export function cambiarNombre({ datos, permiso, lector, nombre, operacionId, alT
         },
       };
     },
-  });
+  }));
 }
 
 // ------------------------------------------------------------------- libros
@@ -283,8 +349,9 @@ export function agregarLibro({ datos, permiso, codigo, titulo, autor, categoria,
   if (!esCodigoValido(codigoLimpio)) throw new ErrorDeNegocio(MENSAJES_DE_OPERACION.codigoInvalido);
   const limpio = revisarLibro({ titulo, autor, categoria, categorias });
   const ruta = rutas.libro(codigoLimpio);
+  anotarIntencion({ tipo: 'alta', ruta, identificadores: [codigoLimpio], operacionId });
 
-  return datos.guardar({
+  return resolverIntencionDe(datos.guardar({
     tipo: 'alta',
     operacionId,
     alTardar,
@@ -312,7 +379,7 @@ export function agregarLibro({ datos, permiso, codigo, titulo, autor, categoria,
         lectura: { existe: leido.existe, creacionId: leido.datos?.creacionId ?? null },
       };
     },
-  });
+  }));
 }
 
 /**
@@ -323,8 +390,9 @@ export function editarLibro({ datos, libro, titulo, autor, categoria, baja, cate
   const limpio = revisarLibro({ titulo, autor, categoria, categorias });
   const bajaFinal = baja === true;
   const ruta = rutas.libro(libro.codigo);
+  anotarIntencion({ tipo: 'cambio', ruta, identificadores: [libro.codigo], operacionId });
 
-  return datos.guardar({
+  return resolverIntencionDe(datos.guardar({
     tipo: 'cambio',
     operacionId,
     alTardar,
@@ -355,7 +423,7 @@ export function editarLibro({ datos, libro, titulo, autor, categoria, baja, cate
         },
       };
     },
-  });
+  }));
 }
 
 /** Da de baja un libro. Es una edición con `baja` en verdadero. */

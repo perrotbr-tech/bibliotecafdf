@@ -28,7 +28,6 @@ import { formularioDeLibro } from './libro-formulario.js';
 
 export function pantallaCatalogo({ datos, permiso, categorias: categoriasIniciales = [] }) {
   let categorias = categoriasIniciales;
-  let crudos = [];
   let libros = [];
   let hayDatos = false;
   let consulta = '';
@@ -165,9 +164,24 @@ export function pantallaCatalogo({ datos, permiso, categorias: categoriasInicial
       total === 0 ? '' : `${total} ${total === 1 ? 'libro' : 'libros'}${faltan > 0 ? `, se muestran ${visibles.length}` : ''}`;
 
     if (total === 0) {
+      // Dos vacíos distintos: una biblioteca sin libros todavía no es una
+      // búsqueda sin resultados, y aconsejar «prueba con menos palabras» a
+      // quien no escribió nada no ayuda a nadie.
+      //
       // C-26: una búsqueda con signos raros no da error, da lista vacía con
       // su mensaje.
-      pintar(lista, vacio('No se encontró ningún libro', 'Prueba con menos palabras, o revisa el código.'));
+      const sinFiltros = consulta.trim() === '' && categoriaElegida === 'todas' && estadoElegido === 'todos';
+      pintar(
+        lista,
+        sinFiltros
+          ? vacio(
+              'Todavía no hay libros en el catálogo.',
+              permiso.rol === 'admin'
+                ? 'Usa «Agregar libro» para poner el primero.'
+                : 'El administrador puede agregarlos.',
+            )
+          : vacio('No se encontró ningún libro', 'Prueba con menos palabras, o revisa el código.'),
+      );
       botonMas.hidden = true;
       return;
     }
@@ -204,30 +218,19 @@ export function pantallaCatalogo({ datos, permiso, categorias: categoriasInicial
 
   // -------------------------------------------------------------- escuchas
 
-  // El catálogo escucha `config/app` por su cuenta: necesita las categorías
-  // para las fichas del filtro y para el color de cada tejuelo, y no puede
-  // recibirlas desde fuera, porque eso obligaría a volver a dibujar la
-  // pantalla y borraría lo que la persona está escribiendo.
-  const soltarConfig = datos.escucharDocumento(rutas.configApp(), (configuracion) => {
-    const nuevas = configuracion?.categorias;
-    if (!Array.isArray(nuevas)) return;
-    categorias = nuevas;
-    pintarFichas();
-    if (hayDatos) {
-      // Los prefijos de los tejuelos salen de las categorías.
-      libros = prepararLibros(crudos, { categorias });
-      pintarLista();
-    }
-  });
-
+  // Las categorías NO se escuchan aquí. `main.js` ya mantiene una escucha de
+  // `config/app` para toda la sesión, y abrir otra por pantalla costaba una
+  // lectura más y, peor, repintaba las fichas en cada evento de metadatos
+  // —una pérdida de señal bastaba— soltando el foco de quien estuviera
+  // filtrando. Ahora `main.js` avisa por `alCambiarCategorias`, y eso solo
+  // ocurre cuando las categorías de verdad cambian.
   const soltarLibros = datos.escucharColeccion(
     rutas.libros(),
     (documentos, _metadatos, cambios) => {
       // Un evento sin cambios —por ejemplo al perder la conexión— no vuelve a
       // pintar nada: pintar soltaría el foco de quien está escribiendo.
       if (cambios === 0 && hayDatos) return;
-      crudos = documentos;
-      libros = prepararLibros(documentos, { categorias });
+      libros = prepararLibros(documentos);
       hayDatos = true;
       pintarLista();
     },
@@ -240,12 +243,22 @@ export function pantallaCatalogo({ datos, permiso, categorias: categoriasInicial
 
   return {
     nodo,
-    desmontar: () => {
-      soltarLibros();
-      soltarConfig();
-    },
+    desmontar: () => soltarLibros(),
     alCambiarRed: () => {
       if (botonAgregar) botonAgregar.disabled = !datos.hayRed();
+    },
+    /** Lo llama `main.js` cuando las categorías de `config/app` cambiaron. */
+    alCambiarCategorias: (nuevas) => {
+      if (!Array.isArray(nuevas)) return;
+      categorias = nuevas;
+      pintarFichas();
+      // Si la categoría elegida desapareció de la configuración, el filtro
+      // volvería a no encontrar nada sin explicación: se vuelve a «Todas».
+      if (categoriaElegida !== 'todas' && !categorias.some((una) => una?.nombre === categoriaElegida)) {
+        categoriaElegida = 'todas';
+        pintarFichas();
+      }
+      pintarLista();
     },
   };
 }

@@ -114,7 +114,7 @@ test('C-25 el filtro encuentra por título, autor y código, sin tildes', () => 
 });
 
 test('C-26 una búsqueda con signos raros devuelve vacío y no lanza', () => {
-  const libros = prepararLibros([libro('INF006')], { categorias: CATEGORIAS });
+  const libros = prepararLibros([libro('INF006')]);
   for (const rara of ['(.*[\\', '[[[', '\\', '*', '?!']) {
     assert.doesNotThrow(() => filtrarLibros(libros, { consulta: rara }), rara);
     assert.deepEqual(filtrarLibros(libros, { consulta: rara }), [], rara);
@@ -175,7 +175,7 @@ test('los lectores se buscan por nombre sin tildes', () => {
 test('se muestran 40 filas y el resto queda detrás de «Mostrar más»', () => {
   assert.equal(FILAS_POR_TANDA, 40);
   const muchos = Array.from({ length: 95 }, (_, i) => libro(`INF${String(i + 1).padStart(3, '0')}`));
-  const libros = prepararLibros(muchos, { categorias: CATEGORIAS });
+  const libros = prepararLibros(muchos);
 
   const primera = porTandas(libros, FILAS_POR_TANDA);
   assert.equal(primera.visibles.length, 40);
@@ -218,15 +218,6 @@ test('el color del tejuelo sale del orden de las categorías y no se mueve', () 
   assert.equal(claseDeTejuelo('Infantil', conUnaMas), 'tejuelo tejuelo--1');
 });
 
-test('el prefijo de un libro sale de su categoría, y si no está, de su código', () => {
-  const [conCategoria, sinCategoria] = prepararLibros(
-    [libro('INF001'), libro('XYZ002', { categoria: 'Cocina' })],
-    { categorias: CATEGORIAS },
-  );
-  assert.equal(conCategoria.prefijo, 'INF');
-  assert.equal(sinCategoria.prefijo, 'XYZ');
-});
-
 // --------------------------------------------------- costo de las puras
 
 test('preparar cinco mil libros se mide en decenas de milisegundos, y filtrar en unidades', () => {
@@ -242,7 +233,7 @@ test('preparar cinco mil libros se mide en decenas de milisegundos, y filtrar en
   });
 
   const antesDePreparar = performance.now();
-  const preparados = prepararLibros(muchos, { categorias: CATEGORIAS });
+  const preparados = prepararLibros(muchos);
   const preparar = performance.now() - antesDePreparar;
 
   const antesDeFiltrar = performance.now();

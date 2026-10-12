@@ -11,6 +11,7 @@ import {
   instanteEnChile,
   mediodiaEnChile,
   primerInstanteEnChile,
+  sabadosEntre,
   temporadaDe,
   temporadaDeInstante,
   textoFechaLarga,
@@ -130,4 +131,17 @@ test('el desplazamiento de días cruza meses, años y cambios de hora', () => {
   assert.equal(diaDesplazado('2024-02-28', 1), '2024-02-29');
   assert.equal(diaDesplazado('2026-04-04', 1), '2026-04-05');
   assert.equal(diaDesplazado('2026-10-10', 14), '2026-10-24');
+});
+
+test('sabadosEntre corta en el tope: una fecha disparatada no camina el calendario', () => {
+  // `esDiaValido` acepta cualquier año de cuatro cifras, así que un `vence`
+  // mal tecleado como 9999-10-17 hacía recorrer tres millones de días en el
+  // paso que solo debía validar y no escribir nada.
+  const antes = performance.now();
+  assert.equal(sabadosEntre('2026-10-03', '9999-10-17', 5), 5);
+  const tardo = performance.now() - antes;
+  assert.ok(tardo < 50, `tardó ${tardo.toFixed(0)} ms`);
+  // Sin alcanzar el tope, la cuenta es exacta.
+  assert.equal(sabadosEntre('2026-10-03', '2026-10-24', 5), 3);
+  assert.equal(sabadosEntre('2026-10-03', '2026-10-10'), 1);
 });

@@ -222,3 +222,16 @@ test('normalizarBusqueda conserva los signos: no hace falta quitarlos', () => {
   assert.equal(normalizarBusqueda('  El Dios  PRÓDIGO '), 'el dios prodigo');
   assert.equal(normalizarBusqueda('(.*[\\'), '(.*[\\');
 });
+
+test('un carácter de control no se convierte en ñ: la marca interna no se cuela', () => {
+  // La clave protege la ñ con un carácter de control, así que un nombre que
+  // trajera uno terminaba convertido en «ñ» y dos personas distintas
+  // colapsaban en una clave. Los controles salen primero.
+  const marca = String.fromCharCode(1);
+  assert.equal(claveDeNombre(`a${marca}b`), 'ab');
+  assert.notEqual(claveDeNombre(`a${marca}b`), claveDeNombre('añb'));
+  assert.equal(claveDeNombre(`Ana${marca}`), 'ana');
+  assert.equal(claveDeNombre(`Rafaela${marca}Toledo`), 'rafaelatoledo');
+  // Y la ñ de verdad sigue intacta.
+  assert.equal(claveDeNombre('Peña'), 'peña');
+});
