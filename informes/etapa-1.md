@@ -372,13 +372,23 @@ Las cinco primeras las aprobaste antes de construir; el resto son de detalle.
    proyecto real, activar GitHub Pages desde `docs/` de `main`, y autorizar la
    Etapa 2.
 
-Dos cosas del repositorio que conviene saber: **todavía no hay rama `main`**
-—`etapa-1` es la única rama, porque el repositorio estaba vacío—, así que para
-abrir la solicitud de cambios hace falta crear primero una base; y si quieres
-que las pruebas de extremo a extremo se puedan correr también desde una sesión
-en la nube, hay que permitir `www.gstatic.com` en la configuración de red de ese
-entorno. Nada de eso bloquea la contraprueba: la integración continua de GitHub
-ya corre las seis suites.
+Tres cosas del repositorio que conviene saber:
+
+- **`main` existe pero está vacía.** El repositorio se creó sin ningún commit, así
+  que no había rama base contra la cual abrir la solicitud de cambios. Se creó
+  una rama huérfana con un commit vacío, con tu autorización expresa. El código
+  de la etapa entra a `main` solo cuando tú la fusiones. Como las dos ramas no
+  comparten historia, la solicitud de cambios muestra el árbol completo como
+  diferencia —que para una primera etapa es justo lo que el revisor necesita— y
+  la fusión necesitará un commit de mezcla.
+- **La rama por defecto del repositorio sigue siendo `etapa-1`.** Intenté
+  cambiarla a `main` y no pude: el proxy de esta sesión no permite escribir
+  ajustes del repositorio. Hay que hacerlo a mano en Settings → General →
+  Default branch.
+- **Para correr el extremo a extremo desde una sesión en la nube** hay que
+  permitir `www.gstatic.com` en la configuración de red de ese entorno. No
+  bloquea la contraprueba: la integración continua de GitHub ya corre las seis
+  suites.
 
 ## 9. Lista de entrega del documento, comprobada
 
@@ -397,7 +407,7 @@ ya corre las seis suites.
 |---|---|
 | Rama | `etapa-1` |
 | SHA entregado | `f191a6cbd6ad3b80c4a51c7b1f2b8787d7401e74` (`f191a6c`) |
-| Corrida de integración continua en verde | `e5fdb6d`, las seis suites |
+| Corrida de integración continua en verde | `f191a6c`, las seis suites |
 | Node | 22.22.0 (local) y 22 en la integración continua |
 | npm | 10.9.4 |
 | Java | OpenJDK 21.0.12.1 local; Temurin 21 en la integración continua |
