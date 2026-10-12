@@ -116,8 +116,8 @@ revisar-repositorio: sin hallazgos
 # fail 0
 
 ### npm run prueba:reglas        (firebase emulators:exec, demo-biblioteca)
-# tests 26
-# pass 26
+# tests 37
+# pass 37
 # fail 0
 
 ### npm run prueba:scripts       (firebase emulators:exec, demo-biblioteca)
@@ -132,8 +132,38 @@ revisar-repositorio: sin hallazgos
 2 passed (6.2s)
 ```
 
-**130 pruebas, 130 en verde, 0 en rojo.** Ninguna se saltó ni se desactivó. Las
+**141 pruebas, 141 en verde, 0 en rojo.** Ninguna se saltó ni se desactivó. Las
 seis suites corren juntas en la integración continua sobre el commit entregado.
+
+### 2.2.1 Escenarios adversos contra las reglas
+
+Además de los casos del documento, `tests/reglas/adversario.test.mjs` tiene 11
+intentos de colarse, marcados «EXTRA» para no confundirlos con A-01 a A-40.
+Todos quedan denegados:
+
+| Intento | Resultado |
+|---|---|
+| Una cuenta de fuera se inscribe sola creando su propio documento | Denegado |
+| …y encima con rol `admin` | Denegado |
+| Un voluntario desactivado se reactiva a sí mismo | Denegado |
+| …o entra por la puerta de la muestra de hora | Denegado |
+| Un administrador desactivado sigue mandando | Denegado: deja de ser administrador |
+| Un alta firmada a nombre de otra persona | Denegado |
+| Un voluntario de `principal` lee o escribe en `bibliotecas/otra` | Denegado |
+| Un cierre ya vencido sigue bloqueando | No bloquea; uno vigente sí |
+| El documento de control llega con basura en `bloqueo` | Denegado: falla hacia el lado seguro |
+| Reenviar el documento con los metadatos viejos | Denegado |
+| Con mantenimiento vigente se toca `config/app` | Denegado; la lectura se conserva |
+
+Dos comportamientos quedan documentados como deliberados, no como hallazgos: el
+correo del token se compara en minúsculas, así que una cuenta que llega como
+`Ana@Example.com` encuentra su documento; y un administrador **sí** puede bajar
+de rango a otro administrador —la especificación solo prohíbe hacérselo a uno
+mismo, con lo que siempre queda al menos un administrador activo.
+
+**Esto no es la contraprueba.** Son escenarios que se me ocurrieron
+construyendo, y una revisión del propio implementador no es independiente
+(AGENTS.md). Codex tiene que buscar los suyos.
 
 ### 2.3 Qué encontraron las pruebas
 
@@ -349,7 +379,18 @@ en la nube, hay que permitir `www.gstatic.com` en la configuración de red de es
 entorno. Nada de eso bloquea la contraprueba: la integración continua de GitHub
 ya corre las seis suites.
 
-## 9. Datos de la entrega
+## 9. Lista de entrega del documento, comprobada
+
+| Punto de la lista | Estado |
+|---|---|
+| La app corre en local con un solo comando | **Comprobado.** `npm start` levanta los emuladores, siembra la base demo e inicializa los cuatro documentos, y sirve `docs/` en <http://127.0.0.1:5173>. |
+| Otro comando corre todas las pruebas | **Comprobado.** `npm test` encadena escáner, unidad, reglas, scripts, extremo a extremo y carga. |
+| Integración continua en verde | **Sí**, las seis suites sobre el commit entregado. |
+| `firestore.rules` con negación por defecto | **Sí**, y probado: A-12 recorre nueve rutas que no figuran en las reglas. |
+| `README.md` con instrucciones para la app, las pruebas y los scripts | **Sí.** |
+| `informes/etapa-1.md` con salida de pruebas, lecturas medidas, pruebas manuales pendientes y lo que no está listo | **Este documento.** |
+
+## 10. Datos de la entrega
 
 | Dato | Valor |
 |---|---|
@@ -368,7 +409,7 @@ ya corre las seis suites.
 | @playwright/test | 1.56.1 |
 | Chromium | 141.0.7390.37 |
 | Proyecto usado | `demo-biblioteca`, solo emulador |
-| Pruebas ejecutadas | **130**: 63 unidad, 26 reglas, 7 scripts, 32 extremo a extremo, 2 carga |
+| Pruebas ejecutadas | **141**: 63 unidad, 37 reglas (26 de los casos + 11 adversas), 7 scripts, 32 extremo a extremo, 2 carga |
 | Pruebas en rojo | ninguna |
 | Casos del documento cubiertos | 39 de 39 automatizables; A-31 es manual |
 | Datos personales versionados | ninguno; el escáner pasa sin hallazgos |
