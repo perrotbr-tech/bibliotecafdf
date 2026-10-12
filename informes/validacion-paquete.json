@@ -1,0 +1,49 @@
+{
+  "tipo": "validación estática del paquete, no prueba de aplicación",
+  "fecha_chile": "2026-10-11",
+  "estado": "PASS",
+  "errores": [],
+  "advertencias_fixture": [
+    "1 vencimientos legados fuera de sábado: advertencia admitida por carga",
+    "1 plazos legados mayores de 28 días: revisar advertencia de carga"
+  ],
+  "casos_por_etapa": {
+    "01-base-y-acceso.md": {
+      "casos": 40,
+      "manuales": 1
+    },
+    "02-catalogo-y-lectores.md": {
+      "casos": 43,
+      "manuales": 0
+    },
+    "03-prestar-y-devolver.md": {
+      "casos": 58,
+      "manuales": 0
+    },
+    "04-atrasados-y-recordatorios.md": {
+      "casos": 24,
+      "manuales": 1
+    },
+    "05-juego-de-temporadas.md": {
+      "casos": 42,
+      "manuales": 1
+    },
+    "06-estadisticas-y-cierre.md": {
+      "casos": 31,
+      "manuales": 1
+    },
+    "07-etiquetas-qr-opcional.md": {
+      "casos": 11,
+      "manuales": 1
+    }
+  },
+  "casos_totales": 249,
+  "fixture": {
+    "libros": 145,
+    "lectores": 80,
+    "prestamos": 193
+  },
+  "referencia_y_fixture_preservados": true,
+  "pruebas_firebase_e2e": "NO EJECUTADAS: aplicación oficial no implementada",
+  "archivos_validacion_requeridos": 11
+}

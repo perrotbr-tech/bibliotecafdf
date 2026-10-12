@@ -1,0 +1,6 @@
+---
+description: Reglas comunes del proyecto de biblioteca
+alwaysApply: true
+---
+
+Lee y sigue AGENTS.md en la raíz y PROMPT-MAESTRO-CURSOR.md. Antes de cada etapa lee specs/00-contrato-operativo.md, specs/00-base.md y el documento de la etapa. No construyas etapas adicionales, no uses proyectos reales ni fusiones a main. La ausencia de configuración real no impide trabajar contra demo-biblioteca.

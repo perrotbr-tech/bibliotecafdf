@@ -1,0 +1,29 @@
+{
+  "name": "biblioteca-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "App de préstamos de la biblioteca de la iglesia. Sitio estático sin compilación, publicado desde docs/.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "firebase emulators:exec --project demo-biblioteca --only auth,firestore \"node scripts/arrancar-local.mjs\"",
+    "servir": "node scripts/servir.mjs",
+    "inicializar": "node scripts/inicializar.mjs",
+    "revisar": "node scripts/revisar-repositorio.mjs",
+    "prueba:unidad": "node --test \"tests/unidad/**/*.test.mjs\"",
+    "prueba:reglas": "firebase emulators:exec --project demo-biblioteca --only auth,firestore \"node --test --test-concurrency=1 'tests/reglas/**/*.test.mjs'\"",
+    "prueba:scripts": "firebase emulators:exec --project demo-biblioteca --only auth,firestore \"node --test --test-concurrency=1 'tests/scripts/**/*.test.mjs'\"",
+    "prueba:e2e": "firebase emulators:exec --project demo-biblioteca --only auth,firestore \"playwright test\"",
+    "prueba:carga": "firebase emulators:exec --project demo-biblioteca --only auth,firestore \"playwright test --config playwright.carga.config.mjs\"",
+    "test": "npm run revisar && npm run prueba:unidad && npm run prueba:reglas && npm run prueba:scripts && npm run prueba:e2e && npm run prueba:carga"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "@playwright/test": "1.56.1",
+    "firebase": "12.19.0",
+    "firebase-admin": "14.5.0",
+    "firebase-tools": "15.33.0"
+  }
+}

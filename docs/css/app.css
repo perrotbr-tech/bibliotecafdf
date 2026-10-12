@@ -1,0 +1,515 @@
+/* App de préstamos de la biblioteca.
+   Una columna para el teléfono: barra superior fija, contenido que fluye,
+   navegación inferior de cinco destinos. Tipografías del sistema: ninguna hoja
+   ni fuente externa, para no bloquear el primer pintado en redes lentas.
+
+   Los colores salen de specs/00-base.md §9. El tema oscuro se aplica por
+   preferencia del sistema y también se puede fijar con data-theme. */
+
+:root {
+  --bg: #f3f6f2;
+  --surface: #ffffff;
+  --sunk: #e9eee8;
+  --fg: #16211b;
+  --muted: #5a6860;
+  --line: #d5ddd6;
+  --campo: #7c8a82;
+  --accent: #1d6a50;
+  --accent-fg: #ffffff;
+  --accent-soft: #ddeee6;
+  --late: #b3301c;
+  --late-soft: #fbe4df;
+  --warn: #8a5a00;
+  --warn-soft: #fbefd2;
+  --oro: #d9a514;
+  --plata: #9ba6af;
+  --bronce: #b8743c;
+
+  --radio: 14px;
+  --toque: 44px;
+  --paso: 12px;
+  --sombra: 0 8px 28px rgb(22 33 27 / 16%);
+  --cuerpo: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+
+  color-scheme: light;
+}
+
+/* Escrito plano, sin anidamiento CSS, para no depender de una versión reciente
+   de Samsung Internet. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1512;
+    --surface: #18211c;
+    --sunk: #131a16;
+    --fg: #e7eee9;
+    --muted: #97a79e;
+    --line: #2b3831;
+    --campo: #7e8e85;
+    --accent: #5fc6a1;
+    --accent-fg: #0b1410;
+    --accent-soft: #1d3229;
+    --late: #ff8d77;
+    --late-soft: #3a1d17;
+    --warn: #e9b955;
+    --warn-soft: #33290f;
+    --oro: #edbe3a;
+    --plata: #bac4cc;
+    --bronce: #d08d55;
+    --sombra: 0 8px 28px rgb(0 0 0 / 50%);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f1512;
+  --surface: #18211c;
+  --sunk: #131a16;
+  --fg: #e7eee9;
+  --muted: #97a79e;
+  --line: #2b3831;
+  --campo: #7e8e85;
+  --accent: #5fc6a1;
+  --accent-fg: #0b1410;
+  --accent-soft: #1d3229;
+  --late: #ff8d77;
+  --late-soft: #3a1d17;
+  --warn: #e9b955;
+  --warn-soft: #33290f;
+  --oro: #edbe3a;
+  --plata: #bac4cc;
+  --bronce: #d08d55;
+  --sombra: 0 8px 28px rgb(0 0 0 / 50%);
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--cuerpo);
+  font-size: 16px;
+  line-height: 1.45;
+  /* A 320 px no puede haber desplazamiento horizontal, ni con una palabra de
+     60 letras: todo el texto largo se corta donde sea necesario. */
+  overflow-wrap: anywhere;
+  padding-bottom: calc(var(--toque) + 28px + env(safe-area-inset-bottom));
+}
+
+[hidden] {
+  display: none !important;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: 1.25;
+}
+
+p {
+  margin: 0 0 var(--paso);
+}
+
+/* ------------------------------------------------------------------ franja */
+
+.franja {
+  background: var(--warn-soft);
+  color: var(--warn);
+  padding: 6px 12px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+}
+
+/* ---------------------------------------------------------- barra superior */
+
+.barra-superior {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: var(--paso);
+  min-height: 56px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.barra-superior__texto {
+  min-width: 0; /* para que el nombre largo se corte en vez de empujar */
+}
+
+.barra-superior__nombre {
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.barra-superior__fecha {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+/* ---------------------------------------------------------------- pantalla */
+
+.pantalla {
+  padding: 16px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.pantalla:focus {
+  outline: none;
+}
+
+.cargando,
+.vacio {
+  color: var(--muted);
+  padding: 24px 0;
+  text-align: center;
+}
+
+.tarjeta {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radio);
+  padding: 16px;
+  margin-bottom: var(--paso);
+}
+
+.titulo-seccion {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 20px 0 8px;
+}
+
+/* ----------------------------------------------------------------- avisos */
+
+.avisos {
+  padding: 0 16px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.avisos:empty {
+  display: none;
+}
+
+.aviso {
+  border-radius: var(--radio);
+  padding: 10px 12px;
+  margin-top: var(--paso);
+  border: 1px solid transparent;
+  font-size: 0.9375rem;
+}
+
+.aviso--exito {
+  background: var(--accent-soft);
+  color: var(--fg);
+  border-color: var(--accent);
+}
+
+.aviso--error {
+  background: var(--late-soft);
+  color: var(--fg);
+  border-color: var(--late);
+}
+
+.aviso--atencion {
+  background: var(--warn-soft);
+  color: var(--fg);
+  border-color: var(--warn);
+}
+
+/* ---------------------------------------------------------------- botones */
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--toque);
+  min-width: var(--toque);
+  padding: 10px 18px;
+  border-radius: var(--radio);
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boton--secundario {
+  background: var(--surface);
+  color: var(--fg);
+  border-color: var(--campo);
+}
+
+.boton--peligro {
+  background: var(--surface);
+  color: var(--late);
+  border-color: var(--late);
+}
+
+.boton--icono {
+  padding: 8px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--fg);
+}
+
+.boton--ancho {
+  width: 100%;
+}
+
+.boton[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.boton:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------------- campos */
+
+.campo {
+  display: block;
+  margin-bottom: var(--paso);
+}
+
+.campo__etiqueta {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.campo__control {
+  width: 100%;
+  min-height: var(--toque);
+  padding: 10px 12px;
+  border: 1px solid var(--campo); /* contraste mínimo 3:1 con el fondo */
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+}
+
+.campo__ayuda {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.campo__error {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8125rem;
+  color: var(--late);
+}
+
+/* ------------------------------------------------------------------ listas */
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lista__fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.lista__fila:last-child {
+  border-bottom: none;
+}
+
+.lista__principal {
+  flex: 1 1 60%;
+  min-width: 0;
+}
+
+.lista__nombre {
+  font-weight: 600;
+}
+
+.lista__detalle {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.etiqueta {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--sunk);
+  color: var(--muted);
+}
+
+.etiqueta--admin {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.etiqueta--inactivo {
+  background: var(--late-soft);
+  color: var(--late);
+}
+
+/* -------------------------------------------------------- barra inferior */
+
+.barra-inferior {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.destino {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--toque);
+  padding: 6px 2px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.6875rem;
+  cursor: pointer;
+}
+
+.destino__icono {
+  font-size: 1.125rem;
+  line-height: 1;
+}
+
+.destino[aria-current="page"] {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------------- hoja */
+
+.hoja {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: flex-end;
+}
+
+.hoja__fondo {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 45%);
+}
+
+.hoja__panel {
+  position: relative;
+  width: 100%;
+  max-height: 90dvh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: var(--radio) var(--radio) 0 0;
+  box-shadow: var(--sombra);
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  animation: subir 160ms ease-out;
+}
+
+.hoja__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--paso);
+  margin-bottom: var(--paso);
+}
+
+.hoja__titulo {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  min-width: 0;
+}
+
+@keyframes subir {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------- entrada */
+
+.entrada {
+  min-height: 70dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--paso);
+}
+
+.entrada__nombre {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.entrada__nota {
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.entrada__correo {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}

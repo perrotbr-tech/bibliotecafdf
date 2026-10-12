@@ -1,0 +1,222 @@
+rules_version = '2';
+
+// Reglas de seguridad de la biblioteca — Etapa 1.
+//
+// Negación por defecto: lo que no está escrito aquí está denegado.
+//
+// Presupuesto de accesos a otros documentos (contrato §7): máximo 10 por
+// operación y 20 por transacción, contados sin suponer ahorro por caché. Por
+// eso cada `get()` se hace UNA vez y su resultado se pasa como argumento a las
+// funciones que lo examinan, en vez de repetir la llamada.
+//
+// Cuentas de esta etapa:
+//   lectura de voluntarios/config  → 1 (el propio voluntario)
+//   sincronización de hora         → 1 (el propio voluntario)
+//   alta o cambio de voluntario    → 2 (el propio voluntario + config/control)
+//   cambio de config/app           → 2 (el propio voluntario + config/control)
+//
+// Lo que estas reglas NO garantizan (declarado a propósito): no reproducen la
+// normalización Unicode del cliente, y no recalculan agregados.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------------------------------------------------------- sesión
+
+    function hayCorreoVerificado() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+
+    function correo() {
+      return request.auth.token.email.lower();
+    }
+
+    function docVoluntario(bib) {
+      return get(/databases/$(database)/documents/bibliotecas/$(bib)/voluntarios/$(correo()));
+    }
+
+    function activo(doc) {
+      return doc != null && doc.data.get('activo', false) == true;
+    }
+
+    function admin(doc) {
+      return activo(doc) && doc.data.get('rol', '') == 'admin';
+    }
+
+    // Una persona es voluntaria si inició sesión, su correo está verificado y
+    // existe su documento con activo verdadero. Iniciar sesión no basta.
+    function esVoluntario(bib) {
+      return hayCorreoVerificado() && activo(docVoluntario(bib));
+    }
+
+    function esAdmin(bib) {
+      return hayCorreoVerificado() && admin(docVoluntario(bib));
+    }
+
+    // -------------------------------------------------------------- bloqueos
+
+    function docControl(bib) {
+      return get(/databases/$(database)/documents/bibliotecas/$(bib)/config/control);
+    }
+
+    // Un bloqueo de mantenimiento no expira solo: su `hasta` es nulo. Un cierre
+    // lleva `hasta` obligatorio y deja de regir cuando lo pasa request.time.
+    function bloqueoVigente(doc) {
+      return doc.data.get('bloqueo', null) != null
+        && (doc.data.bloqueo.get('hasta', null) == null
+            || request.time < doc.data.bloqueo.hasta);
+    }
+
+    // Sin documento de control no se escribe (contrato §6).
+    function sinBloqueo(bib) {
+      return permiteEscritura(docControl(bib));
+    }
+
+    function permiteEscritura(doc) {
+      return doc != null && !bloqueoVigente(doc);
+    }
+
+    // -------------------------------------------------------------- utilería
+
+    function formatoId(valor) {
+      return valor is string && valor.matches('^[0-9a-f]{32}$');
+    }
+
+    function horaDelServidor(valor) {
+      return valor == request.time;
+    }
+
+    function cambia(permitidos) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(permitidos);
+    }
+
+    // ------------------------------------------------------------ biblioteca
+
+    match /bibliotecas/{bib} {
+
+      // --- voluntarios -----------------------------------------------------
+
+      match /voluntarios/{documentoCorreo} {
+
+        // Lo lee cualquier voluntario activo.
+        allow read: if esVoluntario(bib);
+
+        // Lo crea solo un administrador. El identificador es el correo en
+        // minúsculas, y el documento llega con la lista exacta de campos.
+        allow create: if esAdmin(bib)
+          && sinBloqueo(bib)
+          && documentoCorreo == documentoCorreo.lower()
+          && request.resource.data.keys().hasOnly([
+               'nombre', 'rol', 'activo',
+               'creadoEn', 'creadoPor', 'creacionId',
+               'ultimaConexion', 'sincronizacionId'
+             ])
+          && request.resource.data.keys().hasAll([
+               'nombre', 'rol', 'activo', 'creadoEn', 'creadoPor', 'creacionId'
+             ])
+          && request.resource.data.nombre is string
+          && request.resource.data.nombre.size() >= 1
+          && request.resource.data.nombre.size() <= 60
+          && request.resource.data.rol in ['admin', 'voluntario']
+          && request.resource.data.activo is bool
+          && horaDelServidor(request.resource.data.creadoEn)
+          && request.resource.data.creadoPor == correo()
+          && formatoId(request.resource.data.creacionId)
+          && request.resource.data.get('ultimaConexion', null) == null
+          && request.resource.data.get('sincronizacionId', null) == null;
+
+        // Un administrador cambia nombre, rol y estado. Los metadatos de
+        // operación son parte de la lista permitida y no abren ningún otro
+        // campo. `creacionId`, `creadoEn` y `creadoPor` son inmutables.
+        allow update: if esAdmin(bib)
+          && sinBloqueo(bib)
+          && cambia(['nombre', 'rol', 'activo', 'ultimaOperacionId', 'modificadoEn'])
+          && request.resource.data.keys().hasAll(['ultimaOperacionId', 'modificadoEn'])
+          && formatoId(request.resource.data.ultimaOperacionId)
+          && horaDelServidor(request.resource.data.modificadoEn)
+          && request.resource.data.nombre is string
+          && request.resource.data.nombre.size() >= 1
+          && request.resource.data.nombre.size() <= 60
+          && request.resource.data.rol in ['admin', 'voluntario']
+          && request.resource.data.activo is bool
+          // Un administrador no puede desactivarse ni quitarse el rol.
+          && (documentoCorreo != correo()
+              || (request.resource.data.activo == true
+                  && request.resource.data.rol == 'admin'));
+
+        // Excepción del contrato §2: cada voluntario escribe EXACTAMENTE su
+        // muestra de hora en su propio documento. No pasa por el bloqueo:
+        // lectura y sincronización siguen disponibles en mantenimiento.
+        allow update: if hayCorreoVerificado()
+          && documentoCorreo == correo()
+          && activo(docVoluntario(bib))
+          && cambia(['ultimaConexion', 'sincronizacionId'])
+          && horaDelServidor(request.resource.data.ultimaConexion)
+          && formatoId(request.resource.data.sincronizacionId);
+
+        // Nadie borra un voluntario.
+        allow delete: if false;
+      }
+
+      // --- configuración ---------------------------------------------------
+
+      match /config/app {
+        allow read: if esVoluntario(bib);
+
+        // Lo modifica solo un administrador, respetando tipos y largos.
+        // `juegoCerradoAlgunaVez` es inmutable desde el cliente en esta etapa:
+        // solo lo cambia la operación de cierre de la Etapa 5.
+        allow update: if esAdmin(bib)
+          && sinBloqueo(bib)
+          && cambia([
+               'nombreBiblioteca', 'plazoSabadosPorDefecto', 'categorias',
+               'mensajeAtraso', 'mensajePrevio', 'inicioJuego',
+               'ultimaOperacionId', 'modificadoEn'
+             ])
+          && request.resource.data.keys().hasAll(['ultimaOperacionId', 'modificadoEn'])
+          && formatoId(request.resource.data.ultimaOperacionId)
+          && horaDelServidor(request.resource.data.modificadoEn)
+          && request.resource.data.nombreBiblioteca is string
+          && request.resource.data.nombreBiblioteca.size() >= 1
+          && request.resource.data.nombreBiblioteca.size() <= 40
+          && request.resource.data.plazoSabadosPorDefecto is int
+          && request.resource.data.plazoSabadosPorDefecto >= 1
+          && request.resource.data.plazoSabadosPorDefecto <= 4
+          && request.resource.data.categorias is list
+          && request.resource.data.mensajeAtraso is string
+          && request.resource.data.mensajeAtraso.size() >= 10
+          && request.resource.data.mensajeAtraso.size() <= 400
+          && request.resource.data.mensajePrevio is string
+          && request.resource.data.mensajePrevio.size() >= 10
+          && request.resource.data.mensajePrevio.size() <= 400
+          && request.resource.data.inicioJuego is string
+          && request.resource.data.juegoCerradoAlgunaVez == resource.data.juegoCerradoAlgunaVez;
+
+        // Lo crea y lo borra solo el script del dueño, que no pasa por reglas.
+        allow create, delete: if false;
+      }
+
+      // Los contadores se leen, pero en esta etapa nadie los escribe desde la
+      // app: los préstamos y los lectores son de etapas posteriores.
+      match /config/contadores {
+        allow read: if esVoluntario(bib);
+        allow write: if false;
+      }
+
+      // El control del bloqueo se lee para que la app sepa que está cerrada.
+      // El mantenimiento lo pone y lo saca el script del dueño; el cierre llega
+      // en la Etapa 5.
+      match /config/control {
+        allow read: if esVoluntario(bib);
+        allow write: if false;
+      }
+
+      // Cualquier otro documento de config queda denegado por omisión: no hay
+      // regla con comodín para esa colección.
+    }
+
+    // Cualquier otra ruta: denegada.
+  }
+}

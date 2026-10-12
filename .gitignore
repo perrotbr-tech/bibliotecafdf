@@ -1,0 +1,16 @@
+# Datos reales y llaves: nunca se versionan
+datos/
+*.serviceAccount.json
+*-firebase-adminsdk-*.json
+.env
+.env.*
+
+# Herramientas
+node_modules/
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+playwright-report/
+test-results/
+.DS_Store

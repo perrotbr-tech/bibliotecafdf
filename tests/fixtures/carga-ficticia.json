@@ -1,0 +1,3191 @@
+{
+ "_nota": "Datos de prueba inventados. Lectores, teléfonos y préstamos son sintéticos; el catálogo usa títulos publicados. Fecha de referencia para las pruebas: 2026-10-10.",
+ "categorias": [
+  {
+   "nombre": "Infantil",
+   "prefijo": "INF"
+  },
+  {
+   "nombre": "Hombres y mujeres",
+   "prefijo": "HM"
+  },
+  {
+   "nombre": "Familia",
+   "prefijo": "FAM"
+  },
+  {
+   "nombre": "Vida Cristiana",
+   "prefijo": "VC"
+  },
+  {
+   "nombre": "Novelas",
+   "prefijo": "NV"
+  },
+  {
+   "nombre": "Teología",
+   "prefijo": "TEO"
+  }
+ ],
+ "libros": [
+  {
+   "codigo": "INF003",
+   "titulo": "¿Cómo estoy seguro de lo que está bien y lo que está mal?",
+   "autor": "Chris Morpher",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF004",
+   "titulo": "Cercano",
+   "autor": "Sally Lloyd y Jones y Jago",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF005",
+   "titulo": "¿Dónde se fue mi risa?",
+   "autor": "Max Lucado",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF006",
+   "titulo": "El amor es bondadoso",
+   "autor": "Laura Sassi",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF007",
+   "titulo": "El carpintero impaciente",
+   "autor": "Salem y Agnes de Bezenec",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF008",
+   "titulo": "El Dios que adoramos",
+   "autor": "Jonathan & Sarah Jérez",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF009",
+   "titulo": "El sembrador",
+   "autor": "Scott James",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF010",
+   "titulo": "El progreso del peregrino",
+   "autor": "John Bunyan",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF011",
+   "titulo": "¿Quién soy y por qué importo?",
+   "autor": "Chris Morphew",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF012",
+   "titulo": "JXSC De la oscuridad a la luz",
+   "autor": "Jairo Namnúm",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF014",
+   "titulo": "La noche que comenzó la navidad",
+   "autor": "Biblia para principiantes",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF015",
+   "titulo": "Los hijos del Rey",
+   "autor": "Max Lucado",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF016",
+   "titulo": "SL ¡Deja ir a mi pueblo! Historia del Éxodo",
+   "autor": "Super libro",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF017",
+   "titulo": "SL El arca de Noé",
+   "autor": "Super libro",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF018",
+   "titulo": "SL Los 10 mandamientos, Moisés y La Ley",
+   "autor": "Super libro",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF019",
+   "titulo": "El Barbero que quería orar",
+   "autor": "R.C. Sproul",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF020",
+   "titulo": "El jardín, la cortina y la cruz",
+   "autor": "Carl Laferton",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF021",
+   "titulo": "La copa envenenada del príncipe",
+   "autor": "R.C. Sproul",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF022",
+   "titulo": "¿Por qué Dios me hizo niña?",
+   "autor": "Abby Owen y Joe Owen",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF023",
+   "titulo": "¿Por qué Dios me hizo niño?",
+   "autor": "Abby Owen y Joe Owen",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF024",
+   "titulo": "Perfil de tres Monarcas",
+   "autor": "Gene Edwards",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF025",
+   "titulo": "Los prisioneros, el terremoto y la canción de media noche",
+   "autor": "Bob Hartman",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF026",
+   "titulo": "La asombrosa super fantastica fiesta sin fin",
+   "autor": "Joni Eareckson Tada",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "INF027",
+   "titulo": "Como yo",
+   "autor": "Laura Wifler",
+   "categoria": "Infantil",
+   "baja": false
+  },
+  {
+   "codigo": "HM001",
+   "titulo": "Cómo salvar tu matrinonio antes de casarte",
+   "autor": "Paolo y Karen Lacota",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM002",
+   "titulo": "El arte de esperar sin desesperar",
+   "autor": "Sharon Virkler",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM005",
+   "titulo": "La apariencia",
+   "autor": "Nancy Leigh Demoss",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM006",
+   "titulo": "La influencia de un hombre de Dios",
+   "autor": "Jim George",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM007",
+   "titulo": "Llamados a actuar",
+   "autor": "Vince Miller",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM008",
+   "titulo": "Lo que toda chica debería saber",
+   "autor": "Nancy Buceta",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM009",
+   "titulo": "Lo que todo chico debería saber",
+   "autor": "Nancy Buceta",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM010",
+   "titulo": "Los 5 lenguajes del amor",
+   "autor": "Gary Chapman",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM012",
+   "titulo": "Muy bendecida para estar estresada",
+   "autor": "Debora M Coty",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM013",
+   "titulo": "No me metan en la bolsa",
+   "autor": "Lucas Leys",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM014",
+   "titulo": "Oración Ferviente",
+   "autor": "Priscilla Shirer",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM015",
+   "titulo": "Preguntas difíciles 101",
+   "autor": "Lucas Leys",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM016",
+   "titulo": "Ser mujer",
+   "autor": "Katie J. MacCoy",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM018",
+   "titulo": "Una esposa conforme al corazón de Dios",
+   "autor": "Elizabeth George",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM019",
+   "titulo": "Una pareja conforme al corazón de Dios",
+   "autor": "Jim & Elizabeth George",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM020",
+   "titulo": "Un hombre del reino",
+   "autor": "Tony Evans",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "HM021",
+   "titulo": "Maternidad Redimida",
+   "autor": "Emily Jensen",
+   "categoria": "Hombres y mujeres",
+   "baja": true
+  },
+  {
+   "codigo": "HM022",
+   "titulo": "Disciplinas de un joven piadoso",
+   "autor": "R. Kent Hughes",
+   "categoria": "Hombres y mujeres",
+   "baja": false
+  },
+  {
+   "codigo": "FAM001",
+   "titulo": "Amándolo bien",
+   "autor": "Gary Thomas",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM002",
+   "titulo": "Criando hijos en un mundo saturado de pantallas",
+   "autor": "Eliza Huie",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM003",
+   "titulo": "Criando hijos en un mundo hipersexualizado",
+   "autor": "Eliza Huie",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM004",
+   "titulo": "Criando hijos en un mundo ¡Tú puedes hacerlo!",
+   "autor": "Eliza Huie",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM005",
+   "titulo": "De regreso a casa",
+   "autor": "Sixto Porras",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM006",
+   "titulo": "Edificando un matrimonio que en verdad funcione",
+   "autor": "Kay Arthur y David",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM007",
+   "titulo": "Familias confiadas",
+   "autor": "Dr. James Dobson",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM008",
+   "titulo": "Familias tecnológicamente confiadas",
+   "autor": "Andy Crouch",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM009",
+   "titulo": "Lo que las esposas desean que los maridos sepan",
+   "autor": "Dr. James Dobson",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM011",
+   "titulo": "Pacto matrimonial",
+   "autor": "John Piper",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM012",
+   "titulo": "Preparándonos para el matrimonio",
+   "autor": "John Piper",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM013",
+   "titulo": "Una puerta llamada divorcio",
+   "autor": "David Hormachea",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM014",
+   "titulo": "Una pequeña locura llamada matrimonio",
+   "autor": "Greg y Erin Smalley",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM015",
+   "titulo": "Padres, hijos y las pantallas",
+   "autor": "Jonathan McKee",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM016",
+   "titulo": "Cuando pecadores dicen ACEPTO",
+   "autor": "Dave Harvey",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "FAM017",
+   "titulo": "Crianza Bíbliba",
+   "autor": "Hector Salcedo",
+   "categoria": "Familia",
+   "baja": false
+  },
+  {
+   "codigo": "VC001",
+   "titulo": "Agua para los sedientos",
+   "autor": "T. D. Jakes",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC002",
+   "titulo": "Crecer en Cristo",
+   "autor": "Arnie Cole y Michael Ross",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC003",
+   "titulo": "Cómo la biblia moldea tu labor docente",
+   "autor": "Jhon Shortt",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC004",
+   "titulo": "Cuando la gente es grande y Dios es pequeño",
+   "autor": "Edward T. Welch",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC005",
+   "titulo": "Dios es el evangelio",
+   "autor": "John Piper",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC006",
+   "titulo": "El camino hacia Dios",
+   "autor": "Dwight L. Moody",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC007",
+   "titulo": "El Dios pródigo",
+   "autor": "Timothy Keller",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC008",
+   "titulo": "El misterio de la voluntad de Dios",
+   "autor": "Charles R. Swindoll",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC009",
+   "titulo": "El principio de la pureza",
+   "autor": "Rancy Alcorn",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC010",
+   "titulo": "El progreso del peregrino",
+   "autor": "John Bunyan",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC011",
+   "titulo": "El secreto espiritual de Hudson Taylor",
+   "autor": "Howard y G Taylor",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC013",
+   "titulo": "Gracia sobre Gracia",
+   "autor": "AA.VV",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC014",
+   "titulo": "¿Hasta cuándo Dios?",
+   "autor": "Joselo Mercado",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC015",
+   "titulo": "Hombre eres y no Dios",
+   "autor": "Jorge Himitian",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC016",
+   "titulo": "Jesús en nuestra vida hoy",
+   "autor": "Juan Carlos Ortiz",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC017",
+   "titulo": "La ansiedad: cómo conocer la paz de Dios",
+   "autor": "Paul Tautges",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC018",
+   "titulo": "La conversación suprema",
+   "autor": "Charles F. Stanley",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC019",
+   "titulo": "La esperanza del mundo",
+   "autor": "TD. Jakes",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC020",
+   "titulo": "Las grandes doctrinas de la biblia",
+   "autor": "William Evans",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC021",
+   "titulo": "La iglesia de bendición",
+   "autor": "Robert Morris",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC022",
+   "titulo": "La iglesia de bendición",
+   "autor": "Robert Morris",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC023",
+   "titulo": "La vida secreta de oración",
+   "autor": "David Macintyre",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC024",
+   "titulo": "Licencia para dudar",
+   "autor": "Chris Du-Pond",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC025",
+   "titulo": "Mañana será brillante",
+   "autor": "Jared Mellinger",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC026",
+   "titulo": "Mi debilidad, Su fortaleza",
+   "autor": "J. I Packer",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC027",
+   "titulo": "Mi respirar",
+   "autor": "Louie Giglio",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC028",
+   "titulo": "No desperdicie su vida",
+   "autor": "John Piper",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC029",
+   "titulo": "Libertad de perdonar",
+   "autor": "Jairo Namnúm",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC030",
+   "titulo": "No seas fiel a ti mismo",
+   "autor": "Kevin Deyoung",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC031",
+   "titulo": "Nunca antes pasamos por este camino",
+   "autor": "R. T. Kendall",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC032",
+   "titulo": "Radical",
+   "autor": "David Platt",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC033",
+   "titulo": "¿Realmente Dios tiene el control?",
+   "autor": "Jarry Bridges",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC034",
+   "titulo": "Oración",
+   "autor": "John Bunyan",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC035",
+   "titulo": "Pablo: su vida, llamado y ministerio",
+   "autor": "Josué Yrión",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC036",
+   "titulo": "Pureza bajo presión",
+   "autor": "Neil T. Anderson y Dave Park",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC037",
+   "titulo": "¿Quién creó a Dios?",
+   "autor": "Ravi Zacharias",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC038",
+   "titulo": "Santos y sinverguenza en la historia de Jesús",
+   "autor": "Nancy Guthrie",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC040",
+   "titulo": "Sea auténtico 100%",
+   "autor": "James Macdonald",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC042",
+   "titulo": "Se ejemplo",
+   "autor": "Tim Challies",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC044",
+   "titulo": "Totalmente por Gracia",
+   "autor": "Charles H. Spurgeon",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC045",
+   "titulo": "Una vida con propósito",
+   "autor": "Rick Warren",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC046",
+   "titulo": "Un pueblo radical",
+   "autor": "David Platt",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC047",
+   "titulo": "Vivir con integridad y sabiduría",
+   "autor": "Miguel Nuñez",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC048",
+   "titulo": "¡AYUDA! Quiero salir de la depresión",
+   "autor": "Carol Trahan",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC049",
+   "titulo": "¿Prosperidad? En busca del verdadero evangelio",
+   "autor": "Mbagua/ Maura",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC050",
+   "titulo": "Creciendo en santidad",
+   "autor": "R.C. Sproul",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC051",
+   "titulo": "Viviendo su voluntad",
+   "autor": "Sebastien Franz",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC052",
+   "titulo": "Lo que contemplas te trasforma",
+   "autor": "Ana Ávila",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC053",
+   "titulo": "La soberanía de Dios",
+   "autor": "Jeffrey D. Johnson",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC054",
+   "titulo": "Como no leer la biblia",
+   "autor": "Dan Kimball",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC055",
+   "titulo": "Los atributos de Dios",
+   "autor": "Arthur W.Pink",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC056",
+   "titulo": "La santidad de Dios",
+   "autor": "R.C. Sproul",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC057",
+   "titulo": "La ansiedad; en busca de una mejor historia",
+   "autor": "Liz Edrington",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC058",
+   "titulo": "Loco amor; asombrado por un Dios incesante",
+   "autor": "Francis Chan",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC059",
+   "titulo": "El progreso del peregrino",
+   "autor": "John Bunyan",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC060",
+   "titulo": "El caos dentro de mí",
+   "autor": "Edyah Ramos",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "VC061",
+   "titulo": "Cambios profundos",
+   "autor": "Nicolás Tranchini",
+   "categoria": "Vida Cristiana",
+   "baja": false
+  },
+  {
+   "codigo": "NV001",
+   "titulo": "El color del corazón",
+   "autor": "Mario Escobar",
+   "categoria": "Novelas",
+   "baja": false
+  },
+  {
+   "codigo": "NV002",
+   "titulo": "El hilo escarlata",
+   "autor": "Francine Rivers",
+   "categoria": "Novelas",
+   "baja": false
+  },
+  {
+   "codigo": "NV003",
+   "titulo": "Hombres de valor",
+   "autor": "Francine Rivers",
+   "categoria": "Novelas",
+   "baja": false
+  },
+  {
+   "codigo": "NV005",
+   "titulo": "Un linaje de gracia",
+   "autor": "Francine Rivers",
+   "categoria": "Novelas",
+   "baja": false
+  },
+  {
+   "codigo": "NV006",
+   "titulo": "Tiempo de bailar",
+   "autor": "Karen Kingsbury",
+   "categoria": "Novelas",
+   "baja": false
+  },
+  {
+   "codigo": "NV007",
+   "titulo": "Todo llora el cielo",
+   "autor": "Ted Dekker",
+   "categoria": "Novelas",
+   "baja": false
+  },
+  {
+   "codigo": "TEO001",
+   "titulo": "Maduros en Cristo (Santiago)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO002",
+   "titulo": "Fieles en Cristo (Timoteo, Tito y Filemón)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO003",
+   "titulo": "Justos en Cristo (Romanos)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO004",
+   "titulo": "Esperanzados en Cristo (1 Pedro)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO005",
+   "titulo": "Alertas en Cristo (2° Pedro, 2° y 3° de Juan, Judas)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO006",
+   "titulo": "Libres en Cristo (Gálatas)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO007",
+   "titulo": "Gozosos en Cristo (Filipenses)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO008",
+   "titulo": "Dinámicos en Cristo (Hechos 1-12)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO025",
+   "titulo": "Intrépidos en Cristo (Hechos 13-28)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO009",
+   "titulo": "Sabios en Cristo (1 Corintios)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO010",
+   "titulo": "Animados en Cristo (2 Corintios)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO011",
+   "titulo": "Compasivos en Cristo (Lucas 1-13)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO012",
+   "titulo": "Valientes en Cristo (Lucas 14-24)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO013",
+   "titulo": "Preparados en Cristo (Tesalonicenses)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO014",
+   "titulo": "Completos en Cristo (Colosenses)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO015",
+   "titulo": "Genuinos en Cristo (1 Juan)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO016",
+   "titulo": "Confiados en Cristo (Hebreos)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO017",
+   "titulo": "Ricos en Cristo (Efesios)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO018",
+   "titulo": "Vivos en Cristo (Juan 1-12)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO019",
+   "titulo": "Transformados en Cristo (Juan 13-21)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO021",
+   "titulo": "Leales en Cristo (Mateo)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO022",
+   "titulo": "Diligentes en Cristo (Marcos)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO023",
+   "titulo": "Victoriosas en Cristo (Apocalipsis)",
+   "autor": "Warren W. Wiersbe",
+   "categoria": "Teología",
+   "baja": false
+  },
+  {
+   "codigo": "TEO024",
+   "titulo": "Apologética en 10 respuestas",
+   "autor": "Antonio Cruz",
+   "categoria": "Teología",
+   "baja": false
+  }
+ ],
+ "lectores": [
+  {
+   "id": "L001",
+   "nombre": "Emilio Espejo",
+   "telefono": "56900000001"
+  },
+  {
+   "id": "L002",
+   "nombre": "Ciro Navarrete",
+   "telefono": "56900000002"
+  },
+  {
+   "id": "L003",
+   "nombre": "Mateo Sepúlveda",
+   "telefono": "56900000003"
+  },
+  {
+   "id": "L004",
+   "nombre": "Ismael Figueroa",
+   "telefono": "56900000004"
+  },
+  {
+   "id": "L005",
+   "nombre": "Ismael Donoso",
+   "telefono": "56900000005"
+  },
+  {
+   "id": "L006",
+   "nombre": "Lautaro Espejo",
+   "telefono": "56900000006"
+  },
+  {
+   "id": "L007",
+   "nombre": "Héctor Figueroa",
+   "telefono": "56900000007"
+  },
+  {
+   "id": "L008",
+   "nombre": "Pascual Zúñiga",
+   "telefono": "56900000008"
+  },
+  {
+   "id": "L009",
+   "nombre": "Gaspar Bustos",
+   "telefono": null
+  },
+  {
+   "id": "L010",
+   "nombre": "Yolanda Aravena",
+   "telefono": "56900000010"
+  },
+  {
+   "id": "L011",
+   "nombre": "Leonor Sepúlveda",
+   "telefono": "56900000011"
+  },
+  {
+   "id": "L012",
+   "nombre": "Abel Valdés",
+   "telefono": "56900000012"
+  },
+  {
+   "id": "L013",
+   "nombre": "Ximena Catalán",
+   "telefono": "56900000013"
+  },
+  {
+   "id": "L014",
+   "nombre": "Leonor Mellado",
+   "telefono": "56900000014"
+  },
+  {
+   "id": "L015",
+   "nombre": "Jimena Ibáñez",
+   "telefono": "56900000015"
+  },
+  {
+   "id": "L016",
+   "nombre": "Ismael Ibáñez",
+   "telefono": "56900000016"
+  },
+  {
+   "id": "L017",
+   "nombre": "Teresa Figueroa",
+   "telefono": null
+  },
+  {
+   "id": "L018",
+   "nombre": "Facundo Donoso",
+   "telefono": null
+  },
+  {
+   "id": "L019",
+   "nombre": "Fabiola Zúñiga",
+   "telefono": null
+  },
+  {
+   "id": "L020",
+   "nombre": "Ismael Henríquez",
+   "telefono": "56900000020"
+  },
+  {
+   "id": "L021",
+   "nombre": "Gracia Valdés",
+   "telefono": "56900000021"
+  },
+  {
+   "id": "L022",
+   "nombre": "Néstor Oyarzún",
+   "telefono": "56900000022"
+  },
+  {
+   "id": "L023",
+   "nombre": "Renato Mellado",
+   "telefono": "56900000023"
+  },
+  {
+   "id": "L024",
+   "nombre": "Magdalena Navarrete",
+   "telefono": "56900000024"
+  },
+  {
+   "id": "L025",
+   "nombre": "Vicente Bustos",
+   "telefono": "56900000025"
+  },
+  {
+   "id": "L026",
+   "nombre": "Gracia Oyarzún",
+   "telefono": "56900000026"
+  },
+  {
+   "id": "L027",
+   "nombre": "Benjamín Catalán",
+   "telefono": "56900000027"
+  },
+  {
+   "id": "L028",
+   "nombre": "Simón Zúñiga",
+   "telefono": "56900000028"
+  },
+  {
+   "id": "L029",
+   "nombre": "Sofía Alarcón",
+   "telefono": null
+  },
+  {
+   "id": "L030",
+   "nombre": "Jimena Garrido",
+   "telefono": null
+  },
+  {
+   "id": "L031",
+   "nombre": "Abel Henríquez",
+   "telefono": "56900000012"
+  },
+  {
+   "id": "L032",
+   "nombre": "Fabiola Sepúlveda",
+   "telefono": null
+  },
+  {
+   "id": "L033",
+   "nombre": "Lautaro Navarrete",
+   "telefono": "56900000033"
+  },
+  {
+   "id": "L034",
+   "nombre": "Jimena Valdés",
+   "telefono": "56900000034"
+  },
+  {
+   "id": "L035",
+   "nombre": "Belén Zúñiga",
+   "telefono": "56900000035"
+  },
+  {
+   "id": "L036",
+   "nombre": "Néstor Toledo",
+   "telefono": "56900000036"
+  },
+  {
+   "id": "L037",
+   "nombre": "Benjamín Aravena",
+   "telefono": null
+  },
+  {
+   "id": "L038",
+   "nombre": "Mateo Bustos",
+   "telefono": "56900000038"
+  },
+  {
+   "id": "L039",
+   "nombre": "Irene Garrido",
+   "telefono": "56900000039"
+  },
+  {
+   "id": "L040",
+   "nombre": "Belén Espejo",
+   "telefono": "56900000040"
+  },
+  {
+   "id": "L041",
+   "nombre": "Octavio Quezada",
+   "telefono": "56900000041"
+  },
+  {
+   "id": "L042",
+   "nombre": "Teresa Aravena",
+   "telefono": null
+  },
+  {
+   "id": "L043",
+   "nombre": "Tomás Henríquez",
+   "telefono": "56900000043"
+  },
+  {
+   "id": "L044",
+   "nombre": "Abel Donoso",
+   "telefono": null
+  },
+  {
+   "id": "L045",
+   "nombre": "Mateo Zúñiga",
+   "telefono": "56900000045"
+  },
+  {
+   "id": "L046",
+   "nombre": "Irene Espejo",
+   "telefono": "56900000046"
+  },
+  {
+   "id": "L047",
+   "nombre": "Julián Cárdenas",
+   "telefono": "56900000047"
+  },
+  {
+   "id": "L048",
+   "nombre": "Gracia Aravena",
+   "telefono": null
+  },
+  {
+   "id": "L049",
+   "nombre": "Mateo Ibáñez",
+   "telefono": "56900000049"
+  },
+  {
+   "id": "L050",
+   "nombre": "Olivia Figueroa",
+   "telefono": "56900000050"
+  },
+  {
+   "id": "L051",
+   "nombre": "Néstor Ulloa",
+   "telefono": null
+  },
+  {
+   "id": "L052",
+   "nombre": "Delia Espejo",
+   "telefono": null
+  },
+  {
+   "id": "L053",
+   "nombre": "Gracia Donoso",
+   "telefono": "56900000008"
+  },
+  {
+   "id": "L054",
+   "nombre": "Sofía Sepúlveda",
+   "telefono": "56900000054"
+  },
+  {
+   "id": "L055",
+   "nombre": "Damián Durán",
+   "telefono": "56900000055"
+  },
+  {
+   "id": "L056",
+   "nombre": "Ciro Valdés",
+   "telefono": null
+  },
+  {
+   "id": "L057",
+   "nombre": "Fabiola Figueroa",
+   "telefono": null
+  },
+  {
+   "id": "L058",
+   "nombre": "Sofía Durán",
+   "telefono": "56900000058"
+  },
+  {
+   "id": "L059",
+   "nombre": "Jimena Bustos",
+   "telefono": "56900000059"
+  },
+  {
+   "id": "L060",
+   "nombre": "Hilda Toledo",
+   "telefono": "56900000060"
+  },
+  {
+   "id": "L061",
+   "nombre": "Ximena Oyarzún",
+   "telefono": null
+  },
+  {
+   "id": "L062",
+   "nombre": "Paulina Zúñiga",
+   "telefono": "56900000062"
+  },
+  {
+   "id": "L063",
+   "nombre": "Jimena Donoso",
+   "telefono": "56900000063"
+  },
+  {
+   "id": "L064",
+   "nombre": "Renato Durán",
+   "telefono": null
+  },
+  {
+   "id": "L065",
+   "nombre": "Tomás Zúñiga",
+   "telefono": "56900000065"
+  },
+  {
+   "id": "L066",
+   "nombre": "Mateo Quezada",
+   "telefono": null
+  },
+  {
+   "id": "L067",
+   "nombre": "Hilda Oyarzún",
+   "telefono": "56900000067"
+  },
+  {
+   "id": "L068",
+   "nombre": "Ximena Cárdenas",
+   "telefono": null
+  },
+  {
+   "id": "L069",
+   "nombre": "Irene Yáñez",
+   "telefono": "56900000069"
+  },
+  {
+   "id": "L070",
+   "nombre": "Paulina Espejo",
+   "telefono": "56900000070"
+  },
+  {
+   "id": "L071",
+   "nombre": "Aurora Lagos",
+   "telefono": null
+  },
+  {
+   "id": "L072",
+   "nombre": "Rafaela Riquelme",
+   "telefono": "56900000072"
+  },
+  {
+   "id": "L073",
+   "nombre": "Néstor Ibáñez",
+   "telefono": "56900000073"
+  },
+  {
+   "id": "L074",
+   "nombre": "Pascual Quezada",
+   "telefono": "56900000074"
+  },
+  {
+   "id": "L075",
+   "nombre": "Hilda Cárdenas",
+   "telefono": "56900000075"
+  },
+  {
+   "id": "L076",
+   "nombre": "Julián Quezada",
+   "telefono": "56900000076"
+  },
+  {
+   "id": "L077",
+   "nombre": "Sofía Ibáñez",
+   "telefono": "56900000077"
+  },
+  {
+   "id": "L078",
+   "nombre": "Fabiola Oyarzún",
+   "telefono": "56900000078"
+  },
+  {
+   "id": "L079",
+   "nombre": "Aurora Henríquez",
+   "telefono": "56900000079"
+  },
+  {
+   "id": "L080",
+   "nombre": "Héctor Ulloa",
+   "telefono": "56900000080"
+  }
+ ],
+ "prestamos": [
+  {
+   "numero": 1,
+   "libro": "HM012",
+   "lector": "L031",
+   "salio": "2025-11-01",
+   "vence": "2025-11-18",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 2,
+   "libro": "VC060",
+   "lector": "L041",
+   "salio": "2025-11-01",
+   "vence": "2025-11-15",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 3,
+   "libro": "FAM003",
+   "lector": "L077",
+   "salio": "2025-11-01",
+   "vence": "2025-11-15",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 4,
+   "libro": "TEO012",
+   "lector": "L067",
+   "salio": "2025-11-01",
+   "vence": "2025-11-08",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 5,
+   "libro": "INF019",
+   "lector": "L035",
+   "salio": "2025-11-08",
+   "vence": "2025-11-15",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 6,
+   "libro": "TEO010",
+   "lector": "L069",
+   "salio": "2025-11-08",
+   "vence": "2026-02-21",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 7,
+   "libro": "TEO009",
+   "lector": "L016",
+   "salio": "2025-11-08",
+   "vence": "2025-11-22",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 8,
+   "libro": "INF010",
+   "lector": "L032",
+   "salio": "2025-11-08",
+   "vence": "2025-11-22",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 9,
+   "libro": "TEO016",
+   "lector": "L043",
+   "salio": "2025-11-15",
+   "vence": "2025-11-22",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 10,
+   "libro": "HM002",
+   "lector": "L071",
+   "salio": "2025-11-29",
+   "vence": "2025-12-06",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 11,
+   "libro": "INF004",
+   "lector": "L012",
+   "salio": "2025-11-29",
+   "vence": "2025-12-13",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 12,
+   "libro": "VC056",
+   "lector": "L064",
+   "salio": "2025-12-13",
+   "vence": "2025-12-20",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 13,
+   "libro": "VC033",
+   "lector": "L037",
+   "salio": "2025-12-13",
+   "vence": "2026-01-03",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 14,
+   "libro": "VC016",
+   "lector": "L044",
+   "salio": "2025-12-20",
+   "vence": "2026-01-03",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 15,
+   "libro": "VC035",
+   "lector": "L035",
+   "salio": "2025-12-27",
+   "vence": "2026-01-03",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 16,
+   "libro": "HM009",
+   "lector": "L005",
+   "salio": "2026-01-03",
+   "vence": "2026-01-10",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 17,
+   "libro": "INF008",
+   "lector": "L013",
+   "salio": "2026-01-17",
+   "vence": "2026-02-07",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 18,
+   "libro": "NV007",
+   "lector": "L026",
+   "salio": "2026-01-17",
+   "vence": "2026-01-31",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 19,
+   "libro": "TEO025",
+   "lector": "L021",
+   "salio": "2026-01-24",
+   "vence": "2026-02-14",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 20,
+   "libro": "VC055",
+   "lector": "L007",
+   "salio": "2026-01-24",
+   "vence": "2026-02-14",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 21,
+   "libro": "HM012",
+   "lector": "L075",
+   "salio": "2026-01-24",
+   "vence": "2026-02-21",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 22,
+   "libro": "VC034",
+   "lector": "L027",
+   "salio": "2026-02-14",
+   "vence": "2026-02-21",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 23,
+   "libro": "VC057",
+   "lector": "L034",
+   "salio": "2026-02-14",
+   "vence": "2026-02-28",
+   "devuelto": true,
+   "devolvio": null
+  },
+  {
+   "numero": 24,
+   "libro": "TEO013",
+   "lector": "L070",
+   "salio": "2026-02-21",
+   "vence": "2026-02-28",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 25,
+   "libro": "HM007",
+   "lector": "L025",
+   "salio": "2026-03-07",
+   "vence": "2026-03-28",
+   "devuelto": true,
+   "devolvio": "2026-03-21"
+  },
+  {
+   "numero": 26,
+   "libro": "FAM006",
+   "lector": "L023",
+   "salio": "2026-03-07",
+   "vence": "2026-03-21",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 27,
+   "libro": "VC050",
+   "lector": "L034",
+   "salio": "2026-03-07",
+   "vence": "2026-03-14",
+   "devuelto": true,
+   "devolvio": "2026-03-14"
+  },
+  {
+   "numero": 28,
+   "libro": "VC047",
+   "lector": "L002",
+   "salio": "2026-03-07",
+   "vence": "2026-03-14",
+   "devuelto": true,
+   "devolvio": "2026-03-14"
+  },
+  {
+   "numero": 29,
+   "libro": "VC036",
+   "lector": "L055",
+   "salio": "2026-03-07",
+   "vence": "2026-03-28",
+   "devuelto": true,
+   "devolvio": "2026-03-28"
+  },
+  {
+   "numero": 30,
+   "libro": "HM016",
+   "lector": "L006",
+   "salio": "2026-03-14",
+   "vence": "2026-03-28",
+   "devuelto": true,
+   "devolvio": "2026-03-28"
+  },
+  {
+   "numero": 31,
+   "libro": "INF007",
+   "lector": "L018",
+   "salio": "2026-03-14",
+   "vence": "2026-03-21",
+   "devuelto": true,
+   "devolvio": "2026-03-21"
+  },
+  {
+   "numero": 32,
+   "libro": "VC025",
+   "lector": "L064",
+   "salio": "2026-03-14",
+   "vence": "2026-03-21",
+   "devuelto": true,
+   "devolvio": "2026-03-21"
+  },
+  {
+   "numero": 33,
+   "libro": "INF018",
+   "lector": "L067",
+   "salio": "2026-03-14",
+   "vence": "2026-03-28",
+   "devuelto": true,
+   "devolvio": "2026-03-21"
+  },
+  {
+   "numero": 34,
+   "libro": "VC015",
+   "lector": "L060",
+   "salio": "2026-03-14",
+   "vence": "2026-03-28",
+   "devuelto": true,
+   "devolvio": "2026-03-21"
+  },
+  {
+   "numero": 35,
+   "libro": "TEO003",
+   "lector": "L071",
+   "salio": "2026-03-21",
+   "vence": "2026-03-28",
+   "devuelto": true,
+   "devolvio": "2026-03-28"
+  },
+  {
+   "numero": 36,
+   "libro": "TEO008",
+   "lector": "L003",
+   "salio": "2026-03-21",
+   "vence": "2026-03-28",
+   "devuelto": true,
+   "devolvio": "2026-03-28"
+  },
+  {
+   "numero": 37,
+   "libro": "INF018",
+   "lector": "L015",
+   "salio": "2026-03-21",
+   "vence": "2026-03-28",
+   "devuelto": true,
+   "devolvio": "2026-03-28"
+  },
+  {
+   "numero": 38,
+   "libro": "TEO021",
+   "lector": "L010",
+   "salio": "2026-03-21",
+   "vence": "2026-04-04",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 39,
+   "libro": "INF016",
+   "lector": "L020",
+   "salio": "2026-03-28",
+   "vence": "2026-04-04",
+   "devuelto": true,
+   "devolvio": "2026-04-04"
+  },
+  {
+   "numero": 40,
+   "libro": "VC003",
+   "lector": "L034",
+   "salio": "2026-03-28",
+   "vence": "2026-04-25",
+   "devuelto": true,
+   "devolvio": "2026-04-25"
+  },
+  {
+   "numero": 41,
+   "libro": "VC031",
+   "lector": "L035",
+   "salio": "2026-03-28",
+   "vence": "2026-04-18",
+   "devuelto": true,
+   "devolvio": "2026-04-18"
+  },
+  {
+   "numero": 42,
+   "libro": "VC023",
+   "lector": "L006",
+   "salio": "2026-03-28",
+   "vence": "2026-04-25",
+   "devuelto": true,
+   "devolvio": "2026-04-25"
+  },
+  {
+   "numero": 43,
+   "libro": "VC015",
+   "lector": "L032",
+   "salio": "2026-04-04",
+   "vence": "2026-04-18",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 44,
+   "libro": "VC057",
+   "lector": "L058",
+   "salio": "2026-04-04",
+   "vence": "2026-04-18",
+   "devuelto": true,
+   "devolvio": "2026-04-18"
+  },
+  {
+   "numero": 45,
+   "libro": "VC001",
+   "lector": "L034",
+   "salio": "2026-04-04",
+   "vence": "2026-04-18",
+   "devuelto": true,
+   "devolvio": "2026-04-11"
+  },
+  {
+   "numero": 46,
+   "libro": "INF021",
+   "lector": "L028",
+   "salio": "2026-04-11",
+   "vence": "2026-04-25",
+   "devuelto": true,
+   "devolvio": "2026-04-18"
+  },
+  {
+   "numero": 47,
+   "libro": "VC056",
+   "lector": "L077",
+   "salio": "2026-04-11",
+   "vence": "2026-05-02",
+   "devuelto": true,
+   "devolvio": "2026-05-02"
+  },
+  {
+   "numero": 48,
+   "libro": "INF020",
+   "lector": "L071",
+   "salio": "2026-04-11",
+   "vence": "2026-04-25",
+   "devuelto": true,
+   "devolvio": "2026-04-25"
+  },
+  {
+   "numero": 49,
+   "libro": "INF023",
+   "lector": "L035",
+   "salio": "2026-04-11",
+   "vence": "2026-04-18",
+   "devuelto": true,
+   "devolvio": "2026-04-18"
+  },
+  {
+   "numero": 50,
+   "libro": "INF006",
+   "lector": "L043",
+   "salio": "2026-04-18",
+   "vence": "2026-05-16",
+   "devuelto": true,
+   "devolvio": "2026-05-16"
+  },
+  {
+   "numero": 51,
+   "libro": "INF004",
+   "lector": "L022",
+   "salio": "2026-04-18",
+   "vence": "2026-05-02",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 52,
+   "libro": "VC054",
+   "lector": "L022",
+   "salio": "2026-04-18",
+   "vence": "2026-05-02",
+   "devuelto": true,
+   "devolvio": "2026-04-25"
+  },
+  {
+   "numero": 53,
+   "libro": "TEO014",
+   "lector": "L076",
+   "salio": "2026-04-18",
+   "vence": "2026-04-25",
+   "devuelto": true,
+   "devolvio": "2026-04-25"
+  },
+  {
+   "numero": 54,
+   "libro": "TEO014",
+   "lector": "L051",
+   "salio": "2026-04-25",
+   "vence": "2026-05-23",
+   "devuelto": true,
+   "devolvio": "2026-05-23"
+  },
+  {
+   "numero": 55,
+   "libro": "VC048",
+   "lector": "L006",
+   "salio": "2026-04-25",
+   "vence": "2026-05-09",
+   "devuelto": true,
+   "devolvio": "2026-05-02"
+  },
+  {
+   "numero": 56,
+   "libro": "VC011",
+   "lector": "L049",
+   "salio": "2026-05-02",
+   "vence": "2026-05-09",
+   "devuelto": true,
+   "devolvio": "2026-05-09"
+  },
+  {
+   "numero": 57,
+   "libro": "VC001",
+   "lector": "L011",
+   "salio": "2026-05-02",
+   "vence": "2026-05-09",
+   "devuelto": true,
+   "devolvio": "2026-05-09"
+  },
+  {
+   "numero": 58,
+   "libro": "HM001",
+   "lector": "L074",
+   "salio": "2026-05-02",
+   "vence": "2026-05-16",
+   "devuelto": true,
+   "devolvio": "2026-05-16"
+  },
+  {
+   "numero": 59,
+   "libro": "VC014",
+   "lector": "L022",
+   "salio": "2026-05-02",
+   "vence": "2026-05-09",
+   "devuelto": true,
+   "devolvio": "2026-05-09"
+  },
+  {
+   "numero": 60,
+   "libro": "INF023",
+   "lector": "L066",
+   "salio": "2026-05-02",
+   "vence": "2026-05-16",
+   "devuelto": true,
+   "devolvio": "2026-05-30"
+  },
+  {
+   "numero": 61,
+   "libro": "HM005",
+   "lector": "L077",
+   "salio": "2026-05-02",
+   "vence": "2026-05-16",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 62,
+   "libro": "INF016",
+   "lector": "L022",
+   "salio": "2026-05-09",
+   "vence": "2026-05-23",
+   "devuelto": true,
+   "devolvio": "2026-05-23"
+  },
+  {
+   "numero": 63,
+   "libro": "INF020",
+   "lector": "L051",
+   "salio": "2026-05-09",
+   "vence": "2026-05-23",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 64,
+   "libro": "VC010",
+   "lector": "L035",
+   "salio": "2026-05-09",
+   "vence": "2026-05-16",
+   "devuelto": true,
+   "devolvio": "2026-05-23"
+  },
+  {
+   "numero": 65,
+   "libro": "NV006",
+   "lector": "L074",
+   "salio": "2026-05-09",
+   "vence": "2026-06-06",
+   "devuelto": true,
+   "devolvio": "2026-06-06"
+  },
+  {
+   "numero": 66,
+   "libro": "FAM003",
+   "lector": "L077",
+   "salio": "2026-05-09",
+   "vence": "2026-05-30",
+   "devuelto": true,
+   "devolvio": "2026-05-30"
+  },
+  {
+   "numero": 67,
+   "libro": "VC028",
+   "lector": "L018",
+   "salio": "2026-05-16",
+   "vence": "2026-05-23",
+   "devuelto": true,
+   "devolvio": "2026-05-23"
+  },
+  {
+   "numero": 68,
+   "libro": "VC008",
+   "lector": "L067",
+   "salio": "2026-05-16",
+   "vence": "2026-05-23",
+   "devuelto": true,
+   "devolvio": "2026-05-23"
+  },
+  {
+   "numero": 69,
+   "libro": "NV005",
+   "lector": "L035",
+   "salio": "2026-05-16",
+   "vence": "2026-05-23",
+   "devuelto": true,
+   "devolvio": "2026-05-23"
+  },
+  {
+   "numero": 70,
+   "libro": "VC034",
+   "lector": "L041",
+   "salio": "2026-05-16",
+   "vence": "2026-05-30",
+   "devuelto": true,
+   "devolvio": "2026-06-20"
+  },
+  {
+   "numero": 71,
+   "libro": "TEO012",
+   "lector": "L044",
+   "salio": "2026-05-23",
+   "vence": "2026-06-06",
+   "devuelto": true,
+   "devolvio": "2026-06-06"
+  },
+  {
+   "numero": 72,
+   "libro": "FAM014",
+   "lector": "L074",
+   "salio": "2026-05-23",
+   "vence": "2026-06-06",
+   "devuelto": true,
+   "devolvio": "2026-06-06"
+  },
+  {
+   "numero": 73,
+   "libro": "INF021",
+   "lector": "L002",
+   "salio": "2026-05-23",
+   "vence": "2026-06-13",
+   "devuelto": true,
+   "devolvio": "2026-07-04"
+  },
+  {
+   "numero": 74,
+   "libro": "HM001",
+   "lector": "L035",
+   "salio": "2026-05-23",
+   "vence": "2026-05-30",
+   "devuelto": true,
+   "devolvio": "2026-05-30"
+  },
+  {
+   "numero": 75,
+   "libro": "INF022",
+   "lector": "L022",
+   "salio": "2026-05-23",
+   "vence": "2026-05-30",
+   "devuelto": true,
+   "devolvio": "2026-05-30"
+  },
+  {
+   "numero": 76,
+   "libro": "INF007",
+   "lector": "L049",
+   "salio": "2026-05-23",
+   "vence": "2026-06-06",
+   "devuelto": true,
+   "devolvio": "2026-06-06"
+  },
+  {
+   "numero": 77,
+   "libro": "VC042",
+   "lector": "L063",
+   "salio": "2026-05-30",
+   "vence": "2026-06-20",
+   "devuelto": true,
+   "devolvio": "2026-06-20"
+  },
+  {
+   "numero": 78,
+   "libro": "HM015",
+   "lector": "L021",
+   "salio": "2026-05-30",
+   "vence": "2026-06-13",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 79,
+   "libro": "HM019",
+   "lector": "L035",
+   "salio": "2026-05-30",
+   "vence": "2026-06-13",
+   "devuelto": true,
+   "devolvio": "2026-06-13"
+  },
+  {
+   "numero": 80,
+   "libro": "VC048",
+   "lector": "L034",
+   "salio": "2026-05-30",
+   "vence": "2026-06-06",
+   "devuelto": true,
+   "devolvio": "2026-06-20"
+  },
+  {
+   "numero": 81,
+   "libro": "VC017",
+   "lector": "L032",
+   "salio": "2026-05-30",
+   "vence": "2026-06-20",
+   "devuelto": true,
+   "devolvio": "2026-06-20"
+  },
+  {
+   "numero": 82,
+   "libro": "VC001",
+   "lector": "L064",
+   "salio": "2026-06-06",
+   "vence": "2026-07-04",
+   "devuelto": true,
+   "devolvio": "2026-07-11"
+  },
+  {
+   "numero": 83,
+   "libro": "HM013",
+   "lector": "L051",
+   "salio": "2026-06-06",
+   "vence": "2026-06-20",
+   "devuelto": true,
+   "devolvio": "2026-06-13"
+  },
+  {
+   "numero": 84,
+   "libro": "VC029",
+   "lector": "L043",
+   "salio": "2026-06-06",
+   "vence": "2026-06-20",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 85,
+   "libro": "TEO022",
+   "lector": "L071",
+   "salio": "2026-06-06",
+   "vence": "2026-06-27",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 86,
+   "libro": "TEO010",
+   "lector": "L035",
+   "salio": "2026-06-06",
+   "vence": "2026-06-20",
+   "devuelto": true,
+   "devolvio": "2026-06-20"
+  },
+  {
+   "numero": 87,
+   "libro": "VC037",
+   "lector": "L040",
+   "salio": "2026-06-06",
+   "vence": "2026-06-27",
+   "devuelto": true,
+   "devolvio": "2026-07-04"
+  },
+  {
+   "numero": 88,
+   "libro": "INF024",
+   "lector": "L051",
+   "salio": "2026-06-13",
+   "vence": "2026-06-20",
+   "devuelto": true,
+   "devolvio": "2026-06-20"
+  },
+  {
+   "numero": 89,
+   "libro": "VC054",
+   "lector": "L015",
+   "salio": "2026-06-13",
+   "vence": "2026-06-27",
+   "devuelto": true,
+   "devolvio": "2026-07-11"
+  },
+  {
+   "numero": 90,
+   "libro": "INF014",
+   "lector": "L066",
+   "salio": "2026-06-13",
+   "vence": "2026-07-04",
+   "devuelto": true,
+   "devolvio": "2026-07-04"
+  },
+  {
+   "numero": 91,
+   "libro": "FAM011",
+   "lector": "L053",
+   "salio": "2026-06-13",
+   "vence": "2026-07-04",
+   "devuelto": true,
+   "devolvio": "2026-07-04"
+  },
+  {
+   "numero": 92,
+   "libro": "VC023",
+   "lector": "L012",
+   "salio": "2026-06-13",
+   "vence": "2026-06-27",
+   "devuelto": true,
+   "devolvio": "2026-07-18"
+  },
+  {
+   "numero": 93,
+   "libro": "VC026",
+   "lector": "L055",
+   "salio": "2026-06-20",
+   "vence": "2026-07-04",
+   "devuelto": true,
+   "devolvio": "2026-07-04"
+  },
+  {
+   "numero": 94,
+   "libro": "INF007",
+   "lector": "L006",
+   "salio": "2026-06-20",
+   "vence": "2026-07-04",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 95,
+   "libro": "VC061",
+   "lector": "L071",
+   "salio": "2026-06-20",
+   "vence": "2026-06-27",
+   "devuelto": true,
+   "devolvio": "2026-06-27"
+  },
+  {
+   "numero": 96,
+   "libro": "INF019",
+   "lector": "L077",
+   "salio": "2026-06-20",
+   "vence": "2026-06-27",
+   "devuelto": true,
+   "devolvio": "2026-06-27"
+  },
+  {
+   "numero": 97,
+   "libro": "INF016",
+   "lector": "L067",
+   "salio": "2026-06-20",
+   "vence": "2026-06-27",
+   "devuelto": true,
+   "devolvio": "2026-07-18"
+  },
+  {
+   "numero": 98,
+   "libro": "VC004",
+   "lector": "L080",
+   "salio": "2026-06-20",
+   "vence": "2026-07-18",
+   "devuelto": true,
+   "devolvio": "2026-07-18"
+  },
+  {
+   "numero": 99,
+   "libro": "INF010",
+   "lector": "L055",
+   "salio": "2026-06-27",
+   "vence": "2026-07-11",
+   "devuelto": true,
+   "devolvio": "2026-07-04"
+  },
+  {
+   "numero": 100,
+   "libro": "HM007",
+   "lector": "L058",
+   "salio": "2026-06-27",
+   "vence": "2026-07-04",
+   "devuelto": true,
+   "devolvio": "2026-07-04"
+  },
+  {
+   "numero": 101,
+   "libro": "FAM001",
+   "lector": "L024",
+   "salio": "2026-06-27",
+   "vence": "2026-07-11",
+   "devuelto": true,
+   "devolvio": "2026-07-04"
+  },
+  {
+   "numero": 102,
+   "libro": "VC049",
+   "lector": "L001",
+   "salio": "2026-06-27",
+   "vence": "2026-07-11",
+   "devuelto": true,
+   "devolvio": "2026-07-18"
+  },
+  {
+   "numero": 103,
+   "libro": "HM001",
+   "lector": "L022",
+   "salio": "2026-06-27",
+   "vence": "2026-07-04",
+   "devuelto": true,
+   "devolvio": "2026-07-04"
+  },
+  {
+   "numero": 104,
+   "libro": "VC027",
+   "lector": "L043",
+   "salio": "2026-06-27",
+   "vence": "2026-07-11",
+   "devuelto": true,
+   "devolvio": "2026-07-11"
+  },
+  {
+   "numero": 105,
+   "libro": "HM006",
+   "lector": "L055",
+   "salio": "2026-06-27",
+   "vence": "2026-07-11",
+   "devuelto": true,
+   "devolvio": "2026-07-11"
+  },
+  {
+   "numero": 106,
+   "libro": "VC011",
+   "lector": "L034",
+   "salio": "2026-06-27",
+   "vence": "2026-07-04",
+   "devuelto": true,
+   "devolvio": "2026-07-11"
+  },
+  {
+   "numero": 107,
+   "libro": "VC014",
+   "lector": "L055",
+   "salio": "2026-07-04",
+   "vence": "2026-07-11",
+   "devuelto": true,
+   "devolvio": "2026-07-11"
+  },
+  {
+   "numero": 108,
+   "libro": "VC032",
+   "lector": "L049",
+   "salio": "2026-07-04",
+   "vence": "2026-07-25",
+   "devuelto": true,
+   "devolvio": "2026-08-01"
+  },
+  {
+   "numero": 109,
+   "libro": "VC007",
+   "lector": "L049",
+   "salio": "2026-07-04",
+   "vence": "2026-07-11",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 110,
+   "libro": "HM022",
+   "lector": "L066",
+   "salio": "2026-07-04",
+   "vence": "2026-07-25",
+   "devuelto": true,
+   "devolvio": "2026-07-25"
+  },
+  {
+   "numero": 111,
+   "libro": "TEO012",
+   "lector": "L066",
+   "salio": "2026-07-04",
+   "vence": "2026-07-18",
+   "devuelto": true,
+   "devolvio": "2026-07-11"
+  },
+  {
+   "numero": 112,
+   "libro": "HM016",
+   "lector": "L053",
+   "salio": "2026-07-04",
+   "vence": "2026-07-11",
+   "devuelto": true,
+   "devolvio": "2026-07-11"
+  },
+  {
+   "numero": 113,
+   "libro": "TEO007",
+   "lector": "L075",
+   "salio": "2026-07-04",
+   "vence": "2026-07-18",
+   "devuelto": true,
+   "devolvio": "2026-07-18"
+  },
+  {
+   "numero": 114,
+   "libro": "HM009",
+   "lector": "L073",
+   "salio": "2026-07-11",
+   "vence": "2026-07-25",
+   "devuelto": true,
+   "devolvio": "2026-08-15"
+  },
+  {
+   "numero": 115,
+   "libro": "TEO004",
+   "lector": "L067",
+   "salio": "2026-07-11",
+   "vence": "2026-07-25",
+   "devuelto": true,
+   "devolvio": "2026-07-18"
+  },
+  {
+   "numero": 116,
+   "libro": "TEO009",
+   "lector": "L032",
+   "salio": "2026-07-11",
+   "vence": "2026-07-25",
+   "devuelto": true,
+   "devolvio": "2026-08-15"
+  },
+  {
+   "numero": 117,
+   "libro": "TEO006",
+   "lector": "L036",
+   "salio": "2026-07-11",
+   "vence": "2026-07-18",
+   "devuelto": true,
+   "devolvio": "2026-08-01"
+  },
+  {
+   "numero": 118,
+   "libro": "VC013",
+   "lector": "L055",
+   "salio": "2026-07-11",
+   "vence": "2026-07-25",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 119,
+   "libro": "VC005",
+   "lector": "L078",
+   "salio": "2026-07-18",
+   "vence": "2026-08-01",
+   "devuelto": true,
+   "devolvio": "2026-08-01"
+  },
+  {
+   "numero": 120,
+   "libro": "TEO004",
+   "lector": "L037",
+   "salio": "2026-07-18",
+   "vence": "2026-08-01",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 121,
+   "libro": "TEO011",
+   "lector": "L071",
+   "salio": "2026-07-18",
+   "vence": "2026-08-08",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 122,
+   "libro": "VC033",
+   "lector": "L058",
+   "salio": "2026-07-18",
+   "vence": "2026-08-01",
+   "devuelto": true,
+   "devolvio": "2026-08-01"
+  },
+  {
+   "numero": 123,
+   "libro": "VC040",
+   "lector": "L064",
+   "salio": "2026-07-18",
+   "vence": "2026-08-01",
+   "devuelto": true,
+   "devolvio": "2026-08-01"
+  },
+  {
+   "numero": 124,
+   "libro": "INF018",
+   "lector": "L055",
+   "salio": "2026-07-18",
+   "vence": "2026-08-08",
+   "devuelto": true,
+   "devolvio": "2026-08-08"
+  },
+  {
+   "numero": 125,
+   "libro": "FAM016",
+   "lector": "L049",
+   "salio": "2026-07-25",
+   "vence": "2026-08-08",
+   "devuelto": true,
+   "devolvio": "2026-08-08"
+  },
+  {
+   "numero": 126,
+   "libro": "TEO014",
+   "lector": "L037",
+   "salio": "2026-07-25",
+   "vence": "2026-08-08",
+   "devuelto": true,
+   "devolvio": "2026-08-01"
+  },
+  {
+   "numero": 127,
+   "libro": "TEO012",
+   "lector": "L012",
+   "salio": "2026-07-25",
+   "vence": "2026-08-08",
+   "devuelto": true,
+   "devolvio": "2026-08-08"
+  },
+  {
+   "numero": 128,
+   "libro": "VC048",
+   "lector": "L043",
+   "salio": "2026-07-25",
+   "vence": "2026-08-08",
+   "devuelto": true,
+   "devolvio": "2026-08-08"
+  },
+  {
+   "numero": 129,
+   "libro": "NV005",
+   "lector": "L071",
+   "salio": "2026-07-25",
+   "vence": "2026-08-01",
+   "devuelto": true,
+   "devolvio": "2026-08-01"
+  },
+  {
+   "numero": 130,
+   "libro": "HM002",
+   "lector": "L017",
+   "salio": "2026-08-01",
+   "vence": "2026-08-08",
+   "devuelto": true,
+   "devolvio": "2026-08-08"
+  },
+  {
+   "numero": 131,
+   "libro": "INF010",
+   "lector": "L033",
+   "salio": "2026-08-01",
+   "vence": "2026-08-08",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 132,
+   "libro": "FAM017",
+   "lector": "L021",
+   "salio": "2026-08-01",
+   "vence": "2026-08-08",
+   "devuelto": true,
+   "devolvio": "2026-08-15"
+  },
+  {
+   "numero": 133,
+   "libro": "VC019",
+   "lector": "L035",
+   "salio": "2026-08-01",
+   "vence": "2026-08-29",
+   "devuelto": true,
+   "devolvio": "2026-08-22"
+  },
+  {
+   "numero": 134,
+   "libro": "VC011",
+   "lector": "L077",
+   "salio": "2026-08-01",
+   "vence": "2026-08-15",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 135,
+   "libro": "TEO018",
+   "lector": "L005",
+   "salio": "2026-08-01",
+   "vence": "2026-08-15",
+   "devuelto": true,
+   "devolvio": "2026-08-15"
+  },
+  {
+   "numero": 136,
+   "libro": "TEO024",
+   "lector": "L014",
+   "salio": "2026-08-01",
+   "vence": "2026-08-08",
+   "devuelto": true,
+   "devolvio": "2026-08-08"
+  },
+  {
+   "numero": 137,
+   "libro": "TEO006",
+   "lector": "L016",
+   "salio": "2026-08-01",
+   "vence": "2026-08-15",
+   "devuelto": true,
+   "devolvio": "2026-08-15"
+  },
+  {
+   "numero": 138,
+   "libro": "TEO017",
+   "lector": "L068",
+   "salio": "2026-08-01",
+   "vence": "2026-08-08",
+   "devuelto": true,
+   "devolvio": "2026-08-08"
+  },
+  {
+   "numero": 139,
+   "libro": "NV003",
+   "lector": "L039",
+   "salio": "2026-08-08",
+   "vence": "2026-08-22",
+   "devuelto": true,
+   "devolvio": "2026-08-29"
+  },
+  {
+   "numero": 140,
+   "libro": "TEO017",
+   "lector": "L080",
+   "salio": "2026-08-08",
+   "vence": "2026-08-15",
+   "devuelto": true,
+   "devolvio": "2026-08-15"
+  },
+  {
+   "numero": 141,
+   "libro": "INF022",
+   "lector": "L049",
+   "salio": "2026-08-08",
+   "vence": "2026-08-22",
+   "devuelto": true,
+   "devolvio": "2026-08-22"
+  },
+  {
+   "numero": 142,
+   "libro": "VC014",
+   "lector": "L067",
+   "salio": "2026-08-08",
+   "vence": "2026-08-29",
+   "devuelto": true,
+   "devolvio": "2026-08-22"
+  },
+  {
+   "numero": 143,
+   "libro": "TEO017",
+   "lector": "L077",
+   "salio": "2026-08-15",
+   "vence": "2026-08-29",
+   "devuelto": true,
+   "devolvio": "2026-08-29"
+  },
+  {
+   "numero": 144,
+   "libro": "FAM017",
+   "lector": "L001",
+   "salio": "2026-08-15",
+   "vence": "2026-08-29",
+   "devuelto": true,
+   "devolvio": "2026-08-29"
+  },
+  {
+   "numero": 145,
+   "libro": "TEO006",
+   "lector": "L049",
+   "salio": "2026-08-15",
+   "vence": "2026-08-29",
+   "devuelto": true,
+   "devolvio": "2026-09-12"
+  },
+  {
+   "numero": 146,
+   "libro": "NV006",
+   "lector": "L022",
+   "salio": "2026-08-15",
+   "vence": "2026-08-22",
+   "devuelto": true,
+   "devolvio": "2026-09-12"
+  },
+  {
+   "numero": 147,
+   "libro": "VC040",
+   "lector": "L066",
+   "salio": "2026-08-15",
+   "vence": "2026-08-22",
+   "devuelto": true,
+   "devolvio": "2026-08-22"
+  },
+  {
+   "numero": 148,
+   "libro": "VC049",
+   "lector": "L035",
+   "salio": "2026-08-22",
+   "vence": "2026-08-29",
+   "devuelto": true,
+   "devolvio": "2026-09-05"
+  },
+  {
+   "numero": 149,
+   "libro": "VC058",
+   "lector": "L035",
+   "salio": "2026-08-22",
+   "vence": "2026-08-29",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 150,
+   "libro": "INF008",
+   "lector": "L034",
+   "salio": "2026-08-22",
+   "vence": "2026-09-19",
+   "devuelto": true,
+   "devolvio": "2026-09-19"
+  },
+  {
+   "numero": 151,
+   "libro": "INF026",
+   "lector": "L038",
+   "salio": "2026-08-22",
+   "vence": "2026-09-19",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 152,
+   "libro": "VC048",
+   "lector": "L067",
+   "salio": "2026-08-22",
+   "vence": "2026-09-19",
+   "devuelto": true,
+   "devolvio": "2026-09-19"
+  },
+  {
+   "numero": 153,
+   "libro": "VC024",
+   "lector": "L042",
+   "salio": "2026-08-22",
+   "vence": "2026-09-05",
+   "devuelto": true,
+   "devolvio": "2026-08-29"
+  },
+  {
+   "numero": 154,
+   "libro": "VC026",
+   "lector": "L021",
+   "salio": "2026-08-22",
+   "vence": "2026-09-12",
+   "devuelto": true,
+   "devolvio": "2026-09-12"
+  },
+  {
+   "numero": 155,
+   "libro": "VC025",
+   "lector": "L035",
+   "salio": "2026-08-22",
+   "vence": "2026-09-12",
+   "devuelto": true,
+   "devolvio": "2026-09-05"
+  },
+  {
+   "numero": 156,
+   "libro": "TEO018",
+   "lector": "L020",
+   "salio": "2026-08-29",
+   "vence": "2026-09-05",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 157,
+   "libro": "INF016",
+   "lector": "L047",
+   "salio": "2026-08-29",
+   "vence": "2026-09-19",
+   "devuelto": true,
+   "devolvio": "2026-09-12"
+  },
+  {
+   "numero": 158,
+   "libro": "HM020",
+   "lector": "L036",
+   "salio": "2026-08-29",
+   "vence": "2026-09-05",
+   "devuelto": true,
+   "devolvio": "2026-09-05"
+  },
+  {
+   "numero": 159,
+   "libro": "TEO017",
+   "lector": "L018",
+   "salio": "2026-08-29",
+   "vence": "2026-09-26",
+   "devuelto": true,
+   "devolvio": "2026-09-26"
+  },
+  {
+   "numero": 160,
+   "libro": "VC020",
+   "lector": "L015",
+   "salio": "2026-08-29",
+   "vence": "2026-09-05",
+   "devuelto": true,
+   "devolvio": "2026-09-05"
+  },
+  {
+   "numero": 161,
+   "libro": "FAM016",
+   "lector": "L077",
+   "salio": "2026-09-05",
+   "vence": "2026-09-19",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 162,
+   "libro": "TEO008",
+   "lector": "L022",
+   "salio": "2026-09-05",
+   "vence": "2026-09-19",
+   "devuelto": true,
+   "devolvio": "2026-09-12"
+  },
+  {
+   "numero": 163,
+   "libro": "VC030",
+   "lector": "L067",
+   "salio": "2026-09-05",
+   "vence": "2026-09-19",
+   "devuelto": true,
+   "devolvio": "2026-09-19"
+  },
+  {
+   "numero": 164,
+   "libro": "TEO003",
+   "lector": "L071",
+   "salio": "2026-09-05",
+   "vence": "2026-09-26",
+   "devuelto": true,
+   "devolvio": "2026-09-19"
+  },
+  {
+   "numero": 165,
+   "libro": "VC010",
+   "lector": "L077",
+   "salio": "2026-09-05",
+   "vence": "2026-09-12",
+   "devuelto": true,
+   "devolvio": "2026-09-19"
+  },
+  {
+   "numero": 166,
+   "libro": "FAM003",
+   "lector": "L077",
+   "salio": "2026-09-05",
+   "vence": "2026-09-12",
+   "devuelto": true,
+   "devolvio": "2026-09-12"
+  },
+  {
+   "numero": 167,
+   "libro": "VC038",
+   "lector": "L049",
+   "salio": "2026-09-12",
+   "vence": "2026-09-26",
+   "devuelto": true,
+   "devolvio": "2026-09-26"
+  },
+  {
+   "numero": 168,
+   "libro": "VC005",
+   "lector": "L063",
+   "salio": "2026-09-12",
+   "vence": "2026-09-26",
+   "devuelto": true,
+   "devolvio": "2026-09-26"
+  },
+  {
+   "numero": 169,
+   "libro": "VC001",
+   "lector": "L063",
+   "salio": "2026-09-12",
+   "vence": "2026-10-10",
+   "devuelto": true,
+   "devolvio": "2026-10-03"
+  },
+  {
+   "numero": 170,
+   "libro": "FAM017",
+   "lector": "L048",
+   "salio": "2026-09-12",
+   "vence": "2026-10-03",
+   "devuelto": true,
+   "devolvio": "2026-10-03"
+  },
+  {
+   "numero": 171,
+   "libro": "INF018",
+   "lector": "L077",
+   "salio": "2026-09-12",
+   "vence": "2026-10-10",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 172,
+   "libro": "FAM012",
+   "lector": "L035",
+   "salio": "2026-09-12",
+   "vence": "2026-09-19",
+   "devuelto": true,
+   "devolvio": "2026-09-19"
+  },
+  {
+   "numero": 173,
+   "libro": "TEO008",
+   "lector": "L039",
+   "salio": "2026-09-19",
+   "vence": "2026-10-10",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 174,
+   "libro": "INF019",
+   "lector": "L035",
+   "salio": "2026-09-19",
+   "vence": "2026-10-03",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 175,
+   "libro": "HM010",
+   "lector": "L077",
+   "salio": "2026-09-19",
+   "vence": "2026-10-03",
+   "devuelto": true,
+   "devolvio": "2026-10-03"
+  },
+  {
+   "numero": 176,
+   "libro": "FAM009",
+   "lector": "L016",
+   "salio": "2026-09-19",
+   "vence": "2026-10-03",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 177,
+   "libro": "VC035",
+   "lector": "L067",
+   "salio": "2026-09-19",
+   "vence": "2026-10-03",
+   "devuelto": true,
+   "devolvio": "2026-10-03"
+  },
+  {
+   "numero": 178,
+   "libro": "HM006",
+   "lector": "L043",
+   "salio": "2026-09-26",
+   "vence": "2026-10-10",
+   "devuelto": true,
+   "devolvio": "2026-10-10"
+  },
+  {
+   "numero": 179,
+   "libro": "VC026",
+   "lector": "L077",
+   "salio": "2026-09-26",
+   "vence": "2026-10-03",
+   "devuelto": true,
+   "devolvio": "2026-10-03"
+  },
+  {
+   "numero": 180,
+   "libro": "VC021",
+   "lector": "L009",
+   "salio": "2026-09-26",
+   "vence": "2026-10-17",
+   "devuelto": true,
+   "devolvio": "2026-10-10"
+  },
+  {
+   "numero": 181,
+   "libro": "VC014",
+   "lector": "L078",
+   "salio": "2026-09-26",
+   "vence": "2026-10-10",
+   "devuelto": true,
+   "devolvio": "2026-10-10"
+  },
+  {
+   "numero": 182,
+   "libro": "VC028",
+   "lector": "L049",
+   "salio": "2026-09-26",
+   "vence": "2026-10-03",
+   "devuelto": true,
+   "devolvio": "2026-10-03"
+  },
+  {
+   "numero": 183,
+   "libro": "VC017",
+   "lector": "L001",
+   "salio": "2026-09-26",
+   "vence": "2026-10-03",
+   "devuelto": true,
+   "devolvio": "2026-10-10"
+  },
+  {
+   "numero": 184,
+   "libro": "TEO012",
+   "lector": "L034",
+   "salio": "2026-10-03",
+   "vence": "2026-10-10",
+   "devuelto": true,
+   "devolvio": "2026-10-10"
+  },
+  {
+   "numero": 185,
+   "libro": "TEO002",
+   "lector": "L049",
+   "salio": "2026-10-03",
+   "vence": "2026-10-24",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 186,
+   "libro": "HM013",
+   "lector": "L070",
+   "salio": "2026-10-03",
+   "vence": "2026-10-24",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 187,
+   "libro": "VC004",
+   "lector": "L077",
+   "salio": "2026-10-03",
+   "vence": "2026-10-17",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 188,
+   "libro": "INF012",
+   "lector": "L064",
+   "salio": "2026-10-03",
+   "vence": "2026-10-10",
+   "devuelto": true,
+   "devolvio": "2026-10-10"
+  },
+  {
+   "numero": 189,
+   "libro": "VC010",
+   "lector": "L042",
+   "salio": "2026-10-03",
+   "vence": "2026-10-24",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 190,
+   "libro": "FAM004",
+   "lector": "L016",
+   "salio": "2026-10-03",
+   "vence": "2026-10-31",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 191,
+   "libro": "VC052",
+   "lector": "L008",
+   "salio": "2026-10-03",
+   "vence": "2026-10-31",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 192,
+   "libro": "TEO007",
+   "lector": "L037",
+   "salio": "2026-10-03",
+   "vence": "2026-10-24",
+   "devuelto": false,
+   "devolvio": null
+  },
+  {
+   "numero": 193,
+   "libro": "VC002",
+   "lector": "L043",
+   "salio": "2026-10-03",
+   "vence": "2026-10-17",
+   "devuelto": false,
+   "devolvio": null
+  }
+ ],
+ "contadores": {
+  "ultimoPrestamo": 193,
+  "ultimoLector": 80
+ }
+}
