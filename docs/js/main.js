@@ -42,6 +42,7 @@ const app = {
   sesion: null,
   permiso: { estado: 'sin-sesion', correo: null, rol: null, nombre: null },
   vista: VISTA_INICIAL,
+  vistaActual: null,
   desmontarVista: () => {},
   soltarPermiso: () => {},
   soltarConfig: () => {},
@@ -63,12 +64,11 @@ async function principal() {
     memoriaSesion: globalThis.sessionStorage,
   });
 
-  ponerFranja(app.eleccion);
+  ponerFranja({
+    ...app.eleccion,
+    nota: app.eleccion.parametroEnsayoIgnorado ? 'se ignoró «ensayo=1»' : null,
+  });
   ponerNombreBiblioteca(NOMBRE_ENTRADA);
-
-  if (app.eleccion.parametroEnsayoIgnorado) {
-    avisar('En local siempre se usa el emulador: se ignoró «ensayo=1».', 'atencion');
-  }
 
   if (app.eleccion.bloqueado) {
     // Configuración ausente: no se inicia ninguna conexión.
@@ -98,8 +98,12 @@ async function principal() {
   prepararReloj(parametros);
   conectarHoja({ alPedirCierre: () => (history.state?.hoja ? history.back() : cerrarHoja()) });
 
-  // Una pérdida o vuelta de red cambia qué botones se pueden tocar.
-  for (const evento of ['online', 'offline']) globalThis.addEventListener(evento, () => dibujar());
+  // Una pérdida o vuelta de red cambia qué botones se pueden tocar, pero NO
+  // vuelve a dibujar la pantalla: un redibujado borraría lo que la persona está
+  // escribiendo, y eso es justo lo que la forma de guardar promete no hacer.
+  for (const evento of ['online', 'offline']) {
+    globalThis.addEventListener(evento, () => app.vistaActual?.alCambiarRed?.());
+  }
 
   globalThis.addEventListener('popstate', (evento) => {
     if (hojaAbierta()) cerrarHoja();
@@ -283,6 +287,7 @@ function ir(vista, { reemplazar = false } = {}) {
 function dibujar() {
   app.desmontarVista();
   app.desmontarVista = () => {};
+  app.vistaActual = null;
 
   const destino = pantalla();
 
@@ -323,6 +328,7 @@ function dibujar() {
   const vista = construirVista();
   if (vista?.nodo) {
     pintar(destino, vista.nodo);
+    app.vistaActual = vista;
     app.desmontarVista = vista.desmontar ?? (() => {});
   } else {
     pintar(destino, vista);

@@ -21,8 +21,14 @@ export function ponerFecha(instante) {
   nodo.dataset.horaPendiente = instante ? 'no' : 'si';
 }
 
-/** Franja de ambiente: EMULADOR o ENSAYO, con el proyecto configurado. */
-export function ponerFranja({ franja, proyecto }) {
+/**
+ * Franja de ambiente: EMULADOR o ENSAYO, con el proyecto configurado.
+ *
+ * La nota va aquí y no en un aviso suelto porque la franja no se borra: un
+ * aviso se limpia al cambiar de sesión, y esto es un dato del ambiente que
+ * tiene que seguir a la vista.
+ */
+export function ponerFranja({ franja, proyecto, nota = null }) {
   const nodo = document.getElementById('franja');
   if (!nodo) return;
   if (!franja) {
@@ -31,5 +37,5 @@ export function ponerFranja({ franja, proyecto }) {
     return;
   }
   nodo.hidden = false;
-  nodo.textContent = proyecto ? `${franja} · ${proyecto}` : franja;
+  nodo.textContent = [franja, proyecto, nota].filter(Boolean).join(' · ');
 }

@@ -28,6 +28,11 @@ export function pantallaVoluntarios({ datos, permiso }) {
     lista,
   ]);
 
+  // Los botones de escritura de cada fila, para poder habilitarlos o
+  // deshabilitarlos cuando cambia la red SIN volver a dibujar la pantalla: un
+  // redibujado borraría lo que la persona está escribiendo.
+  const botonesDeFila = [];
+
   let voluntarios = [];
   const soltar = datos.escucharColeccion(
     rutas.voluntarios(),
@@ -41,6 +46,7 @@ export function pantallaVoluntarios({ datos, permiso }) {
   );
 
   function pintarLista() {
+    botonesDeFila.length = 0;
     if (voluntarios.length === 0) {
       pintar(lista, vacio('Todavía no hay voluntarios.'));
       return;
@@ -53,7 +59,7 @@ export function pantallaVoluntarios({ datos, permiso }) {
       el(
         'ul',
         { clase: 'lista' },
-        ordenados.map((voluntario) => filaVoluntario({ datos, permiso, voluntario })),
+        ordenados.map((voluntario) => filaVoluntario({ datos, permiso, voluntario, botonesDeFila })),
       ),
     );
   }
@@ -64,12 +70,18 @@ export function pantallaVoluntarios({ datos, permiso }) {
       soltar();
       quitarAviso(AVISO);
     },
+    /** Cambió la conexión: solo se ajustan los botones, no se redibuja nada. */
+    alCambiarRed: () => {
+      formulario.reflejarRed();
+      const hay = datos.hayRed();
+      for (const { boton, esYo } of botonesDeFila) boton.disabled = esYo || !hay;
+    },
   };
 }
 
 // --------------------------------------------------------------------- fila
 
-function filaVoluntario({ datos, permiso, voluntario }) {
+function filaVoluntario({ datos, permiso, voluntario, botonesDeFila = [] }) {
   const esYo = voluntario.id === permiso.correo;
   const activo = voluntario.activo === true;
 
@@ -82,6 +94,7 @@ function filaVoluntario({ datos, permiso, voluntario }) {
     disabled: esYo || !datos.hayRed(),
     title: esYo ? 'No puedes desactivar tu propia cuenta' : '',
   });
+  botonesDeFila.push({ boton, esYo });
 
   // La intención es estable desde el primer toque de ESTA fila.
   let operacionId = null;

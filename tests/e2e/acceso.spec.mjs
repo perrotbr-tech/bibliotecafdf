@@ -55,8 +55,13 @@ test('A-03 una cuenta inactiva ve «Sin acceso»', async ({ page }) => {
 });
 
 test('A-04 un correo sin verificar no entra', async ({ page }) => {
+  // Con un correo propio de esta prueba: el emulador de Auth guarda la cuenta
+  // tal como se creó, y dejar a Ana sin verificar ensuciaría a las demás.
+  const sinVerificar = 'sinverificar@example.com';
+  await sembrarBaseDemo({ voluntarios: [{ correo: sinVerificar, nombre: 'Sin Verificar' }] });
+
   await abrir(page);
-  await entrar(page, VOLUNTARIA, { verificado: false });
+  await entrar(page, sinVerificar, { verificado: false });
 
   await expect(page.getByTestId('sin-acceso')).toBeVisible();
 });
@@ -158,8 +163,9 @@ test('A-30 en localhost se usa el emulador y se ve su franja', async ({ page }) 
 
 test('A-30 en loopback el parámetro ensayo=1 se ignora y se dice', async ({ page }) => {
   await abrir(page, '/?ensayo=1');
+  // Va en la franja, que no se borra al cambiar de sesión.
   await expect(page.locator('#franja')).toContainText('EMULADOR');
-  await expect(page.getByText('se ignoró «ensayo=1»')).toBeVisible();
+  await expect(page.locator('#franja')).toContainText('se ignoró «ensayo=1»');
 });
 
 test('A-15 y A-37 al perder el acceso con la app abierta se pasa a «Sin acceso» sin error sin tratar', async ({

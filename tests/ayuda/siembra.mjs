@@ -23,6 +23,21 @@ export async function baseDemo() {
   return { db, FieldValue };
 }
 
+/**
+ * Borra las cuentas del emulador de Authentication.
+ *
+ * Hace falta entre pruebas: el emulador de Auth NO se limpia solo, así que una
+ * prueba que entra con el correo sin verificar deja esa cuenta guardada así, y
+ * la siguiente que usa el mismo correo hereda `emailVerified: false`.
+ */
+export async function limpiarCuentas() {
+  const host = process.env.FIREBASE_AUTH_EMULATOR_HOST ?? '127.0.0.1:9099';
+  await fetch(`http://${host}/emulator/v1/projects/${PROYECTO}/accounts`, {
+    method: 'DELETE',
+    headers: { Authorization: 'Bearer owner' },
+  });
+}
+
 export async function limpiarBase() {
   const { db: base } = await baseDemo();
   for (const ruta of [rutas.configApp(), rutas.configContadores(), rutas.configControl()]) {
@@ -40,6 +55,7 @@ export async function limpiarBase() {
 export async function sembrarBaseDemo({ voluntarios = [], bloqueo = null } = {}) {
   const { db: base, FieldValue: campos } = await baseDemo();
   await limpiarBase();
+  await limpiarCuentas();
 
   const comunes = { creadoEn: campos.serverTimestamp(), creadoPor: 'prueba' };
   await base.doc(rutas.configApp()).set({ ...CONFIG_APP_INICIAL, inicioJuego: '2026-5', ...comunes });

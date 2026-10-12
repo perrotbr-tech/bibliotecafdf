@@ -15,7 +15,6 @@ import { CLAVE_INTENCION } from '../../docs/js/datos.js';
 // Contra el emulador, el SDK habla por WebChannel: las rutas se reconocen por
 // el nombre del servicio en la dirección, no por un glob de archivo.
 const HABLA_CON_FIRESTORE = (url) => url.href.includes('google.firestore.v1.Firestore');
-const ESCRIBE_EN_FIRESTORE = (url) => url.href.includes('google.firestore.v1.Firestore/Write');
 
 async function abrirVoluntarios(page, direccion = '/') {
   await page.goto(direccion);
@@ -106,53 +105,81 @@ test('A-17 sin conexión los botones de escritura quedan deshabilitados y se avi
   await expect(page.getByTestId('agregar-voluntario')).toBeEnabled();
 });
 
+/**
+ * Corta la red a mitad de una escritura, que es lo que pasa en la calle.
+ *
+ * Abortar las peticiones no basta: el SDK las reintenta y la transacción se
+ * queda colgada sin resolverse. Lo que de verdad la hace fallar es que el
+ * navegador quede sin conexión, así que se hacen las dos cosas: se bloquea el
+ * tráfico para que la escritura no llegue, y después se corta la conexión para
+ * que el SDK deje de reintentar.
+ */
+async function cortarLaRed(page, context) {
+  await page.route(HABLA_CON_FIRESTORE, (ruta) => ruta.abort('connectionfailed'));
+  await context.setOffline(true);
+}
+
+async function devolverLaRed(page, context) {
+  await page.unroute(HABLA_CON_FIRESTORE);
+  await context.setOffline(false);
+}
+
+/** Entra de nuevo después de recargar, para que corra la recuperación. */
+async function volverAEntrar(page) {
+  await page.waitForFunction(() => globalThis.__biblioteca !== undefined, { timeout: 20_000 });
+  await page.evaluate((correo) => globalThis.__biblioteca.entrarSimulado(correo), ADMIN);
+}
+
 test('A-18 si la red se corta entre el toque y la respuesta, no hay confirmación y el formulario se conserva', async ({
   page,
+  context,
 }) => {
   await abrirVoluntarios(page);
 
-  // La escritura sale, pero la respuesta nunca llega: se demora y después
-  // falla. Así aparece «Confirmando… no cierres la app».
-  await page.route(ESCRIBE_EN_FIRESTORE, async (ruta) => {
-    await new Promise((listo) => setTimeout(listo, 6000));
-    await ruta.abort('connectionfailed');
-  });
+  // La escritura sale pero la respuesta nunca llega: la transacción se queda
+  // esperando y a los 5 segundos aparece el aviso de demora.
+  await page.route(HABLA_CON_FIRESTORE, (ruta) => ruta.abort('connectionfailed'));
 
   await llenarFormulario(page, { correo: 'cortada@example.com', nombre: 'Red Cortada' });
   await page.getByTestId('agregar-voluntario').click();
 
   await expect(page.getByTestId('agregar-voluntario')).toBeDisabled();
-  await expect(page.getByText('Confirmando… no cierres la app')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText('Confirmando… no cierres la app')).toBeVisible({ timeout: 20_000 });
 
-  // Cuando la transacción termina mal, no se afirma que se guardó.
-  await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 30_000 });
+  // Recién ahora se corta de verdad, para que el SDK deje de reintentar.
+  await context.setOffline(true);
+
+  await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 40_000 });
   await expect(page.getByText(/quedó agregado/)).toHaveCount(0);
+  // Lo escrito se conserva: ni el corte ni el redibujado lo borran.
   await expect(page.getByTestId('nuevo-nombre')).toHaveValue('Red Cortada');
   await expect(page.getByTestId('nuevo-correo')).toHaveValue('cortada@example.com');
+
+  await devolverLaRed(page, context);
 });
 
 test('A-39 si la comprobación tampoco se puede hacer, no se afirma que no se guardó', async ({ page, context }) => {
   await abrirVoluntarios(page);
   await llenarFormulario(page, { correo: 'dudosa@example.com', nombre: 'Dudosa' });
 
-  await page.route(HABLA_CON_FIRESTORE, (ruta) => ruta.abort('connectionfailed'));
+  await cortarLaRed(page, context);
   await page.getByTestId('agregar-voluntario').click();
 
   const mensaje = page.getByTestId('error-formulario');
-  await expect(mensaje).toBeVisible({ timeout: 30_000 });
+  await expect(mensaje).toBeVisible({ timeout: 40_000 });
   await expect(mensaje).toContainText('Revisa su estado antes de repetir');
   await expect(page.getByText('No se guardó. Inténtalo de nuevo')).toHaveCount(0);
-  await context.setOffline(false);
+
+  await devolverLaRed(page, context);
 });
 
-test('A-19 si la escritura sí se había aplicado, al volver se reconoce y no se duplica', async ({ page }) => {
+test('A-19 si la escritura sí se había aplicado, al volver se reconoce y no se duplica', async ({ page, context }) => {
   await abrirVoluntarios(page);
   await llenarFormulario(page, { correo: 'aplicada@example.com', nombre: 'Sí Quedó' });
 
-  // Se corta todo lo que habla con Firestore: la app no puede confirmar.
-  await page.route(HABLA_CON_FIRESTORE, (ruta) => ruta.abort('connectionfailed'));
+  await cortarLaRed(page, context);
   await page.getByTestId('agregar-voluntario').click();
-  await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 40_000 });
 
   // La intención quedó anotada: solo identificadores, nada personal.
   const intencion = JSON.parse(
@@ -167,47 +194,44 @@ test('A-19 si la escritura sí se había aplicado, al volver se reconoce y no se
     creacionId: intencion.operacionId,
   });
 
-  await page.unroute(HABLA_CON_FIRESTORE);
+  await devolverLaRed(page, context);
   await page.reload();
-  await page.waitForFunction(() => globalThis.__biblioteca !== undefined, { timeout: 20_000 });
-  await page.evaluate((correo) => globalThis.__biblioteca.entrarSimulado(correo), ADMIN);
+  await volverAEntrar(page);
 
   await expect(page.getByText('Sí quedó guardado')).toBeVisible({ timeout: 20_000 });
   expect(await contarVoluntarios()).toBe(3); // admin, Ana y la nueva: sin duplicado
 });
 
-test('A-20 si la escritura no se aplicó, al volver se dice que no se guardó', async ({ page }) => {
+test('A-20 si la escritura no se aplicó, al volver se dice que no se guardó', async ({ page, context }) => {
   await abrirVoluntarios(page);
   await llenarFormulario(page, { correo: 'perdida@example.com', nombre: 'No Quedó' });
 
-  await page.route(HABLA_CON_FIRESTORE, (ruta) => ruta.abort('connectionfailed'));
+  await cortarLaRed(page, context);
   await page.getByTestId('agregar-voluntario').click();
-  await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 40_000 });
 
-  await page.unroute(HABLA_CON_FIRESTORE);
+  await devolverLaRed(page, context);
   await page.reload();
-  await page.waitForFunction(() => globalThis.__biblioteca !== undefined, { timeout: 20_000 });
-  await page.evaluate((correo) => globalThis.__biblioteca.entrarSimulado(correo), ADMIN);
+  await volverAEntrar(page);
 
   await expect(page.getByText('No se guardó. Inténtalo de nuevo')).toBeVisible({ timeout: 20_000 });
   expect(await leerVoluntario('perdida@example.com')).toBeNull();
 });
 
-test('A-36 si el documento lo creó otra operación, no se presenta como éxito propio', async ({ page }) => {
+test('A-36 si el documento lo creó otra operación, no se presenta como éxito propio', async ({ page, context }) => {
   await abrirVoluntarios(page);
   await llenarFormulario(page, { correo: 'ajena@example.com', nombre: 'De Otro' });
 
-  await page.route(HABLA_CON_FIRESTORE, (ruta) => ruta.abort('connectionfailed'));
+  await cortarLaRed(page, context);
   await page.getByTestId('agregar-voluntario').click();
-  await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 40_000 });
 
   // Otra persona, en otro teléfono, creó ese mismo correo.
   await ponerVoluntario({ correo: 'ajena@example.com', nombre: 'De Otro', creacionId: 'c'.repeat(32) });
 
-  await page.unroute(HABLA_CON_FIRESTORE);
+  await devolverLaRed(page, context);
   await page.reload();
-  await page.waitForFunction(() => globalThis.__biblioteca !== undefined, { timeout: 20_000 });
-  await page.evaluate((correo) => globalThis.__biblioteca.entrarSimulado(correo), ADMIN);
+  await volverAEntrar(page);
 
   await expect(page.getByText(/creado por otra operación/)).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText('Sí quedó guardado')).toHaveCount(0);
