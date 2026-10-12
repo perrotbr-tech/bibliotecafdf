@@ -172,7 +172,9 @@ async function alCambiarSesion(usuario) {
   limpiarAvisos();
 
   if (!usuario) {
-    olvidarTodo();
+    // Al arrancar no hay nada que olvidar, y olvidar aquí borraría la pantalla
+    // que pedía la dirección: un enlace a `#voluntarios` abriría Inicio.
+    if (app.permiso.estado !== 'sin-sesion') olvidarTodo();
     app.permiso = permisoDe({ sesion: null, documento: null });
     dibujar();
     return;
