@@ -2,9 +2,10 @@
 
 Revisión 1.1 · 12-10-2026 (America/Santiago) · rama `etapa-1`
 
-**SHA entregado para la contraprueba:** el último commit de `etapa-1`, anotado en
-la sección 9. Ese es el commit exacto que debe revisar Codex y el que debe
-publicarse en ensayo.
+**SHA entregado para la contraprueba:** `f191a6cbd6ad3b80c4a51c7b1f2b8787d7401e74`
+(`f191a6c`), el último commit de código de `etapa-1`. Ese es el commit exacto
+que debe revisar Codex y el que debe publicarse en ensayo. Los datos completos
+de la entrega están en la sección 10.
 
 **Estado: las 39 pruebas automatizables de la etapa están escritas y ejecutadas,
 y pasan.** A-31 es manual y queda para el dueño.
@@ -395,7 +396,7 @@ ya corre las seis suites.
 | Dato | Valor |
 |---|---|
 | Rama | `etapa-1` |
-| SHA entregado | el último commit de la rama (este informe incluido) |
+| SHA entregado | `f191a6cbd6ad3b80c4a51c7b1f2b8787d7401e74` (`f191a6c`) |
 | Corrida de integración continua en verde | `e5fdb6d`, las seis suites |
 | Node | 22.22.0 (local) y 22 en la integración continua |
 | npm | 10.9.4 |
