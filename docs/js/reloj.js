@@ -21,6 +21,8 @@ import { nuevoId } from './texto.js';
 export const VIGENCIA_MS = 5 * 60 * 1000;
 export const MAX_IDA_VUELTA_MS = 4000;
 export const MAX_INTENTOS = 3;
+/** Cuántos descartes se recuerdan. Es para el informe, no un registro eterno. */
+export const MAX_DESCARTES = 20;
 /** Desde cuánta diferencia se avisa que el reloj del teléfono está corrido. */
 export const DESFASE_AVISABLE_MS = 60 * 1000;
 
@@ -37,12 +39,22 @@ export function crearReloj({
   let sincronizando = null;
   let ultimoMotivo = null;
   const descartes = [];
+  // Cada invalidación abre una época nueva. Una muestra que venía en camino
+  // pertenece a la época anterior y ya no sirve: sin esto, perder la conexión
+  // a mitad de una sincronización se deshacía solo cuando llegaba la respuesta.
+  let epoca = 0;
+
+  function anotarDescarte(descarte) {
+    descartes.push(descarte);
+    if (descartes.length > MAX_DESCARTES) descartes.splice(0, descartes.length - MAX_DESCARTES);
+  }
 
   function invalidar(motivo) {
     // El motivo se guarda siempre, también cuando nunca hubo muestra: la
     // pantalla tiene que poder decir por qué no hay hora.
     ultimoMotivo = motivo;
     muestra = null;
+    epoca += 1;
   }
 
   function vencida() {
@@ -53,24 +65,31 @@ export function crearReloj({
   }
 
   async function unIntento() {
+    const miEpoca = epoca;
     const identificador = nuevoId();
     const antes = monotonico();
     const resultado = await tomarMuestra(identificador);
     const despues = monotonico();
     const idaVuelta = despues - antes;
 
+    if (miEpoca !== epoca) {
+      // Mientras esta muestra viajaba, algo la invalidó: suspensión, cambio de
+      // red o cierre de sesión. No se puede dar por buena.
+      anotarDescarte({ motivo: 'la muestra quedó obsoleta antes de llegar' });
+      return false;
+    }
     if (idaVuelta > maxIdaVueltaMs) {
-      descartes.push({ motivo: 'ida y vuelta mayor que el máximo', idaVuelta });
+      anotarDescarte({ motivo: 'ida y vuelta mayor que el máximo', idaVuelta });
       return false;
     }
     if (!resultado || resultado.sincronizacionId !== identificador) {
       // La muestra es de otro dispositivo: no se le atribuye a este.
-      descartes.push({ motivo: 'identificador de otra muestra' });
+      anotarDescarte({ motivo: 'identificador de otra muestra' });
       return false;
     }
     const instante = resultado.instante instanceof Date ? resultado.instante : new Date(resultado.instante);
     if (Number.isNaN(instante.getTime())) {
-      descartes.push({ motivo: 'instante del servidor ilegible' });
+      anotarDescarte({ motivo: 'instante del servidor ilegible' });
       return false;
     }
 
@@ -89,23 +108,30 @@ export function crearReloj({
    * Siempre se puede reintentar: la sincronización no se bloquea a sí misma.
    */
   async function sincronizar() {
-    if (sincronizando) return await sincronizando;
-    sincronizando = (async () => {
+    // Si ya hay una en curso de ESTA época, se espera esa. Si la época cambió,
+    // la anterior ya no sirve y se pide una nueva.
+    if (sincronizando && sincronizando.epoca === epoca) return await sincronizando.promesa;
+    const deEstaEpoca = epoca;
+    const promesa = (async () => {
       for (let intento = 1; intento <= maxIntentos; intento += 1) {
         try {
           if (await unIntento()) return true;
         } catch (error) {
-          descartes.push({ motivo: 'error al pedir la muestra', error: String(error?.code ?? error?.message ?? error) });
+          anotarDescarte({
+            motivo: 'error al pedir la muestra',
+            error: String(error?.code ?? error?.message ?? error),
+          });
         }
         if (intento < maxIntentos) await esperar(intento);
       }
       invalidar('no se pudo obtener la hora del servidor');
       return false;
     })();
+    sincronizando = { epoca: deEstaEpoca, promesa };
     try {
-      return await sincronizando;
+      return await promesa;
     } finally {
-      sincronizando = null;
+      if (sincronizando?.promesa === promesa) sincronizando = null;
     }
   }
 

@@ -105,9 +105,7 @@ service cloud.firestore {
 
         // Lo crea solo un administrador. El identificador es el correo en
         // minúsculas, y el documento llega con la lista exacta de campos.
-        allow create: if esAdmin(bib)
-          && sinBloqueo(bib)
-          && documentoCorreo == documentoCorreo.lower()
+        allow create: if documentoCorreo == documentoCorreo.lower()
           && request.resource.data.keys().hasOnly([
                'nombre', 'rol', 'activo',
                'creadoEn', 'creadoPor', 'creacionId',
@@ -125,14 +123,31 @@ service cloud.firestore {
           && request.resource.data.creadoPor == correo()
           && formatoId(request.resource.data.creacionId)
           && request.resource.data.get('ultimaConexion', null) == null
-          && request.resource.data.get('sincronizacionId', null) == null;
+          && request.resource.data.get('sincronizacionId', null) == null
+          && esAdmin(bib)
+          && sinBloqueo(bib);
+
+        // IMPORTANTE: el orden de estas dos ramas importa para el presupuesto
+        // de accesos. Cada rama comprueba PRIMERO la forma de la escritura,
+        // que es gratis, y solo entonces consulta otros documentos. Y la rama
+        // de la muestra de hora va antes que la del administrador, porque es
+        // la más frecuente y la más barata: así una sincronización gasta un
+        // acceso, no los de la otra rama además.
+
+        // Excepción del contrato §2: cada voluntario escribe EXACTAMENTE su
+        // muestra de hora en su propio documento. No pasa por el bloqueo:
+        // lectura y sincronización siguen disponibles en mantenimiento.
+        allow update: if cambia(['ultimaConexion', 'sincronizacionId'])
+          && documentoCorreo == correo()
+          && horaDelServidor(request.resource.data.ultimaConexion)
+          && formatoId(request.resource.data.sincronizacionId)
+          && hayCorreoVerificado()
+          && activo(docVoluntario(bib));
 
         // Un administrador cambia nombre, rol y estado. Los metadatos de
         // operación son parte de la lista permitida y no abren ningún otro
         // campo. `creacionId`, `creadoEn` y `creadoPor` son inmutables.
-        allow update: if esAdmin(bib)
-          && sinBloqueo(bib)
-          && cambia(['nombre', 'rol', 'activo', 'ultimaOperacionId', 'modificadoEn'])
+        allow update: if cambia(['nombre', 'rol', 'activo', 'ultimaOperacionId', 'modificadoEn'])
           && request.resource.data.keys().hasAll(['ultimaOperacionId', 'modificadoEn'])
           && formatoId(request.resource.data.ultimaOperacionId)
           && horaDelServidor(request.resource.data.modificadoEn)
@@ -144,17 +159,9 @@ service cloud.firestore {
           // Un administrador no puede desactivarse ni quitarse el rol.
           && (documentoCorreo != correo()
               || (request.resource.data.activo == true
-                  && request.resource.data.rol == 'admin'));
-
-        // Excepción del contrato §2: cada voluntario escribe EXACTAMENTE su
-        // muestra de hora en su propio documento. No pasa por el bloqueo:
-        // lectura y sincronización siguen disponibles en mantenimiento.
-        allow update: if hayCorreoVerificado()
-          && documentoCorreo == correo()
-          && activo(docVoluntario(bib))
-          && cambia(['ultimaConexion', 'sincronizacionId'])
-          && horaDelServidor(request.resource.data.ultimaConexion)
-          && formatoId(request.resource.data.sincronizacionId);
+                  && request.resource.data.rol == 'admin'))
+          && esAdmin(bib)
+          && sinBloqueo(bib);
 
         // Nadie borra un voluntario.
         allow delete: if false;
@@ -168,9 +175,7 @@ service cloud.firestore {
         // Lo modifica solo un administrador, respetando tipos y largos.
         // `juegoCerradoAlgunaVez` es inmutable desde el cliente en esta etapa:
         // solo lo cambia la operación de cierre de la Etapa 5.
-        allow update: if esAdmin(bib)
-          && sinBloqueo(bib)
-          && cambia([
+        allow update: if cambia([
                'nombreBiblioteca', 'plazoSabadosPorDefecto', 'categorias',
                'mensajeAtraso', 'mensajePrevio', 'inicioJuego',
                'ultimaOperacionId', 'modificadoEn'
@@ -192,7 +197,15 @@ service cloud.firestore {
           && request.resource.data.mensajePrevio.size() >= 10
           && request.resource.data.mensajePrevio.size() <= 400
           && request.resource.data.inicioJuego is string
-          && request.resource.data.juegoCerradoAlgunaVez == resource.data.juegoCerradoAlgunaVez;
+          && request.resource.data.inicioJuego.matches('^[0-9]{4}-[1-6]$')
+          // Una vez que se cerró una temporada, `inicioJuego` no se mueve más
+          // desde la app (contrato §8): cambiarlo escondería una fotografía ya
+          // cerrada. El indicador solo lo levanta la operación de cierre.
+          && (resource.data.get('juegoCerradoAlgunaVez', false) == false
+              || request.resource.data.inicioJuego == resource.data.inicioJuego)
+          && request.resource.data.juegoCerradoAlgunaVez == resource.data.juegoCerradoAlgunaVez
+          && esAdmin(bib)
+          && sinBloqueo(bib);
 
         // Lo crea y lo borra solo el script del dueño, que no pasa por reglas.
         allow create, delete: if false;

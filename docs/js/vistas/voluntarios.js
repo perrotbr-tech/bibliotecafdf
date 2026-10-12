@@ -14,6 +14,11 @@ import { prepararBotonGuardar } from '../ui/boton-guardar.js';
 
 const AVISO = 'voluntarios';
 
+/** ¿El resultado dejó de verdad la duda abierta, o ya quedó resuelto? */
+function quedoEnDuda(resultado) {
+  return resultado.estado === 'indeterminado';
+}
+
 export function pantallaVoluntarios({ datos, permiso }) {
   if (permiso.rol !== 'admin') {
     return { nodo: el('div', { 'data-prueba': 'voluntarios' }, [sinPermiso()]), desmontar: () => {} };
@@ -36,7 +41,11 @@ export function pantallaVoluntarios({ datos, permiso }) {
   let voluntarios = [];
   const soltar = datos.escucharColeccion(
     rutas.voluntarios(),
-    (documentos) => {
+    (documentos, _metadatos, cambios) => {
+      // Un evento que no trae cambios —por ejemplo al perder o recuperar la
+      // conexión— no redibuja la lista: eso soltaría el botón que alguien
+      // acaba de tocar y perdería la intención estable de esa fila.
+      if (cambios === 0 && voluntarios.length > 0) return;
       voluntarios = documentos;
       pintarLista();
     },
@@ -69,6 +78,9 @@ export function pantallaVoluntarios({ datos, permiso }) {
     desmontar: () => {
       soltar();
       quitarAviso(AVISO);
+      // El aviso de sin conexión es de esta pantalla: no puede quedar colgado
+      // sobre Inicio o Catálogo, donde no se guarda nada.
+      quitarAviso('sin-conexion');
     },
     /** Cambió la conexión: solo se ajustan los botones, no se redibuja nada. */
     alCambiarRed: () => {
@@ -140,6 +152,11 @@ function filaVoluntario({ datos, permiso, voluntario, botonesDeFila = [] }) {
         olvidarIntencion();
         avisar(deseado ? 'Voluntario reactivado' : 'Voluntario desactivado', 'exito', { id: AVISO, duracionMs: 4000 });
       } else {
+        // La intención solo se conserva cuando de verdad quedó la duda. Un
+        // conflicto, un permiso denegado o un «sin conexión» ya están
+        // resueltos: dejarla anotada haría que la próxima apertura avisara de
+        // nuevo sobre algo que ya se sabe.
+        if (!quedoEnDuda(resultado)) olvidarIntencion();
         avisar(resultado.mensaje, 'error', { id: AVISO });
       }
     },
@@ -253,6 +270,7 @@ function construirFormulario({ datos, permiso }) {
       correo.control.focus();
     } else {
       // Lo escrito se conserva: nadie tiene que volver a tipearlo.
+      if (!quedoEnDuda(resultado)) olvidarIntencion();
       mostrarError(resultado.mensaje);
       avisar(resultado.mensaje, 'error', { id: AVISO });
     }

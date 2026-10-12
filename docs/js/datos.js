@@ -10,9 +10,21 @@
 // este módulo se puede probar en Node sin cargar el SDK desde la red, y la app
 // sigue usando los módulos oficiales desde www.gstatic.com.
 
+import { BIB } from './config-publica.js';
 import { nuevoId } from './texto.js';
 
 export const MAX_INTENTOS_TRANSACCION = 5;
+
+/**
+ * Accesos a otros documentos que gastan las reglas, por operación. Sale del
+ * análisis de `firestore.rules` y está anotado en el informe de la etapa: una
+ * lectura consulta el documento del propio voluntario; una escritura consulta
+ * además `config/control`.
+ *
+ * Es una ESTIMACIÓN del cliente, no una factura: las reglas también se evalúan
+ * en operaciones denegadas, y eso no se ve desde aquí.
+ */
+export const ACCESOS_DE_REGLAS = { lectura: 1, escritura: 2 };
 export const MS_PARA_AVISAR_DEMORA = 5000;
 
 /** Códigos de Firestore que significan «no se sabe si quedó guardado». */
@@ -149,12 +161,21 @@ export function crearDatos({ db, sdk, red = globalThis.navigator, contadores = c
     return red?.onLine !== false;
   }
 
+  /**
+   * Una escucha que venía sirviendo desde la caché y vuelve a traer datos del
+   * servidor es una reconexión. Es la única señal fiable que da el SDK.
+   */
+  function contarReconexion(metadatos, estaba, anotar) {
+    if (estaba() && !metadatos.fromCache) contadores.sumar('reconexiones');
+    anotar(metadatos.fromCache === true);
+  }
+
   /** Lectura puntual contra el SERVIDOR, nunca contra la caché. */
   async function leerDelServidor(ruta) {
     try {
       const instantanea = await sdk.getDocFromServer(sdk.doc(db, ruta));
       contadores.sumar('documentosDelServidor');
-      contadores.sumar('lecturasDeReglasEstimadas');
+      contadores.sumar('lecturasDeReglasEstimadas', ACCESOS_DE_REGLAS.lectura);
       return { estado: 'ok', existe: instantanea.exists(), datos: instantanea.data() ?? null };
     } catch (error) {
       const codigo = error?.code ?? '';
@@ -169,16 +190,25 @@ export function crearDatos({ db, sdk, red = globalThis.navigator, contadores = c
    * de metadatos y los documentos entregados por el servidor.
    */
   function escucharDocumento(ruta, alCambiar, alFallar) {
+    let veniaDeCache = false;
+    let primera = true;
     const soltar = sdk.onSnapshot(
       sdk.doc(db, ruta),
       { includeMetadataChanges: true },
       (instantanea) => {
+        contarReconexion(instantanea.metadata, () => veniaDeCache, (valor) => {
+          veniaDeCache = valor;
+        });
         if (instantanea.metadata.fromCache) {
           contadores.sumar('eventosDeCache');
         } else if (instantanea.metadata.hasPendingWrites) {
           contadores.sumar('cambiosDeMetadatos');
         } else {
           contadores.sumar('documentosDelServidor');
+          if (primera) {
+            primera = false;
+            contadores.sumar('lecturasDeReglasEstimadas', ACCESOS_DE_REGLAS.lectura);
+          }
         }
         alCambiar(instantanea.exists() ? instantanea.data() : null, instantanea.metadata);
       },
@@ -193,18 +223,33 @@ export function crearDatos({ db, sdk, red = globalThis.navigator, contadores = c
 
   /** Escucha una colección. Solo suma los documentos que CAMBIARON. */
   function escucharColeccion(ruta, alCambiar, alFallar) {
+    let veniaDeCache = false;
+    let primera = true;
     const soltar = sdk.onSnapshot(
       sdk.collection(db, ruta),
       { includeMetadataChanges: true },
       (instantanea) => {
+        contarReconexion(instantanea.metadata, () => veniaDeCache, (valor) => {
+          veniaDeCache = valor;
+        });
         if (instantanea.metadata.fromCache) contadores.sumar('eventosDeCache');
         const cambios = instantanea.docChanges();
         if (!instantanea.metadata.fromCache) {
           contadores.sumar('documentosModificadosPorEscucha', cambios.length);
           if (cambios.length === 0) contadores.sumar('cambiosDeMetadatos');
+          if (primera) {
+            primera = false;
+            contadores.sumar('lecturasDeReglasEstimadas', ACCESOS_DE_REGLAS.lectura);
+          }
         }
         if (instantanea.empty) contadores.sumar('consultasVacias');
-        alCambiar(instantanea.docs.map((d) => ({ id: d.id, ...d.data() })), instantanea.metadata);
+        // El tercer argumento es cuántos documentos cambiaron: una pantalla
+        // puede así ignorar un evento que no trae cambios.
+        alCambiar(
+          instantanea.docs.map((d) => ({ id: d.id, ...d.data() })),
+          instantanea.metadata,
+          cambios.length,
+        );
       },
       (error) => alFallar?.(error),
     );
@@ -251,6 +296,7 @@ export function crearDatos({ db, sdk, red = globalThis.navigator, contadores = c
         db,
         async (transaccion) => {
           intentos += 1;
+          contadores.sumar('lecturasDeReglasEstimadas', ACCESOS_DE_REGLAS.escritura);
           return await cuerpo(transaccion, {
             leer: async (ruta) => {
               const instantanea = await transaccion.get(sdk.doc(db, ruta));
@@ -307,7 +353,9 @@ export function crearDatos({ db, sdk, red = globalThis.navigator, contadores = c
 // escrituras.
 // ---------------------------------------------------------------------------
 
-export const CLAVE_INTENCION = 'biblioteca.intencion';
+// Con ámbito, como la clave del ambiente: una misma pestaña puede servir a dos
+// cuentas o a dos ambientes, y la intención de una no es de la otra.
+export const CLAVE_INTENCION = `biblioteca.${BIB}.intencion`;
 
 export function recordarIntencion(intencion, memoria = globalThis.sessionStorage) {
   const permitidas = ['operacionId', 'tipo', 'ruta', 'identificadores'];

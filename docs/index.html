@@ -34,26 +34,6 @@
 
     <nav id="barra-inferior" class="barra-inferior" aria-label="Secciones" hidden></nav>
 
-    <!-- Hoja emergente: retiene el foco y lo devuelve al cerrar. -->
-    <div id="hoja" class="hoja" hidden>
-      <div class="hoja__fondo" data-cerrar-hoja></div>
-      <section
-        id="hoja-panel"
-        class="hoja__panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="hoja-titulo"
-        tabindex="-1"
-      >
-        <header class="hoja__cabecera">
-          <h2 id="hoja-titulo" class="hoja__titulo"></h2>
-          <button type="button" class="boton boton--icono" data-cerrar-hoja aria-label="Cerrar">
-            <span aria-hidden="true">✕</span>
-          </button>
-        </header>
-        <div id="hoja-cuerpo" class="hoja__cuerpo"></div>
-      </section>
-    </div>
 
     <script type="module" src="js/main.js"></script>
     <noscript>

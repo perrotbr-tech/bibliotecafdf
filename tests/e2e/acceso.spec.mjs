@@ -93,6 +93,45 @@ test('A-25 el botón Atrás desde Voluntarios vuelve a Más y no sale de la app'
   await expect(page.locator('#barra-inferior')).toBeVisible();
 });
 
+test('un enlace directo a #voluntarios abre Voluntarios, no Inicio', async ({ page }) => {
+  await abrir(page, '/#voluntarios');
+  await entrar(page, ADMIN);
+
+  await expect(page.getByTestId('voluntarios')).toBeVisible();
+  expect(page.url()).toContain('#voluntarios');
+
+  // Y el primer Atrás no se lo traga nadie: sale de la app como en cualquier
+  // sitio, porque esta es la primera entrada del historial.
+  await page.getByRole('button', { name: 'Catálogo' }).click();
+  await expect(page.getByTestId('catalogo')).toBeVisible();
+  await page.goBack();
+  await expect(page.getByTestId('voluntarios')).toBeVisible();
+});
+
+test('una dirección con una pantalla que no existe cae en Inicio y se corrige', async ({ page }) => {
+  await abrir(page, '/#inventada');
+  await entrar(page, VOLUNTARIA);
+
+  await expect(page.getByTestId('inicio')).toBeVisible();
+  expect(page.url()).toContain('#inicio');
+});
+
+test('A-15 al reactivar a alguien que mira «Sin acceso», puede volver a entrar sin recargar', async ({ page }) => {
+  await abrir(page);
+  await entrar(page, VOLUNTARIA);
+  await expect(page.locator('#barra-inferior')).toBeVisible();
+
+  await cambiarActivo(VOLUNTARIA, false);
+  await expect(page.getByTestId('sin-acceso')).toBeVisible({ timeout: 15_000 });
+
+  // El administrador se arrepiente.
+  await cambiarActivo(VOLUNTARIA, true);
+
+  await page.getByTestId('volver-a-comprobar').click();
+  await expect(page.locator('#barra-inferior')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('sin-acceso')).toHaveCount(0);
+});
+
 test('A-26 a 320 px, con un nombre de 40 caracteres sin espacios, no hay desplazamiento horizontal', async ({
   page,
 }) => {
@@ -118,7 +157,7 @@ test('A-26 a 320 px, con un nombre de 40 caracteres sin espacios, no hay desplaz
   expect(desborde.cuerpo).toBeLessThanOrEqual(0);
 });
 
-test('A-26 todos los controles tocables miden al menos 44 px', async ({ page }) => {
+test('A-26 todos los controles tocables miden al menos 44 × 44 px', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await abrir(page);
   await entrar(page, ADMIN);
@@ -126,10 +165,18 @@ test('A-26 todos los controles tocables miden al menos 44 px', async ({ page }) 
   await page.getByTestId('abrir-voluntarios').click();
   await expect(page.getByTestId('formulario-voluntario')).toBeVisible();
 
-  for (const control of await page.locator('button:visible, input:visible, select:visible').all()) {
+  const controles = await page.locator('button:visible, input:visible, select:visible').all();
+  expect(controles.length, 'hay controles que medir').toBeGreaterThan(0);
+
+  for (const control of controles) {
     const caja = await control.boundingBox();
-    if (!caja) continue;
-    expect(Math.round(caja.height), await control.textContent()).toBeGreaterThanOrEqual(44);
+    const quien = (await control.getAttribute('data-prueba')) ?? (await control.textContent()) ?? '(sin nombre)';
+    // Un control visible sin caja es un control que no se puede tocar: eso es
+    // un fallo, no algo que saltarse.
+    expect(caja, `${quien} no tiene caja`).not.toBeNull();
+    // La regla es 44 × 44, no 44 de alto.
+    expect(Math.round(caja.height), `alto de ${quien}`).toBeGreaterThanOrEqual(44);
+    expect(Math.round(caja.width), `ancho de ${quien}`).toBeGreaterThanOrEqual(44);
   }
 });
 

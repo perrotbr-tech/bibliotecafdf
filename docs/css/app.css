@@ -428,55 +428,6 @@ button:focus-visible {
   font-weight: 700;
 }
 
-/* ------------------------------------------------------------------- hoja */
-
-.hoja {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-  display: flex;
-  align-items: flex-end;
-}
-
-.hoja__fondo {
-  position: absolute;
-  inset: 0;
-  background: rgb(0 0 0 / 45%);
-}
-
-.hoja__panel {
-  position: relative;
-  width: 100%;
-  max-height: 90dvh;
-  overflow-y: auto;
-  background: var(--surface);
-  border-radius: var(--radio) var(--radio) 0 0;
-  box-shadow: var(--sombra);
-  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
-  animation: subir 160ms ease-out;
-}
-
-.hoja__cabecera {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--paso);
-  margin-bottom: var(--paso);
-}
-
-.hoja__titulo {
-  font-size: 1.0625rem;
-  font-weight: 700;
-  min-width: 0;
-}
-
-@keyframes subir {
-  from {
-    transform: translateY(12px);
-    opacity: 0;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

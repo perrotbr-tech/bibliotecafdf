@@ -78,6 +78,23 @@ test('A-14 agregar un correo que ya está en la lista avisa y no cambia el exist
   await expect(page.getByTestId('nuevo-nombre')).toHaveValue('Otra Ana');
 });
 
+test('un fallo concluyente no deja una alarma para la próxima apertura', async ({ page }) => {
+  await abrirVoluntarios(page);
+  await llenarFormulario(page, { correo: VOLUNTARIA, nombre: 'Otra Ana' });
+  await page.getByTestId('agregar-voluntario').click();
+  await expect(page.getByTestId('error-formulario')).toHaveText('Ese correo ya está en la lista');
+
+  // El conflicto ya quedó resuelto: no hay nada que recuperar después.
+  const intencion = await page.evaluate((clave) => globalThis.sessionStorage.getItem(clave), CLAVE_INTENCION);
+  expect(intencion).toBeNull();
+
+  await page.reload();
+  await volverAEntrar(page);
+  await expect(page.locator('#barra-inferior')).toBeVisible();
+  await expect(page.getByText(/Revisa su estado antes de repetir/)).toHaveCount(0);
+  await expect(page.getByText(/creado por otra operación/)).toHaveCount(0);
+});
+
 test('A-16 un doble toque en «Agregar voluntario» crea un solo documento', async ({ page }) => {
   await abrirVoluntarios(page);
   const antes = await contarVoluntarios();

@@ -17,9 +17,8 @@ import { entrarConGoogle, permisoDe, salir, vigilarPermiso } from './acceso.js';
 import { normalizarCorreo } from './texto.js';
 
 import { avisar, limpiarAvisos } from './ui/avisos.js';
-import { dibujarBarraInferior, ocultarBarraInferior } from './ui/barra-inferior.js';
+import { dibujarBarraInferior, esDestino, ocultarBarraInferior } from './ui/barra-inferior.js';
 import { mostrarBarraSuperior, ponerFecha, ponerFranja, ponerNombreBiblioteca } from './ui/barra-superior.js';
-import { cerrarHoja, conectarHoja, hojaAbierta } from './ui/hoja.js';
 import { el, pintar } from './ui/dom.js';
 import { cargando, error as estadoError } from './ui/estados.js';
 
@@ -52,6 +51,17 @@ const app = {
 
 function pantalla() {
   return document.getElementById('pantalla');
+}
+
+/**
+ * Pantalla pedida en la dirección. Un enlace a `#voluntarios` tiene que abrir
+ * Voluntarios, no Inicio con la dirección mintiendo. Lo que no se reconoce cae
+ * en Inicio y la dirección se corrige.
+ */
+function vistaDeLaDireccion() {
+  const pedida = (globalThis.location?.hash ?? '').replace(/^#/u, '');
+  if (pedida === 'voluntarios' || esDestino(pedida)) return pedida;
+  return VISTA_INICIAL;
 }
 
 // ------------------------------------------------------------------ arranque
@@ -96,7 +106,6 @@ async function principal() {
 
   app.datos = crearDatos({ db: app.firebase.db, sdk: app.firebase.piezas });
   prepararReloj(parametros);
-  conectarHoja({ alPedirCierre: () => (history.state?.hoja ? history.back() : cerrarHoja()) });
 
   // Una pérdida o vuelta de red cambia qué botones se pueden tocar, pero NO
   // vuelve a dibujar la pantalla: un redibujado borraría lo que la persona está
@@ -106,7 +115,6 @@ async function principal() {
   }
 
   globalThis.addEventListener('popstate', (evento) => {
-    if (hojaAbierta()) cerrarHoja();
     app.vista = evento.state?.vista ?? VISTA_INICIAL;
     dibujar();
   });
@@ -273,6 +281,9 @@ function olvidarTodo({ conservarPermiso = false } = {}) {
   app.soltarReloj();
   app.soltarReloj = () => {};
   app.datos?.cancelarEscuchas();
+  // La intención es de la cuenta que la dejó: no puede reaparecerle a quien
+  // entre después en esta misma pestaña.
+  olvidarIntencion();
   app.reloj?.invalidar?.('se cerró la sesión');
   app.avisoDesfaseMostrado = false;
   if (!conservarPermiso) app.permiso = { estado: 'sin-sesion', correo: null, rol: null, nombre: null };
@@ -322,6 +333,7 @@ function dibujar() {
       destino,
       pantallaSinAcceso({
         correo: app.permiso.correo,
+        alVolverAComprobar: () => volverAComprobarElAcceso(),
         alUsarOtraCuenta: async () => {
           await salir(app.firebase);
           await iniciarSesion();
@@ -372,6 +384,20 @@ function construirVista() {
   }
 }
 
+/**
+ * Vuelve a preguntar por el permiso sin recargar la app.
+ *
+ * Hace falta porque una lectura denegada mata la escucha: si el administrador
+ * reactiva a alguien que tiene la app abierta en «Sin acceso», sin esto se
+ * quedaría ahí para siempre.
+ */
+async function volverAComprobarElAcceso() {
+  if (!app.sesion) return;
+  app.soltarPermiso();
+  app.soltarPermiso = () => {};
+  await alCambiarSesion(app.sesion);
+}
+
 async function iniciarSesion(boton = null) {
   if (boton) {
     boton.disabled = true;
@@ -420,5 +446,6 @@ function exponerAyudasDePrueba() {
   };
 }
 
-history.replaceState({ vista: VISTA_INICIAL }, '', location.hash || '#inicio');
+app.vista = vistaDeLaDireccion();
+history.replaceState({ vista: app.vista }, '', `#${app.vista}`);
 await principal();

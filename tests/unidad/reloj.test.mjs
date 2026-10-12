@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 
 import {
   DESFASE_AVISABLE_MS,
+  MAX_DESCARTES,
   crearReloj,
   crearRelojDePrueba,
   instanteDeParametro,
@@ -170,6 +171,42 @@ test('A-34 cuando la segunda muestra sí es propia, se acepta', async () => {
   assert.equal(await verificado.sincronizar(), true);
   assert.equal(intento, 2);
   assert.notEqual(verificado.ahora(), null);
+});
+
+test('una muestra en vuelo no resucita después de invalidar', async () => {
+  const reloj = monotonicoDeMentira();
+  let soltar;
+  const verificado = crearReloj({
+    tomarMuestra: async (id) =>
+      new Promise((listo) => {
+        soltar = () => listo({ instante: SERVIDOR, sincronizacionId: id });
+      }),
+    monotonico: reloj.leer,
+    maxIntentos: 1,
+  });
+
+  const enCurso = verificado.sincronizar();
+  // Un respiro para que la muestra quede en vuelo de verdad.
+  await new Promise((listo) => setImmediate(listo));
+
+  // Mientras la muestra viaja, se pierde la conexión.
+  verificado.invalidar('se perdió la conexión');
+  soltar();
+  await enCurso;
+
+  assert.equal(verificado.ahora(), null, 'la muestra obsoleta no se acepta');
+  assert.match(verificado.motivoSinHora(), /conexión|no se pudo obtener/);
+});
+
+test('la lista de descartes no crece sin tope', async () => {
+  const verificado = crearReloj({
+    tomarMuestra: async () => ({ instante: SERVIDOR, sincronizacionId: 'ajeno' }),
+    monotonico: monotonicoDeMentira().leer,
+    maxIntentos: 1,
+  });
+
+  for (let i = 0; i < MAX_DESCARTES + 15; i += 1) await verificado.sincronizar();
+  assert.equal(verificado.descartes().length, MAX_DESCARTES);
 });
 
 test('A-24 el parámetro ?ahora= se lee o se ignora, nunca se adivina', () => {

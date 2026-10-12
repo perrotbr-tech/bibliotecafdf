@@ -53,6 +53,26 @@ test('A-07 un administrador sí modifica config/app respetando tipos y largos', 
   await assertFails(updateDoc(doc(db, RUTAS.app), { mensajePrevio: 'x'.repeat(401), ...metadatos() }));
 });
 
+test('inicioJuego exige el formato AAAA-B', async () => {
+  const db = comoCuenta(entorno, ADMIN);
+  await assertSucceeds(updateDoc(doc(db, RUTAS.app), { inicioJuego: '2027-1', ...metadatos() }));
+  for (const malo of ['basura', '2026-7', '2026-0', '26-5', '2026-05', '', '2026']) {
+    await assertFails(updateDoc(doc(db, RUTAS.app), { inicioJuego: malo, ...metadatos() }), malo);
+  }
+});
+
+test('una vez cerrada una temporada, inicioJuego ya no se mueve desde la app', async () => {
+  // El contrato §8: cambiarlo después escondería una fotografía ya cerrada.
+  await entorno.withSecurityRulesDisabled(async (contexto) => {
+    await contexto.firestore().doc(RUTAS.app).update({ juegoCerradoAlgunaVez: true });
+  });
+  const db = comoCuenta(entorno, ADMIN);
+
+  await assertFails(updateDoc(doc(db, RUTAS.app), { inicioJuego: '2027-1', ...metadatos() }));
+  // Lo demás sí se puede seguir cambiando.
+  await assertSucceeds(updateDoc(doc(db, RUTAS.app), { nombreBiblioteca: 'Otro nombre', ...metadatos() }));
+});
+
 test('juegoCerradoAlgunaVez es inmutable desde el cliente en esta etapa', async () => {
   const db = comoCuenta(entorno, ADMIN);
   await assertFails(updateDoc(doc(db, RUTAS.app), { juegoCerradoAlgunaVez: true, ...metadatos() }));
