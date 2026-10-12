@@ -11,9 +11,12 @@ import { MENSAJES } from '../datos.js';
  *
  * @param {HTMLButtonElement} boton
  * @param {()=>Promise<any>} accion
- * @param {{alTardar?:(texto:string)=>void}} [opciones]
+ * @param {{alTardar?:(texto:string)=>void, deshabilitadoAlTerminar?:()=>boolean}} [opciones]
+ *   `deshabilitadoAlTerminar` decide si el botón vuelve o no a quedar activo.
+ *   Hace falta porque la operación puede terminar justo cuando se cayó la red:
+ *   ahí el botón NO debe reaparecer habilitado.
  */
-export function prepararBotonGuardar(boton, accion, { alTardar } = {}) {
+export function prepararBotonGuardar(boton, accion, { alTardar, deshabilitadoAlTerminar = null } = {}) {
   const textoOriginal = boton.textContent;
   let enCurso = false;
 
@@ -31,7 +34,7 @@ export function prepararBotonGuardar(boton, accion, { alTardar } = {}) {
       return await accion();
     } finally {
       enCurso = false;
-      boton.disabled = false;
+      boton.disabled = deshabilitadoAlTerminar ? deshabilitadoAlTerminar() === true : false;
       boton.textContent = textoOriginal;
       boton.removeAttribute('aria-busy');
     }

@@ -98,49 +98,53 @@ function filaVoluntario({ datos, permiso, voluntario, botonesDeFila = [] }) {
 
   // La intención es estable desde el primer toque de ESTA fila.
   let operacionId = null;
-  prepararBotonGuardar(boton, async () => {
-    operacionId ??= nuevoId();
-    const ruta = rutas.voluntario(voluntario.id);
-    const deseado = !activo;
-    recordarIntencion({ operacionId, tipo: 'cambio', ruta, identificadores: [voluntario.id] });
+  prepararBotonGuardar(
+    boton,
+    async () => {
+      operacionId ??= nuevoId();
+      const ruta = rutas.voluntario(voluntario.id);
+      const deseado = !activo;
+      recordarIntencion({ operacionId, tipo: 'cambio', ruta, identificadores: [voluntario.id] });
 
-    const resultado = await datos.guardar({
-      tipo: 'cambio',
-      operacionId,
-      alTardar: (texto) => avisar(texto, 'atencion', { id: AVISO }),
-      cuerpo: async (transaccion, { leer, ref, ahoraDelServidor }) => {
-        const actual = await leer(ruta);
-        if (!actual.exists()) throw new ErrorDeNegocio('Ese voluntario ya no está en la lista.');
-        if (actual.data().activo === deseado) {
-          throw new ErrorDeNegocio('Alguien ya cambió ese estado. Revisa la lista.');
-        }
-        transaccion.update(ref(ruta), {
-          activo: deseado,
-          ultimaOperacionId: operacionId,
-          modificadoEn: ahoraDelServidor(),
-        });
-      },
-      comprobar: async () => {
-        const leido = await datos.leerDelServidor(ruta);
-        return {
-          estado: leido.estado,
-          lectura: {
-            existe: leido.existe,
-            ultimaOperacionId: leido.datos?.ultimaOperacionId ?? null,
-            aplicado: leido.datos?.activo === deseado,
-          },
-        };
-      },
-    });
+      const resultado = await datos.guardar({
+        tipo: 'cambio',
+        operacionId,
+        alTardar: (texto) => avisar(texto, 'atencion', { id: AVISO }),
+        cuerpo: async (transaccion, { leer, ref, ahoraDelServidor }) => {
+          const actual = await leer(ruta);
+          if (!actual.exists()) throw new ErrorDeNegocio('Ese voluntario ya no está en la lista.');
+          if (actual.data().activo === deseado) {
+            throw new ErrorDeNegocio('Alguien ya cambió ese estado. Revisa la lista.');
+          }
+          transaccion.update(ref(ruta), {
+            activo: deseado,
+            ultimaOperacionId: operacionId,
+            modificadoEn: ahoraDelServidor(),
+          });
+        },
+        comprobar: async () => {
+          const leido = await datos.leerDelServidor(ruta);
+          return {
+            estado: leido.estado,
+            lectura: {
+              existe: leido.existe,
+              ultimaOperacionId: leido.datos?.ultimaOperacionId ?? null,
+              aplicado: leido.datos?.activo === deseado,
+            },
+          };
+        },
+      });
 
-    if (resultado.esExito) {
-      operacionId = null;
-      olvidarIntencion();
-      avisar(deseado ? 'Voluntario reactivado' : 'Voluntario desactivado', 'exito', { id: AVISO, duracionMs: 4000 });
-    } else {
-      avisar(resultado.mensaje, 'error', { id: AVISO });
-    }
-  });
+      if (resultado.esExito) {
+        operacionId = null;
+        olvidarIntencion();
+        avisar(deseado ? 'Voluntario reactivado' : 'Voluntario desactivado', 'exito', { id: AVISO, duracionMs: 4000 });
+      } else {
+        avisar(resultado.mensaje, 'error', { id: AVISO });
+      }
+    },
+    { deshabilitadoAlTerminar: () => esYo || !datos.hayRed() },
+  );
 
   return el('li', { clase: 'lista__fila' }, [
     el('div', { clase: 'lista__principal' }, [
@@ -253,7 +257,7 @@ function construirFormulario({ datos, permiso }) {
       avisar(resultado.mensaje, 'error', { id: AVISO });
     }
     return resultado;
-  });
+  }, { deshabilitadoAlTerminar: () => !datos.hayRed() });
 
   function mostrarError(texto) {
     errorForma.textContent = texto;
