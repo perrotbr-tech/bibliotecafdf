@@ -69,7 +69,13 @@ export function abrirFichaDeLector({ datos, permiso, lector }) {
   return abrirHoja({ titulo: lector.nombre ?? 'Lector', prueba: 'hoja-lector', contenido });
 }
 
-/** `56912345678` se muestra como `+56 9 1234 5678`. */
+/**
+ * `56900000012` se muestra como `+56 9 0000 0012`.
+ *
+ * Los ejemplos de teléfono de la app usan el prefijo 5690000 de los fixtures,
+ * que no es un número de nadie. El escáner del repositorio lo hizo notar: un
+ * «9 1234 5678» de ejemplo puede ser el celular de una persona real.
+ */
 export function formatearTelefono(telefono) {
   const digitos = String(telefono ?? '');
   if (!/^569[0-9]{8}$/u.test(digitos)) return digitos;
@@ -83,7 +89,7 @@ function formularioDeTelefono({ datos, lector, alGuardar }) {
     tipo: 'tel',
     inputmode: 'tel',
     valor: lector.telefono ?? '',
-    ayuda: 'Un celular chileno: 9 1234 5678. Déjalo vacío para quitarlo.',
+    ayuda: 'Un celular chileno: 9 0000 0012. Déjalo vacío para quitarlo.',
   });
   const fallo = errorDeFormulario('error-telefono');
   const boton = el('button', {

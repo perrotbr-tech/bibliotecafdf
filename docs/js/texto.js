@@ -137,7 +137,7 @@ export function normalizarTelefono(valor) {
 
   const digitos = crudo.replace(/[\s()+.-]/gu, '');
   if (!/^[0-9]+$/u.test(digitos)) {
-    return { ok: false, motivo: 'Escribe solo números, por ejemplo 9 1234 5678' };
+    return { ok: false, motivo: 'Escribe solo números, por ejemplo 9 0000 0012' };
   }
   if (/^9[0-9]{8}$/u.test(digitos)) return { ok: true, telefono: `56${digitos}` };
   if (/^569[0-9]{8}$/u.test(digitos)) return { ok: true, telefono: digitos };

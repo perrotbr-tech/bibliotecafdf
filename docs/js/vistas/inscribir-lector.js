@@ -29,7 +29,7 @@ export function formularioDeInscripcion({ datos, permiso, alGuardar }) {
     etiqueta: 'Teléfono (opcional)',
     tipo: 'tel',
     inputmode: 'tel',
-    ayuda: 'Un celular chileno: 9 1234 5678.',
+    ayuda: 'Un celular chileno: 9 0000 0012.',
   });
   const aviso = campoCasilla({ id: 'lector-aviso', etiqueta: TEXTO_DEL_AVISO });
   const fallo = errorDeFormulario('error-lector');

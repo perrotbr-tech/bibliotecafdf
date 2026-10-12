@@ -1,0 +1,497 @@
+# Informe de la Etapa 2 — Catálogo y lectores
+
+Revisión 1.1 · 12-10-2026 (America/Santiago) · rama `etapa-2`
+
+**SHA entregado:** `2b556c6`, el último commit de código de `etapa-2`. Este
+informe va encima y no toca una línea de código. Los datos completos de la
+entrega están en la sección 10.
+
+**No hubo contraprueba externa.** El dueño decidió trabajar solo en esta sesión,
+así que no hay una mirada ajena sobre este código. Lo digo una vez y no lo
+disimulo: una revisión del propio implementador no es una contraprueba
+(AGENTS.md). Lo que sí hay son 316 pruebas ejecutadas, y varias de ellas
+encontraron errores reales mientras se construía; están en la sección 2.3.
+
+**Estado: los 43 casos del documento están escritos y ejecutados, y pasan.** No
+queda ninguno pendiente de automatizar. Lo que queda es del dueño: la prueba de
+humo en el proyecto de ensayo (sección 6) y la carga de los datos reales.
+
+**Un límite del documento NO se cumple, y conviene leerlo antes de nada:** abrir
+el catálogo con 5.000 libros tarda 5,2 segundos, no menos de 1. La sección 3 lo
+mide, lo desarma y explica por qué no es algo que se arregle afinando código.
+Para el tamaño real de la biblioteca —150 libros y 100 lectores— sí se cumple,
+con 736 ms.
+
+## 1. Qué se construyó
+
+- **Funciones puras** (`docs/js/texto.js`, `listas.js`, `fechas.js`). La clave de
+  un nombre, el nombre válido, el teléfono chileno, el código y su sugerencia, la
+  búsqueda sin tildes, el orden de los códigos, los filtros y las tandas de 40
+  filas. En `fechas.js`, lo que la carga necesita para convertir una fecha del
+  Excel en un instante: el mediodía y el fin de un día en Chile, el día de la
+  semana y si una fecha existe en el calendario.
+- **Reglas de seguridad** de `libros`, `lectores`, `lectoresClave` y
+  `config/contadores`, con el enlace bidireccional del contrato §3 hecho con
+  `getAfter`. Un alta de lector escribe tres documentos y las reglas exigen las
+  tres cosas juntas: el lector, su clave apuntándolo y el contador subiendo
+  exactamente hasta el número de su identificador.
+- **Operaciones** (`docs/js/operaciones.js`): inscribir lector, cambiar teléfono,
+  cambiar nombre, agregar libro, editar libro y dar de baja. Cada una con la
+  forma de guardar de la Etapa 1 —transacción, botón bloqueado, éxito solo con
+  respuesta del servidor, comprobación por identidad si el resultado queda
+  incierto— y el alta con su propio reintento, que la sección 2.3 explica.
+- **Pantallas**: Catálogo con buscador, fichas de categoría, selector de estado,
+  40 filas y «Mostrar más»; ficha de libro; agregar y editar libro; Lectores
+  dentro de «Más»; ficha de lector; inscribir lector con su casilla obligatoria;
+  cambiar teléfono y cambiar nombre. Vuelve `ui/hoja.js`, ahora con uso real y
+  con sus pruebas de foco y de botón Atrás. Nuevo `ui/campos.js` con los campos
+  de formulario, que ya no se escriben dos veces.
+- **Scripts del dueño**: `cargar-datos.mjs` con simulación, carga y reemplazo;
+  `respaldar.mjs` con mantenimiento, SHA-256 y verificación completa;
+  `restaurar.mjs` con comparación documento por documento y manifiesto
+  reanudable. Debajo, `scripts/comun/` con el destino, el bloqueo de
+  mantenimiento, el manifiesto, el recorrido de la biblioteca y la serialización
+  canónica.
+- **Pruebas**: 138 de unidad, 72 de reglas, 24 de scripts, 76 de extremo a
+  extremo y 6 de carga.
+
+## 2. Casos de prueba
+
+### 2.1 Estado caso por caso
+
+| ID | Qué exige | Dónde se prueba | Estado |
+|---|---|---|---|
+| C-01 | Voluntario no crea ni edita un libro | `reglas/libros`, `e2e/catalogo` | **Pasa** |
+| C-02 | Código repetido avisa y no cambia el existente | `e2e/catalogo` | **Pasa** |
+| C-03 | `inf 028` se guarda `INF028` | `unidad/lectores-y-libros`, `e2e/catalogo` | **Pasa** |
+| C-04 | Código sugerido: `INF028`, `INF1000`, con huecos | `unidad/lectores-y-libros`, `unidad/listas`, `e2e/catalogo` | **Pasa** |
+| C-05 | Título de 1 o de 121 caracteres, rechazado | `reglas/libros`, `e2e/catalogo` | **Pasa** |
+| C-06 | Título con etiqueta HTML se muestra como texto | `reglas/libros`, `e2e/catalogo` | **Pasa** |
+| C-07 | Editar no mueve `prestamoAbierto` ni `vecesPrestado` | `reglas/libros`, `e2e/catalogo` | **Pasa** |
+| C-08 | Nadie borra un libro ni un lector | `reglas/libros`, `reglas/lectores` | **Pasa** |
+| C-09 | «  rafaela   TOLEDO » cuando existe «Rafaela Toledo» | `unidad`, `reglas/lectores`, `e2e/lectores` | **Pasa** |
+| C-10 | Ancho cero o `ı` que imitan un nombre | `unidad`, `e2e/lectores` | **Pasa** |
+| C-11 | `...`, `a b`, solo espacios | `unidad`, `reglas/lectores`, `e2e/lectores` | **Pasa** |
+| C-12 | Nombre de una sola palabra | `unidad`, `e2e/lectores` | **Pasa** |
+| C-13 | 60 caracteres sí, 61 no | `unidad`, `reglas/lectores`, `e2e/lectores` | **Pasa** |
+| C-14 | «Peña» con «Pena» existente | `unidad`, `reglas/lectores`, `e2e/lectores` | **Pasa** |
+| C-15 | Tres formas de escribir un celular | `unidad`, `e2e/lectores` | **Pasa** |
+| C-16 | Teléfonos inválidos, error visible | `unidad`, `reglas/lectores`, `e2e/lectores` | **Pasa** |
+| C-17 | Teléfono vacío deja nulo | `unidad`, `e2e/lectores` | **Pasa** |
+| C-18 | Sin marcar la casilla no se guarda | `reglas/lectores`, `e2e/lectores` | **Pasa** |
+| C-19 | Dos teléfonos, el mismo nombre, a la vez | `e2e/concurrencia` | **Pasa** |
+| C-20 | Cinco altas en paralelo | `e2e/concurrencia` | **Pasa** |
+| C-21 | Lector sin clave, sin contador o saltándolo | `reglas/lectores` | **Pasa** |
+| C-22 | Doble toque en «Inscribir» | `e2e/lectores` | **Pasa** |
+| C-23 | Voluntario cambia teléfono, no el nombre | `reglas/lectores`, `e2e/lectores` | **Pasa** |
+| C-24 | Administrador cambia el nombre; la clave antigua queda | `reglas/lectores`, `e2e/lectores` | **Pasa** |
+| C-25 | Buscar «dios prodigo» e «inf 006» | `unidad/listas`, `e2e/catalogo` | **Pasa** |
+| C-26 | Buscar `(.*[\` da lista vacía, sin error | `unidad/listas`, `e2e/catalogo` | **Pasa** |
+| C-27 | Otro teléfono agrega un libro mientras escribo | `e2e/catalogo` | **Pasa** |
+| C-28 | Simulación con el archivo ficticio | `unidad/carga`, `scripts/carga` | **Pasa** |
+| C-29 | Dos préstamos abiertos, contadores por debajo | `unidad/carga` | **Pasa** |
+| C-30 | `vence` que no es sábado, plazo de 15 sábados | `unidad/carga` | **Pasa** |
+| C-31 | Carga real sobre colecciones con datos | `scripts/carga` | **Pasa** |
+| C-32 | `--reemplazar` respalda y verifica antes | `scripts/carga` | **Pasa** |
+| C-33 | Después de cargar: estado, cuenta y claves | `unidad/carga`, `scripts/carga` | **Pasa** |
+| C-34 | Respaldar, vaciar y restaurar, idéntico | `scripts/respaldo` | **Pasa** |
+| C-35 | Restaurar con datos, con y sin `--reemplazar` | `scripts/respaldo` | **Pasa** |
+| C-36 | 60 letras de una palabra a 320 px | `e2e/catalogo` | **Pasa** |
+| C-37 | Corregir una tilde y volver atrás | `reglas/lectores`, `e2e/lectores` | **Pasa** |
+| C-38 | Subir el contador sin lector, o dos con un incremento | `reglas/lectores` | **Pasa** |
+| C-39 | Reintento tras carrera conserva `operacionId` | `e2e/concurrencia` | **Pasa** |
+| C-40 | Respaldo mientras otro teléfono escribe | `scripts/respaldo` | **Pasa** |
+| C-41 | Fallo a mitad de importar o restaurar | `scripts/carga`, `scripts/respaldo` | **Pasa** |
+| C-42 | Nombre, categoría o fecha imposible en la carga | `unidad/fechas`, `unidad/carga` | **Pasa** |
+| C-43 | Redirigir una clave sin unión válida | `reglas/lectores`, `e2e/lectores` | **Pasa** |
+
+### 2.2 Salida de la ejecución
+
+Lo que sigue es la salida real de la última corrida completa sobre el commit
+entregado, en este contenedor.
+
+### npm run revisar
+```
+revisar-repositorio: sin hallazgos
+```
+
+### npm run prueba:unidad
+```
+# tests 138
+# pass 138
+# fail 0
+```
+
+### npm run prueba:reglas (firebase emulators:exec, demo-biblioteca)
+```
+# tests 72
+# pass 72
+# fail 0
+```
+
+### npm run prueba:scripts (firebase emulators:exec, demo-biblioteca)
+```
+# tests 24
+# pass 24
+# fail 0
+```
+
+### npm run prueba:e2e (Playwright, Chromium, contra el emulador)
+```
+76 passed (1.8m)
+```
+
+### npm run prueba:carga
+```
+[carga] sembrados 150 libros y 100 lectores (tamaño real)
+[carga] Catálogo con 150 libros, procesador a 1/4: mediana 736 ms (mínimo 588, máximo 1608, medidas 588 · 736 · 1608)
+[carga] contadores del catálogo real: {"documentosDelServidor":5,"eventosDeCache":0,"cambiosDeMetadatos":0,"documentosModificadosPorEscucha":150,"lecturasDeTransaccion":1,"reintentosDeTransaccion":0,"consultasVacias":0,"reconexiones":0,"lecturasDeReglasEstimadas":7}
+[carga] Lectores con 100 lectores, procesador a 1/4: mediana 498 ms (mínimo 304, máximo 500, medidas 304 · 498 · 500)
+[carga] sembrados 5000 libros y 3000 lectores
+[carga] Catálogo con 5000 libros, procesador a 1/4: mediana 5225 ms (mínimo 5206, máximo 6158, medidas 5206 · 5225 · 6158)
+[carga] eso es 1.04 ms por documento: la apertura crece con la colección
+[carga] cada tecla en el buscador del catálogo: mediana 14 ms (mínimo 7, máximo 25)
+[carga] Lectores con 3000 lectores, procesador a 1/4: mediana 2935 ms (mínimo 2496, máximo 3124)
+[carga] cada tecla en el buscador de lectores: mediana 11 ms (mínimo 6, máximo 14)
+[carga] lista de 202 voluntarios en frío, procesador a 1/4: mediana 580 ms (mínimo 437, máximo 794)
+[carga] la misma lista con los documentos ya en el SDK: mediana 510 ms (mínimo 445, máximo 629)
+6 passed (1.3m)
+```
+
+### 2.2.1 Las pruebas de navegador ahora sí corren aquí
+
+En la Etapa 1 ninguna prueba de pantalla se pudo ejecutar en este contenedor: la
+app baja el SDK de Firebase desde `www.gstatic.com` y esa red lo bloquea
+(`CONNECT tunnel failed, response 403`). Se entregaron escritas, y en verde solo
+en la integración continua.
+
+Ahora corren en los dos lados. `tests/ayuda/navegador.mjs` comprueba UNA vez si
+el host responde. Si responde, el navegador de prueba baja el SDK de ahí, como
+en producción. Si no responde, recibe los MISMOS archivos de la MISMA versión
+—12.19.0— desde `node_modules/firebase`, que es el paquete npm del mismo
+proveedor y trae los mismos paquetes de navegador. La app no cambia: cambia de
+dónde los baja el navegador de prueba, y la línea `[e2e] www.gstatic.com no
+responde…` lo dice en la salida.
+
+**Lo que ese respaldo NO prueba** es la descarga real desde gstatic, con su
+latencia, su caché y su política de red. Eso lo cubre la prueba de humo del
+dueño en un teléfono real, y sigue pendiente.
+
+### 2.3 Qué encontraron las pruebas al construir
+
+No es una lista de cosas que podrían pasar: es lo que falló de verdad y hubo
+que arreglar.
+
+1. **Un alta que pierde la carrera del contador termina en
+   `permission-denied`, no en un aborto reintentable.** Esto es lo más
+   importante que encontró esta etapa. Las reglas se evalúan al CONFIRMAR la
+   transacción, y para entonces el contador que ese intento leyó ya no es el que
+   está: la regla `ultimoLector == resource.data.ultimoLector + 1` deniega la
+   escritura, y el SDK no reintenta una denegación. Medido con C-20: de cinco
+   altas en paralelo, **una quedaba y cuatro recibían «Tu cuenta no tiene
+   permiso»**, que además de falso es inútil para la persona.
+   El arreglo: el alta distingue las dos causas mirando los datos, no
+   adivinando. Si la clave ya está tomada, otra persona se quedó con el nombre y
+   el mensaje es «Ya existe: (nombre)»; si sigue libre, lo que se movió fue el
+   contador, y vuelve a intentarlo —hasta tres veces— con el MISMO
+   `operacionId` y un contador recién leído. Con eso quedan cuatro de cinco, con
+   identificadores consecutivos, y la que no queda dice «Inténtalo de nuevo» con
+   el estado `carrera-perdida`, no «denegado».
+   Es exactamente lo que el contrato §3 describe —«el ID final se obtiene del
+   contador DENTRO de la transacción y puede cambiar entre intentos
+   abortados»—, con una corrección: ese reintento hay que hacerlo en el cliente,
+   porque Firestore no lo hace por uno cuando la causa es una regla.
+2. **La hoja emergente no puede apilarse.** Al abrir el formulario de teléfono
+   desde la ficha de un lector, con dos hojas vivas el botón Atrás dejaba
+   entradas muertas de historial y el formulario tapaba la lista que lo abrió,
+   de modo que el toque siguiente se quedaba esperando un elemento invisible.
+   Ahora abrir una hoja REEMPLAZA la que estaba y solo la primera añade una
+   entrada al historial: un Atrás devuelve siempre a la pantalla.
+3. **Dos suposiciones mías sobre el calendario estaban equivocadas**, y las
+   pruebas las corrigieron antes de que llegaran a la carga:
+   - El día largo del año en Chile es el **sábado 4 de abril de 2026**, de 25
+     horas, no el domingo 5. El reloj se mueve a las 00:00, así que la hora que
+     sobra cae al final del día anterior. El domingo 6 de septiembre sí es el
+     corto, de 23 horas, porque empieza a la 01:00.
+   - Por eso el primer instante de un día **no se supone a las 00:00**: se busca
+     por bisección entre dos mediodías. El 06-09-2026 esa medianoche no existe.
+4. **El respaldo no se podía verificar dos veces.** Se toma con el
+   mantenimiento puesto, así que el archivo guardaba el candado, y al releerlo
+   más tarde —ya sin bloqueo— la comparación contra la base fallaba siempre por
+   ese campo. Ahora el archivo guarda `config/control` con `bloqueo: null`, que
+   además es lo que el contrato §6 pide para no trasladar un candado a otra
+   base, y ese campo queda fuera de la comparación por escrito.
+5. **Reponer sobre una base vacía era imposible.** `tomar` el mantenimiento
+   exige el documento de control, y una base vacía no lo tiene. Ahora la
+   restauración lo crea con el candado ya puesto, antes de escribir cualquier
+   otra cosa: así la base no pasa ni un instante escribible y vacía.
+6. **Reanudar un trabajo interrumpido también era imposible**: pedía un bloqueo
+   nuevo, y el anterior seguía vigente a propósito. Ahora reusa el que quedó
+   puesto, cuyo token está en el manifiesto, y comprueba además una huella del
+   contenido para no mezclar dos cargas distintas.
+7. **La prueba de carga de la Etapa 1 medía una sola vez**, y eso resultó
+   optimista. Medida tres veces en frío, la mediana de abrir la lista de 202
+   voluntarios oscila entre 580 y 1.098 ms según cuán cargado esté el
+   contenedor: el límite de 1 segundo se cumple a veces y a veces no. La
+   sección 3 lo desarma.
+8. **Dos aserciones mías, no el código.** La clave de un nombre ELIMINA lo que
+   no es letra, dígito o espacio, no lo reemplaza por un espacio: «Ana-María» y
+   «AnaMaría» comparten clave y «Ana María» no. Y `INFO0281X` es un código
+   válido según base §5: hasta 4 letras, 3 o 4 dígitos y una letra final.
+
+### 2.4 Comprobaciones estáticas
+
+`scripts/revisar-repositorio.mjs` pasa sin hallazgos sobre el commit entregado,
+y **encontró algo real por el camino**: los textos de ayuda de los formularios
+usaban «9 1234 5678» como ejemplo de celular, que puede ser el número de una
+persona. Ahora los ejemplos usan el prefijo `5690000` de los fixtures, que no es
+de nadie. Es exactamente para lo que está ese escáner.
+`datos/` sigue fuera del repositorio, con los respaldos y los manifiestos que
+generaron las pruebas y las corridas a mano. Ningún nombre ni teléfono real vive
+en el código ni en la página publicada; los teléfonos de los fixtures empiezan
+con `5690000`, un prefijo que **no** está acreditado como rango reservado y que
+no se contacta (contrato §8).
+
+## 3. Prueba de carga, medida y desarmada
+
+El documento de la etapa pide medir con **5.000 libros y 3.000 lectores**, el
+procesador reducido a un cuarto: abrir en menos de 1 segundo y responder a cada
+tecla en menos de 100 milisegundos. Cada cosa se midió tres veces y se compara
+la MEDIANA, porque una sola medida en un contenedor compartido se va al doble
+sin que cambie nada del código.
+
+| Qué | Mediana | Mínimo–máximo | Límite | ¿Se cumple? |
+|---|---|---|---|---|
+| Cada tecla, buscador de libros, 5.000 libros | 14 ms | 7–25 | 100 ms | **Sí**, con holgura |
+| Cada tecla, buscador de lectores, 3.000 lectores | 11 ms | 6–14 | 100 ms | **Sí**, con holgura |
+| Abrir Catálogo, 150 libros (tamaño real) | 736 ms | 588–1.608 | 1.000 ms | **Sí** en la mediana |
+| Abrir Lectores, 100 lectores (tamaño real) | 498 ms | 304–500 | 1.000 ms | **Sí** |
+| Abrir Catálogo, 5.000 libros | 5.225 ms | 5.206–6.158 | 1.000 ms | **No** |
+| Abrir Lectores, 3.000 lectores | 2.935 ms | 2.496–3.124 | 1.000 ms | **No** |
+| Abrir Voluntarios, 202 voluntarios, en frío | 580 ms | 437–794 | 1.000 ms | **A veces**; otra corrida dio 1.098 ms de mediana |
+| La misma lista con los documentos ya en el SDK | 510 ms | 445–629 | — | referencia |
+
+**El límite por tecla se cumple con holgura, y eso es lo que el diseño de esta
+etapa compró.** El texto de cada libro se normaliza UNA vez al recibir la
+colección, no en cada pulsación: preparar 5.000 libros cuesta unos 40 ms y
+filtrarlos, 5 ms (medido en Node, sin freno). Si alguien moviera la
+normalización al filtro, cada tecla pasaría de milisegundos a casi un segundo; hay
+una prueba de unidad que vigila ese orden de magnitud.
+
+**El límite de apertura no se cumple al volumen de la etapa, y no es algo que se
+arregle afinando.** Abrir cuesta **1,04 ms por documento**, proporcional al
+tamaño de la colección, porque la pantalla la lee en vivo. El desglose, medido:
+
+- El emulador entrega esos 5.000 documentos al **Admin SDK en 330 ms**, sin
+  reglas, sin navegador y sin freno.
+- **Preparar** los 5.000 en el cliente son **40 ms** sin freno, unos 160 con el
+  procesador a un cuarto.
+- **Pintar** las filas no es el problema: la lista muestra 40, y pintar 202 filas
+  completas cuesta unos 70 ms con el procesador frenado.
+- El resto —unos 4,7 segundos— es el SDK del navegador armando 5.000
+  instantáneas y el emulador evaluando la **regla de lectura documento por
+  documento**, todo multiplicado por cuatro por el freno del procesador.
+
+Lo mismo explica el caso de los 202 voluntarios: el tiempo se va en entregar y
+procesar documentos, no en la pantalla. Por eso esa prueba ahora exige lo que la
+app sí controla —con los documentos ya en el SDK, pintar 202 filas en menos de
+un segundo— y anota el número en frío tal como sale.
+
+**Qué significa para la biblioteca.** Con 150 libros y 100 lectores, abrir son
+736 y 498 ms: dentro del límite. Base §12 dice que la paginación se evalúa
+«sobre el tamaño real», y a ese tamaño no hace falta. **Pero el techo de este
+diseño queda escrito aquí en grande:** leer el catálogo en vivo son tantas
+lecturas como libros, y eso tiene dos consecuencias que importan antes de
+ofrecerle esta app a una biblioteca más grande:
+
+1. **Tiempo.** Por encima de unos 1.000 documentos, abrir pasa del segundo.
+2. **Cuota.** Cada apertura del catálogo cuesta tantas lecturas como libros
+   tenga. Con los 5.000 del ensayo son 5.000 lecturas por apertura: **diez
+   aperturas al día** contra el límite gratuito de 50.000 lecturas diarias. Con
+   los 150 reales son 150 por apertura, unas 330 aperturas diarias, que para una
+   biblioteca con cinco voluntarios no se alcanza ni de lejos.
+
+Para pasar de ahí hace falta otra versión, con consultas paginadas en vez de una
+escucha de la colección completa. No está construida, y lo digo porque es el
+límite del diseño, no un detalle de implementación.
+
+## 4. Consultas a otros documentos en las reglas
+
+El contrato §7 pone el techo en **10 accesos por operación y 20 por
+transacción**, «sin depender de ahorro por caché». Hay dos cifras que conviene
+no confundir, y aquí están las dos.
+
+**La cuenta conservadora, que es la que se promete.** Cada `get()` y cada
+`getAfter()` cuenta como un acceso, aunque repita documento:
+
+| Operación | Accesos | De dónde salen |
+|---|---|---|
+| Leer cualquier colección | 1 | el propio voluntario |
+| Sincronizar la hora | 1 | el propio voluntario |
+| Alta o cambio de voluntario | 2 | voluntario + `config/control` |
+| Cambio de `config/app` | 2 | voluntario + control |
+| Alta o edición de libro | 2 | voluntario + control |
+| Cambio de teléfono de un lector | 2 | voluntario + control |
+| **Alta de lector (3 documentos, 1 transacción)** | **10** | ver abajo |
+| Cambio de nombre de un lector | hasta 6 | 3 del lector + 3 de la clave nueva |
+
+El alta de lector, desglosada por operación:
+
+| Documento de la transacción | Accesos |
+|---|---|
+| `lectores/{id}` (crear) | 4 = voluntario + control + `getAfter(clave)` + `getAfter(contadores)` |
+| `lectoresClave/{clave}` (crear) | 3 = voluntario + control + `getAfter(lector)` |
+| `config/contadores` (subir) | 3 = voluntario + control + `getAfter(lector)` |
+
+**10 por transacción contra el límite de 20, y 4 en la operación más cara contra
+el límite de 10.** Es la cifra que el plan estimó, y se confirma.
+
+**La cuenta medida, que es el margen real.** Está en
+`tests/reglas/presupuesto.test.mjs`, y no es una estimación: construye un
+instrumento —cada documento de clave que se crea consulta con `getAfter` a su
+propio lector, que es un documento distinto— y busca dónde el emulador corta la
+transacción. Lo que mide:
+
+1. El techo son **20 documentos DISTINTOS** por transacción: 18 claves sueltas
+   entran —18 lectores consultados más el voluntario y el control— y 19 no.
+2. Un `getAfter` a un documento que la propia transacción **escribe** no cuesta
+   nada: el alta añade tres —contadores, el lector y su clave— y el techo no se
+   mueve ni un lugar.
+
+De modo que el alta ocupa **2 de los 20** y deja 18 libres. No se promete esa
+cifra: se mide para saber que la conservadora entra con holgura, y para que un
+cambio futuro que gaste accesos de verdad se note en esa prueba.
+
+### Índices
+
+Ninguno compuesto en esta etapa, como dice el documento.
+`firestore.indexes.json` sigue con el único índice declarado en la Etapa 1, que
+es de la Etapa 3.
+
+## 5. Telemetría, que no es facturación
+
+Los contadores de `datos.js` son telemetría del cliente, no una factura
+(contrato §8). Cada cosa se cuenta por separado y una escucha no vuelve a sumar
+todos sus documentos en cada evento. Una apertura de Catálogo con los 150 libros
+reales:
+
+```
+documentosDelServidor: 5          · documentos entregados por lectura puntual
+documentosModificadosPorEscucha: 150 · los que CAMBIARON en la escucha
+eventosDeCache: 0
+cambiosDeMetadatos: 0
+lecturasDeTransaccion: 1          · la muestra de hora
+reintentosDeTransaccion: 0
+consultasVacias: 0
+reconexiones: 0
+lecturasDeReglasEstimadas: 7      · estimación del cliente, no la factura
+```
+
+Las 150 lecturas de la colección son el costo real de abrir el catálogo, y la
+sección 3 explica lo que eso significa para la cuota. `lecturasDeReglasEstimadas`
+es una **estimación**: las reglas también se evalúan en las operaciones
+denegadas, y eso no se ve desde el cliente. El panel del proyecto de ensayo es
+el que manda, y contrastarlo es parte de la prueba de humo del dueño.
+
+## 6. Pruebas manuales pendientes para el dueño
+
+Ninguna de estas la puede hacer el agente, y ninguna está hecha.
+
+1. **Prueba de humo en el proyecto de ensayo** (la lista del documento de la
+   etapa): desplegar reglas e índices; cargar el archivo ficticio, primero en
+   simulación y después de verdad; desde dos teléfonos reales, inscribir un
+   lector en uno y verlo aparecer en el otro; inscribir el mismo nombre desde
+   ambos casi a la vez, y comprobar que uno recibe «Ya existe…»; ejecutar un
+   respaldo y comprobar que el archivo queda en `datos/`.
+2. **La descarga real del SDK desde `www.gstatic.com`**, que en este contenedor
+   está bloqueada (sección 2.2.1).
+3. **A-31 de la Etapa 1**, el ensayo del enlace de WhatsApp con un teléfono que
+   aporte el dueño, que sigue pendiente.
+4. **La carga de los datos reales**, que según `PASOS-DEL-DUENO.md` se hace
+   justo antes del primer sábado de uso, después de la Etapa 3.
+
+## 7. Qué NO está preparado para producción, y por qué
+
+- **Nada se ha probado en un proyecto real.** Todo corre contra
+  `demo-biblioteca` en el emulador. El agente no despliega, no lee credenciales
+  de producción y no fusiona a `main` (AGENTS.md).
+- **No hay contraprueba independiente de esta etapa.**
+- **El catálogo no escala más allá de unos mil documentos**, por tiempo y por
+  cuota (sección 3).
+- **Las reglas no comprueban dos cosas, a propósito y declarado en su
+  cabecera:** que la `clave` corresponda al `nombre` —el lenguaje de reglas no
+  reproduce la normalización Unicode, y base §5 lo deja explícitamente al
+  cliente— y que la `categoria` de un libro sea una de `config/app.categorias`,
+  porque las reglas no pueden recorrer una lista de mapas. Lo segundo lo validan
+  el cliente y el script de carga, que rechaza una categoría inexistente antes
+  de escribir.
+- **`prestamos` se escribe en la carga y no tiene reglas de cliente hasta la
+  Etapa 3.** Admin SDK no pasa por reglas, así que la carga funciona y el
+  cliente no los puede leer, que es justo lo que esta etapa quiere.
+- **Un alta de lector puede fallar bajo contención** y pedir que se intente de
+  nuevo. Con tres intentos, cuatro de cinco altas simultáneas quedan; cinco
+  voluntarios inscribiendo a la vez es un escenario que la biblioteca real no va
+  a tener, pero el comportamiento está medido y el mensaje es honesto.
+- **La restauración integral repone también voluntarios y configuración.** Es lo
+  que el contrato §6 pide, y conviene saberlo: restaurar un respaldo viejo
+  devuelve la lista de voluntarios de ese día.
+
+## 8. Qué debe desplegar o configurar el dueño, paso a paso
+
+1. **Crear los dos proyectos de Firebase** y entregar sus dos bloques de
+   configuración web, que siguen en `null` en `config-publica.js`. Sin eso la
+   app muestra «Falta configurar este ambiente» y no abre conexiones, que es el
+   comportamiento correcto y está probado.
+2. **Cambiar la rama por omisión a `main`** en Ajustes → General del
+   repositorio. Sigue pendiente desde la Etapa 1: el proxy de esta sesión no
+   permite escribir ajustes del repositorio.
+3. **Desplegar reglas e índices en ensayo**:
+   `firebase deploy --only firestore:rules,firestore:indexes --project <ensayo>`.
+4. **Preparar `datos/carga.json`** con el Excel depurado, en el formato de la
+   sección «Carga inicial» del documento de la etapa, y correr primero
+   `node scripts/cargar-datos.mjs --archivo datos/carga.json --simular`.
+5. **Cargar de verdad** con `--cargar`. Si hubiera que repetirlo,
+   `--reemplazar` respalda y verifica antes de borrar nada.
+6. **Respaldar después de cada sábado** con `node scripts/respaldar.mjs`, y
+   guardar una copia fuera del computador. El plan gratuito no incluye respaldos
+   automáticos.
+7. **Si un trabajo se interrumpe**, el mantenimiento queda puesto a propósito:
+   el mensaje de error trae el token y el manifiesto de `datos/` dice qué se
+   alcanzó a escribir. Desde ahí se reanuda con `--reanudar`, o se repone un
+   respaldo. Para soltar el bloqueo a mano, una vez comprobado que la base está
+   íntegra:
+   `node scripts/respaldar.mjs --liberar --token <el token del mensaje>`.
+
+## 9. Lista de entrega del documento, comprobada
+
+| Punto de la lista | Estado |
+|---|---|
+| Reglas de seguridad con sus pruebas, y consultas por operación anotadas | **Sí.** 72 pruebas de reglas; las consultas están en la sección 4, con la cuenta conservadora y la medida. |
+| `texto.js` con pruebas de unidad de la clave, el nombre, el teléfono y el código sugerido | **Sí.** `tests/unidad/lectores-y-libros.test.mjs`, 22 pruebas. |
+| Scripts de carga, respaldo y restauración con sus pruebas | **Sí.** 24 pruebas de scripts y 24 de unidad sobre la validación y la serialización. |
+
+## 10. Datos de la entrega
+
+| Dato | Valor |
+|---|---|
+| Rama | `etapa-2` |
+| SHA entregado | `2b556c6`, el último commit de código; este informe va encima sin tocar código |
+| Commits de la etapa | `84c0e64` puras · `6e351fd` reglas · `33decf6` scripts · `2b556c6` pantallas y concurrencia |
+| Node | 22.22.0 (local) y 22 en la integración continua |
+| npm | 10.9.4 |
+| Java | OpenJDK 21.0.12.1 local; Temurin 21 en la integración continua |
+| firebase-tools | 15.33.0 |
+| Emulador de Firestore | cloud-firestore-emulator v1.22.0 |
+| @firebase/rules-unit-testing | 5.0.2 |
+| firebase (SDK en pruebas) | 12.19.0 |
+| SDK que carga la app | 12.19.0, desde `www.gstatic.com`; en este contenedor, desde `node_modules/firebase` (sección 2.2.1) |
+| firebase-admin | 14.5.0 |
+| @playwright/test | 1.56.1 |
+| Chromium | 141.0.7390.37 |
+| Proyecto usado | `demo-biblioteca`, solo emulador |
+| Pruebas ejecutadas | **316**: 138 unidad, 72 reglas, 24 scripts, 76 extremo a extremo, 6 carga |
+| Pruebas en rojo | ninguna |
+| Casos del documento cubiertos | **43 de 43**, todos automatizados y ejecutados |
+| Límites del documento no cumplidos | abrir con 5.000 libros y 3.000 lectores (sección 3) |
+| Datos personales versionados | ninguno; el escáner pasa sin hallazgos |
+| Contraprueba independiente | **no hubo** |
