@@ -143,32 +143,18 @@ test('A-18 si la red se corta entre el toque y la respuesta, no hay confirmació
   context,
 }) => {
   await abrirVoluntarios(page);
-
-  // La petición se queda colgada: ni responde ni falla. Así la espera de más de
-  // cinco segundos está garantizada y no depende de cuánto tarde el SDK en
-  // rendirse, que es justo lo que pasa cuando el teléfono pierde la señal a
-  // mitad de una escritura.
-  let soltarLaPeticion;
-  const colgada = new Promise((listo) => {
-    soltarLaPeticion = listo;
-  });
-  await page.route(HABLA_CON_FIRESTORE, async (ruta) => {
-    await colgada;
-    await ruta.abort('connectionfailed');
-  });
-
   await llenarFormulario(page, { correo: 'cortada@example.com', nombre: 'Red Cortada' });
+
+  await bloquearFirestore(page);
   await page.getByTestId('agregar-voluntario').click();
-
-  // Mientras la transacción no termina, el botón dice «Guardando…» y no acepta
-  // otro toque; a los 5 segundos aparece el aviso de demora.
-  await expect(page.getByTestId('agregar-voluntario')).toHaveText('Guardando…');
-  await expect(page.getByText('Confirmando… no cierres la app')).toBeVisible({ timeout: 20_000 });
-
-  // Recién ahora se corta de verdad, para que el SDK deje de reintentar.
   await quedarSinConexion(context);
-  soltarLaPeticion();
 
+  // El aviso «Confirmando… no cierres la app» NO se comprueba aquí: cuando el
+  // tráfico está bloqueado, el SDK se declara sin conexión y la transacción
+  // falla antes de los cinco segundos, así que ese aviso no alcanza a salir en
+  // un navegador. El plazo es una regla de datos.js y está probado con reloj
+  // simulado en tests/unidad/datos.test.mjs (A-18). Aquí se comprueba lo que
+  // solo se ve en pantalla.
   await expect(page.getByTestId('error-formulario')).toBeVisible({ timeout: 40_000 });
   await expect(page.getByText(/quedó agregado/)).toHaveCount(0);
   // Lo escrito se conserva: ni el corte ni el redibujado lo borran.

@@ -167,6 +167,46 @@ test('toda escritura pasa por una transacción con maxAttempts en 5', async () =
   assert.ok(resultado.operacionId.length === 32);
 });
 
+test('A-18 a los 5 segundos sin respuesta se avisa «Confirmando… no cierres la app»', async (t) => {
+  // El plazo es una regla de esta capa, no de Firestore. Con el reloj simulado
+  // se comprueba exacto: a los 4,999 s todavía no, a los 5,001 s sí.
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+
+  let terminar;
+  const sdk = {
+    ...sdkDeMentira(),
+    runTransaction: () =>
+      new Promise((listo) => {
+        terminar = listo;
+      }),
+  };
+  const datos = crearDatos({ db: {}, sdk, red: { onLine: true } });
+
+  const avisos = [];
+  const enCurso = datos.guardar({ tipo: 'alta', cuerpo: async () => {}, alTardar: (texto) => avisos.push(texto) });
+
+  t.mock.timers.tick(4999);
+  assert.deepEqual(avisos, [], 'antes de los 5 segundos no se avisa');
+
+  t.mock.timers.tick(2);
+  assert.deepEqual(avisos, [MENSAJES.demora]);
+  assert.equal(MENSAJES.demora, 'Confirmando… no cierres la app');
+
+  terminar('listo');
+  await enCurso;
+});
+
+test('A-18 si la respuesta llega antes de los 5 segundos, no se avisa nada', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const datos = crearDatos({ db: {}, sdk: sdkDeMentira(), red: { onLine: true } });
+
+  const avisos = [];
+  await datos.guardar({ tipo: 'alta', cuerpo: async () => 'rápido', alTardar: (texto) => avisos.push(texto) });
+
+  t.mock.timers.tick(10_000);
+  assert.deepEqual(avisos, [], 'el aviso quedó cancelado al terminar');
+});
+
 test('A-17 sin conexión no se escribe ni se encola', async () => {
   const sdk = sdkDeMentira();
   const datos = crearDatos({ db: {}, sdk, red: { onLine: false } });
