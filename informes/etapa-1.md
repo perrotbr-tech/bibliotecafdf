@@ -372,15 +372,19 @@ Las cinco primeras las aprobaste antes de construir; el resto son de detalle.
    proyecto real, activar GitHub Pages desde `docs/` de `main`, y autorizar la
    Etapa 2.
 
-Tres cosas del repositorio que conviene saber:
+Cuatro cosas del repositorio que conviene saber:
 
 - **`main` existe pero está vacía.** El repositorio se creó sin ningún commit, así
   que no había rama base contra la cual abrir la solicitud de cambios. Se creó
   una rama huérfana con un commit vacío, con tu autorización expresa. El código
-  de la etapa entra a `main` solo cuando tú la fusiones. Como las dos ramas no
-  comparten historia, la solicitud de cambios muestra el árbol completo como
-  diferencia —que para una primera etapa es justo lo que el revisor necesita— y
-  la fusión necesitará un commit de mezcla.
+  de la etapa entra a `main` solo cuando tú la fusiones. GitHub no deja comparar
+  dos ramas sin historia común, así que `etapa-1` trae esa base con un commit de
+  mezcla que no cambia ningún archivo; desde ahí la fusión es limpia. La
+  solicitud de cambios muestra el árbol completo como diferencia, que para una
+  primera etapa es justo lo que el revisor necesita ver.
+- **La solicitud de cambios es
+  [perrotbr-tech/bibliotecafdf#1](https://github.com/perrotbr-tech/bibliotecafdf/pull/1)**,
+  con este informe en la descripción.
 - **La rama por defecto del repositorio sigue siendo `etapa-1`.** Intenté
   cambiarla a `main` y no pude: el proxy de esta sesión no permite escribir
   ajustes del repositorio. Hay que hacerlo a mano en Settings → General →
