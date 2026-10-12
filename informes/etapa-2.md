@@ -2,8 +2,10 @@
 
 Revisión 1.1 · 12-10-2026 (America/Santiago) · rama `etapa-2`
 
-**SHA entregado:** `d5a8e69`, el último commit de código de `etapa-2`. Los datos
-completos de la entrega están en la sección 10.
+**SHA entregado:** `dcd9e5f`, el último commit de CÓDIGO de `etapa-2`. Esta
+línea y la sección 10 se actualizan con cada ronda, así que lo que se ensaya es
+el último commit de la rama; el informe no toca código. Los datos completos de
+la entrega están en la sección 10.
 
 **No hubo contraprueba externa.** El dueño decidió trabajar solo en esta sesión,
 así que no hay una mirada ajena sobre este código. Lo digo una vez y no lo
@@ -485,8 +487,8 @@ Ninguna de estas la puede hacer el agente, y ninguna está hecha.
 | Dato | Valor |
 |---|---|
 | Rama | `etapa-2` |
-| SHA entregado | `d5a8e69`, el último commit de código de la rama |
-| Commits de la etapa | `84c0e64` puras · `6e351fd` reglas · `33decf6` scripts · `2b556c6` pantallas y concurrencia · `644f9c0` informe · `d5a8e69` repaso del diff |
+| SHA entregado | `dcd9e5f`, el último commit de código; encima solo va este informe |
+| Commits de la etapa | `84c0e64` puras · `6e351fd` reglas · `33decf6` scripts · `2b556c6` pantallas y concurrencia · `644f9c0` informe · `d5a8e69` repaso del diff · `dcd9e5f` el escáner y los archivos nuevos |
 | Corridas de integración continua | 26, 27, 28 y 30 en verde; la **29 falló** por el escáner (sección 2.4) y la 31 corre sobre el SHA entregado |
 | Node | 22.22.0 (local) y 22 en la integración continua |
 | npm | 10.9.4 |
