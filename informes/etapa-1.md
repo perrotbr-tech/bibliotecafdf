@@ -110,25 +110,27 @@ Las tres suites que sí corrieron, en esta máquina, el 12-10-2026:
 revisar-repositorio: sin hallazgos
 
 ### npm run prueba:unidad
-# tests 52
-# pass 52
+# tests 61
+# pass 61
 # fail 0
+# duration_ms 2340.119525
 
 ### npm run prueba:reglas        (firebase emulators:exec, demo-biblioteca)
 # tests 26
 # pass 26
 # fail 0
-# duration_ms 10277.919263
+# duration_ms 11087.260036
 
 ### npm run prueba:scripts       (firebase emulators:exec, demo-biblioteca)
 # tests 7
 # pass 7
 # fail 0
-# duration_ms 11812.839231
+# duration_ms 11989.905987
 ```
 
-**85 pruebas ejecutadas, 85 en verde, 0 en rojo.** Ninguna se saltó ni se
-desactivó.
+**94 pruebas ejecutadas, 94 en verde, 0 en rojo.** Ninguna se saltó ni se
+desactivó. Las mismas tres suites vuelven a correr en la integración continua
+sobre el commit entregado, también en verde.
 
 ### 2.3 Comprobaciones estáticas y de humo
 
@@ -276,6 +278,18 @@ Las cinco primeras las aprobaste antes de construir; el resto son de detalle.
   no haberse ejecutado, es probable que los patrones de URL necesiten ajuste en
   la primera corrida. Está señalado aquí para que la contraprueba no lo lea como
   un verde.
+- **La hoja emergente está construida pero ninguna pantalla la abre.** Base §9
+  exige que retenga el foco, lo devuelva al cerrar y que el botón Atrás la
+  cierre. El componente está escrito y conectado al historial, pero la Etapa 1
+  no tiene ninguna pantalla que use una hoja: el formulario de Voluntarios va en
+  línea. Esa mitad de la regla del botón Atrás queda **sin ejercitar** hasta que
+  una etapa siguiente abra la primera hoja.
+- **Después de cinco minutos sin actividad la barra dice «Hora pendiente».** Es
+  lo que manda el contrato §2: la muestra caduca a los cinco minutos y se
+  resincroniza «antes de operar» o al volver a primer plano. Como esta etapa no
+  tiene operaciones temporales, no hay nada que dispare la resincronización
+  salvo volver a la app o recuperar la conexión. Si en la Etapa 3 molesta, ahí
+  se resuelve con el primer gesto de préstamo.
 - **Los contadores son telemetría, no facturación.** El costo cero es un objetivo
   dentro de cuotas, no una promesa.
 - **Sin hora verificada no se bloquea nada todavía**, porque esta etapa no tiene
