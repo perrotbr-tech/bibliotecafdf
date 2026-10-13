@@ -26,7 +26,7 @@ QUÉ LEER ANTES DE ESCRIBIR CÓDIGO
 4. El código, las pruebas y los informes de las etapas anteriores.
 
 CÓMO TRABAJAS
-- Una etapa por vez. Cada etapa va en su propia rama y termina en una sola solicitud de cambios. No empiezas la siguiente sin autorización explícita del dueño.
+- Una entrega por vez. Una entrega puede abarcar más de un documento de especificación; los construyes juntos. Cada entrega va en su propia rama y termina en una sola solicitud de cambios. No empiezas la siguiente sin autorización explícita del dueño.
 - Plan primero, siempre. Antes de programar respondes con: (a) tu plan en pasos, (b) los archivos que vas a crear o tocar, (c) toda duda o contradicción que encuentres en las especificaciones. No escribes código hasta que el dueño confirme el plan, haya o no dudas.
 - Pruebas primero. Conviertes cada fila de «Casos de prueba» en una prueba automatizada que lleva su identificador (por ejemplo P-02) en el nombre, y luego escribes el código que las hace pasar. Las filas marcadas «(manual)» no se automatizan: las listas en el informe para el dueño.
 - Las funciones de fechas, puntos y texto son puras, viven en su módulo y reciben la hora como parámetro. Nunca leen el reloj por dentro. En la app, la única fuente de hora es reloj.ahora().
@@ -57,55 +57,45 @@ CALIDAD QUE SE EXIGE SIEMPRE
 - En las pruebas de extremo a extremo se entra con signInWithCredential y una credencial de Google simulada del emulador; ese camino solo existe contra el emulador.
 - Textos de la interfaz en español de Chile, breves y directos, con el tono del prototipo.
 
-INFORME AL TERMINAR CADA ETAPA
-Lo guardas en informes/etapa-N.md y lo copias en la descripción de la solicitud de cambios, con estos títulos y en este orden:
-1. Qué se construyó (lista breve).
-2. Casos de prueba: tabla con cada identificador y su estado; salida completa de la ejecución.
-3. Prueba de carga: tabla de tiempos y lecturas medidas contra los límites del documento.
-4. Consultas a otros documentos que usa cada operación en las reglas de seguridad, e índices compuestos declarados.
+INFORME AL TERMINAR CADA ENTREGA
+Cabe en una página. Lo guardas en informes/ y lo copias en la descripción de la solicitud de cambios, con estos títulos y en este orden:
+1. SHA entregado y versiones instaladas (Node, npm, Java, navegador).
+2. Casos de prueba: tabla con cada identificador y su estado, y dónde quedó la salida de la ejecución. No pegas la salida completa en el informe; va en el PR o en un archivo aparte.
+3. Carga: tiempos y lecturas medidas contra los límites del documento.
+4. Accesos a otros documentos que usa cada operación en las reglas, e índices compuestos declarados.
 5. Decisiones tomadas donde la especificación no alcanzaba.
-6. Pruebas manuales pendientes para el dueño, incluida la prueba de humo del documento.
-7. Qué NO está preparado para producción y por qué.
-8. Qué debe desplegar o configurar el dueño, paso a paso.
-Si un punto no tiene contenido, escribes «Nada». No declaras la etapa terminada si alguna prueba automatizada falla.
+6. Pendiente para el dueño: las pruebas manuales por un lado, lo que no está listo para producción por el otro.
+Lo que se construyó no se narra: está en el diff. Si un punto no tiene contenido, escribes «Nada». No declaras la entrega terminada si alguna prueba automatizada falla.
 ```
 
 ---
 
-## 2. Arranque de etapa
+## 2. Arranque de entrega
 
-Cambia el número y el archivo según la etapa. Para comenzar localmente no hacen falta los bloques web reales. Déjalos en null hasta que Eduardo los entregue; serán obligatorios para el ensayo y despliegue del ambiente correspondiente.
+Cambia los documentos y la rama según la entrega. Los tres ambientes ya están configurados en `docs/js/config-publica.js`: emulador, ensayo y producción. El agente sigue trabajando solo contra el emulador.
 
 ```text
-Ejecuta la Etapa 1 según specs/01-base-y-acceso.md.
+Ejecuta la entrega «Préstamos»: specs/03-prestar-y-devolver.md y specs/04-atrasados-y-recordatorios.md, los dos juntos.
 
-Antes de programar: lee AGENTS.md, specs/00-contrato-operativo.md, specs/00-base.md y el documento de la etapa, revisa referencia/prototipo.html y respóndeme con tu plan, los archivos que vas a tocar y tus dudas. No escribas código hasta que te confirme.
+Antes de programar: lee AGENTS.md, specs/00-contrato-operativo.md, specs/00-base.md y los dos documentos de la entrega, revisa referencia/prototipo.html y respóndeme con tu plan, los archivos que vas a tocar y tus dudas. No escribas código hasta que te confirme.
 
-Trabaja en la rama etapa-1, no fusiones ni empujes a main, y entrégame una sola solicitud de cambios con el informe completo.
-
-Configuración web de Firebase para docs/js/config-publica.js (solo en la Etapa 1):
-Proyecto real: null si todavía no está creado.
-Proyecto de ensayo: null si todavía no está creado.
-Emulador: demo-biblioteca; iniciar localmente sin pedir credenciales reales.
-Si todavía no existe remoto, entregar rama y commits locales; no inventar una URL de PR.
+Trabaja en la rama entrega-prestamos, no fusiones ni empujes a main, y entrégame una sola solicitud de cambios con el informe de una página.
 ```
 
-| Etapa | Documento | Rama |
+| Entrega | Documentos | Rama |
 |---|---|---|
-| 1 | `specs/01-base-y-acceso.md` | `etapa-1` |
-| 2 | `specs/02-catalogo-y-lectores.md` | `etapa-2` |
-| 3 | `specs/03-prestar-y-devolver.md` | `etapa-3` |
-| 4 | `specs/04-atrasados-y-recordatorios.md` | `etapa-4` |
-| 5 | `specs/05-juego-de-temporadas.md` | `etapa-5` |
-| 6 | `specs/06-estadisticas-y-cierre.md` | `etapa-6` |
-| 7, opcional | `specs/07-etiquetas-qr-opcional.md` | `etapa-7` |
+| Base y acceso | `specs/01-base-y-acceso.md` | `etapa-1` (entregada) |
+| Catálogo y lectores | `specs/02-catalogo-y-lectores.md` | `etapa-2` (entregada) |
+| Préstamos | `specs/03-prestar-y-devolver.md` + `specs/04-atrasados-y-recordatorios.md` | `entrega-prestamos` |
+| Juego y cierre | `specs/05-juego-de-temporadas.md` + `specs/06-estadisticas-y-cierre.md` | `entrega-juego` |
+| QR, opcional | `specs/07-etiquetas-qr-opcional.md` | solo si el dueño la pide |
 
 ---
 
 ## 3. Corrección tras contraprueba
 
 ```text
-Una revisión externa encontró los problemas que pego abajo en la Etapa N. Trabaja en la misma rama etapa-N.
+Una revisión externa encontró los problemas que pego abajo. Trabaja en la misma rama de la entrega.
 
 Para cada hallazgo:
 1. Si se puede automatizar, escribe primero una prueba que lo reproduzca y falle. Si no se puede, dilo y describe cómo verificarlo a mano.
@@ -114,7 +104,7 @@ Para cada hallazgo:
 
 No cambies nada que no esté relacionado con los hallazgos. Si un hallazgo contradice la especificación, no lo corrijas: explícame la contradicción.
 
-Actualiza informes/etapa-N.md con una tabla: hallazgo, causa, prueba agregada y estado.
+Actualiza el informe de la entrega con una tabla: hallazgo, causa, prueba agregada y estado.
 
 HALLAZGOS:
 (pegar aquí)
@@ -124,13 +114,13 @@ HALLAZGOS:
 
 ## Orden de trabajo
 
-Para cada etapa:
+Para cada entrega:
 
-1. El dueño pega el texto de arranque de la etapa.
+1. El dueño pega el texto de arranque de la entrega.
 2. Cursor responde con su plan y sus dudas. El dueño confirma.
-3. Cursor construye y entrega la solicitud de cambios con el informe.
-4. El dueño pasa la solicitud a una contraprueba externa.
-5. Si hay hallazgos, el dueño usa el texto de corrección.
-6. Con la contraprueba limpia, el dueño despliega reglas e índices en el proyecto de ensayo y ejecuta la prueba de humo del documento, con teléfonos reales sobre una publicación de ensayo del SHA candidato, antes de fusionarlo.
-7. Si la prueba de humo pasa, el dueño fusiona la rama y despliega en el proyecto real.
-8. Recién entonces se autoriza la etapa siguiente.
+3. Cursor construye y entrega la solicitud de cambios con el informe de una página.
+4. El dueño pasa la solicitud a una contraprueba externa. **Una sola.** Se repite solo si un hallazgo viene calificado «antes de producción»; los menores se corrigen con el texto de corrección y se declaran en el informe.
+5. Con eso, el dueño despliega reglas e índices en el proyecto de ensayo y fusiona.
+6. Recién entonces se autoriza la entrega siguiente.
+
+El ensayo con teléfonos reales **no se hace por entrega**: las pruebas de humo de los documentos se acumulan y se corren juntas, en una sesión, sobre el proyecto de ensayo, antes de la carga de los datos reales. Esa carga ya estaba fijada para el momento previo al primer sábado de uso real, así que el ensayo cae donde corresponde: cuando la app ya hace todo lo que se va a usar ese día.

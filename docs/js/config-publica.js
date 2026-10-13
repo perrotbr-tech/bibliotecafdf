@@ -40,7 +40,11 @@ export const CONFIGURACIONES = {
     apiKey: 'AIzaSyAIvCRLf77m7YEnEi7iLA33NdkoRis2GCc',
     authDomain: 'biblioteca-fdf-ensayo.firebaseapp.com',
   },
-  produccion: null,
+  produccion: {
+    projectId: 'biblioteca-fdf',
+    apiKey: 'AIzaSyC-HkO5c5ph7qQ6d5pJ7Of9Jwg1etVqELQ',
+    authDomain: 'biblioteca-fdf.firebaseapp.com',
+  },
 };
 
 /**

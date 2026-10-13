@@ -18,26 +18,52 @@ Estas tareas no las puede hacer el agente: requieren tus cuentas y tus decisione
 
 Abrir la carpeta en Cursor y usar LEEME-ARRANQUE-BIBLIOTECA.md. Se puede planificar y construir contra demo-biblioteca sin repositorio remoto, Firebase real ni Excel actualizado. Si falta remoto, el PR queda pendiente, no el trabajo local.
 
-## Antes del ensayo con teléfonos de la Etapa 1
+## Infraestructura — hecho el 13-10-2026
 
-1. **Crear el repositorio** en GitHub, público, y copiar dentro el contenido de este paquete. Para ensayar el commit candidato antes de fusionar, preparar un segundo destino de Pages de ensayo según contrato §1; nunca publicar datos/ ni referencia/ como app oficial.
-2. **Crear dos proyectos de Firebase**, ambos gratuitos y separados de los de tus otras apps:
-   - el **real**, donde vivirán los datos de la biblioteca;
-   - el de **ensayo**, para probar cada etapa con teléfonos reales antes de tocar el real. El emulador que usa Cursor no detecta índices faltantes ni todos los límites; el proyecto de ensayo sí.
-3. En cada proyecto, **crear la base Firestore** en modo de producción, no en modo de prueba. El modo de prueba deja la base abierta a cualquiera y sus reglas caducan después de un plazo, tras lo cual la app deja de funcionar sin aviso. Región: `southamerica-west1` (Santiago). La región no se puede cambiar después.
-4. En cada proyecto, **activar el inicio de sesión con Google** en Authentication y **agregar el dominio de GitHub Pages** a los dominios autorizados (por ejemplo `tucuenta.github.io`).
-5. **Registrar una app web** en cada proyecto. El bloque de configuración que muestra Firebase es público por diseño y puede ir en el repositorio; ambos bloques se le entregan a Cursor antes del ensayo correspondiente. No impiden desarrollar localmente. La app usa el proyecto de ensayo cuando la dirección lleva `?ensayo=1`.
-6. **Preparar credenciales administrativas solo en tu computador.** Usar credenciales locales autorizadas para Admin SDK; si se requiere una llave JSON, guardarla fuera del repositorio o dentro de datos/ excluida. Nunca pegarla en un chat, adjuntarla al paquete ni entregarla al agente para producción. Los scripts del agente solo usan el emulador y no requieren llaves.
+Esto ya está, no hay que repetirlo. Queda anotado porque la región y el modo de la base no se pueden cambiar después.
 
-## Después de cada etapa
+| Qué | Estado |
+|---|---|
+| Repositorio público `perrotbr-tech/bibliotecafdf` | creado |
+| Proyecto de **ensayo**: `biblioteca-fdf-ensayo` | creado, plan Spark |
+| Proyecto **real**: `biblioteca-fdf` | creado, plan Spark |
+| Firestore en los dos | creada, edición Standard, base `(default)`, **modo producción**, **`southamerica-west1`** |
+| Authentication con Google en los dos | habilitado, correo de asistencia `perrot.br@gmail.com` |
+| Dominio `perrotbr-tech.github.io` autorizado en los dos | agregado |
+| App web registrada en los dos | sin Firebase Hosting; se publica con GitHub Pages |
+| Bloques web en `docs/js/config-publica.js` | puestos: `ensayo` y `produccion` |
 
-1. Pasar la solicitud de cambios por una contraprueba externa.
+Dos cosas que conviene saber de eso:
+
+- Las reglas de los dos proyectos hoy dicen `allow read, write: if false`. Es lo correcto: la app no puede leer ni escribir nada hasta que despliegues `firestore.rules`. No lo arregles a mano en la consola.
+- Los proyectos traen Google Analytics vinculado desde que se crearon. La app no lo carga, y el `measurementId` no está en el repositorio, así que no hay forma de que se active por descuido.
+
+## Lo que sigue siendo tuyo
+
+1. **Preparar credenciales administrativas solo en tu computador.** Usar credenciales locales autorizadas para Admin SDK; si se requiere una llave JSON, guardarla fuera del repositorio o dentro de datos/ excluida. Nunca pegarla en un chat, adjuntarla al paquete ni entregarla al agente para producción. Los scripts del agente solo usan el emulador y no requieren llaves.
+2. **Un segundo destino de Pages de ensayo** si quieres probar el commit candidato antes de fusionar, según contrato §1. Nunca publicar `datos/` ni `referencia/` como app oficial.
+
+## Las entregas que faltan
+
+Las especificaciones siguen siendo siete documentos, pero se construyen agrupadas: menos entregas, cada una con un plan, un informe de una página y un PR.
+
+| Entrega | Documentos | Estado |
+|---|---|---|
+| Base y acceso | `specs/01` | entregada, en contraprueba |
+| Catálogo y lectores | `specs/02` | entregada, en contraprueba |
+| Préstamos | `specs/03` + `specs/04` | por hacer |
+| Juego y cierre | `specs/05` + `specs/06` | por hacer |
+| QR | `specs/07` | opcional, solo si la pides |
+
+## Después de cada entrega
+
+1. Pasar la solicitud de cambios por una contraprueba externa. **Una sola.** Se repite únicamente si un hallazgo viene calificado «antes de producción»; los menores se corrigen y quedan declarados en el informe.
 2. Desplegar reglas e índices en el proyecto de **ensayo** con el comando que indique el informe.
-3. Ejecutar la **prueba de humo** que trae el documento de la etapa, con teléfonos reales.
-4. Hacer las pruebas marcadas «(manual)».
-5. Si todo pasa: fusionar la rama y desplegar reglas e índices en el proyecto **real**.
+3. Fusionar la rama.
 
-Además, después de la Etapa 1:
+Las pruebas marcadas «(manual)» y las pruebas de humo de cada documento **no se hacen entrega por entrega**: se acumulan y se corren juntas, en una sesión con dos teléfonos reales sobre el proyecto de ensayo, antes de la carga de los datos reales. Esa carga ya estaba fijada para justo antes del primer sábado de uso, así que el ensayo cae en el momento correcto: cuando la app ya hace todo lo que se va a usar ese día. Recién ahí se despliegan reglas e índices en el proyecto **real**.
+
+Una vez, cuando se fusione la primera entrega:
 
 - **Activar GitHub Pages** desde la carpeta `docs/` de la rama `main`.
 - Ejecutar `scripts/inicializar.mjs` en el proyecto real con tu correo, para quedar como primer administrador.

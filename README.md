@@ -37,10 +37,12 @@ Levanta los emuladores de Authentication y Firestore con el proyecto
 
 En local **siempre** se usa el emulador: el contrato §1 fija que solo
 `localhost`, `127.0.0.1` y `[::1]` lo seleccionan, y que `?ensayo=1` ahí se
-ignora. Las configuraciones de ensayo y de producción viven en
-`docs/js/config-publica.js` y hoy están en `null`: hasta que el dueño entregue
-los bloques web, esos ambientes muestran «Falta configurar este ambiente» y no
-abren ninguna conexión.
+ignora. Los tres ambientes viven en `docs/js/config-publica.js`: `emulador`
+(`demo-biblioteca`), `ensayo` (`biblioteca-fdf-ensayo`) y `produccion`
+(`biblioteca-fdf`). De cada bloque web solo se guardan los tres campos que la
+app usa —`apiKey`, `authDomain` y `projectId`—; el resto corresponde a
+servicios que no se cargan. Son valores públicos por diseño, no credenciales:
+la seguridad la dan `firestore.rules` y Authentication.
 
 Parámetros útiles, solo contra el emulador:
 
