@@ -4,9 +4,10 @@ Sitio estático sin paso de compilación: HTML, CSS y módulos ES nativos. Se pu
 tal cual desde `docs/` con GitHub Pages. La base de datos es Cloud Firestore en
 plan gratuito, y se entra con una cuenta de Google.
 
-**Estado: Etapa 1 (base y acceso).** Catálogo, lectores, préstamos, recordatorios,
-juego y estadísticas llegan en las etapas siguientes; sus pantallas dicen
-«Disponible pronto».
+**Estado: base y acceso, catálogo y lectores.** Préstamos, recordatorios, juego
+y estadísticas llegan en las dos entregas siguientes; sus pantallas dicen
+«Disponible pronto». La agrupación de las entregas que faltan está en
+`AGENTS.md`.
 
 La especificación manda sobre el código: `specs/00-contrato-operativo.md`,
 `specs/00-base.md` y el documento de cada etapa. `referencia/prototipo.html` es
