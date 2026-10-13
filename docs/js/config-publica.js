@@ -22,6 +22,12 @@ export const NOMBRE_ENTRADA = 'Biblioteca';
  *   selecciona desde loopback.
  * - `ensayo` y `produccion`: los entrega el dueño cuando crea los proyectos.
  *   Hasta entonces quedan en null a propósito.
+ *
+ * De cada bloque web solo se copian los tres campos que esta app usa:
+ * `apiKey` y `authDomain` los necesita Authentication, y `projectId` Firestore.
+ * Los demás campos del bloque que muestra la consola (`storageBucket`,
+ * `messagingSenderId`, `appId`, `measurementId`) corresponden a servicios que
+ * esta app no carga —Storage, Cloud Messaging, Analytics— y no se versionan.
  */
 export const CONFIGURACIONES = {
   emulador: {
@@ -29,7 +35,11 @@ export const CONFIGURACIONES = {
     apiKey: 'demo-biblioteca-sin-llave-real',
     authDomain: 'demo-biblioteca.firebaseapp.com',
   },
-  ensayo: null,
+  ensayo: {
+    projectId: 'biblioteca-fdf-ensayo',
+    apiKey: 'AIzaSyAIvCRLf77m7YEnEi7iLA33NdkoRis2GCc',
+    authDomain: 'biblioteca-fdf-ensayo.firebaseapp.com',
+  },
   produccion: null,
 };
 
