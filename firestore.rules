@@ -1,0 +1,532 @@
+rules_version = '2';
+
+// Reglas de seguridad de la biblioteca — Etapas 1 y 2.
+//
+// Negación por defecto: lo que no está escrito aquí está denegado.
+//
+// Presupuesto de accesos a otros documentos (contrato §7): máximo 10 por
+// operación y 20 por transacción, contados sin suponer ahorro por caché. Por
+// eso cada `get()` se hace UNA vez y su resultado se pasa como argumento a las
+// funciones que lo examinan, en vez de repetir la llamada.
+//
+// Cuentas conservadoras, contando cada `get()` y cada `getAfter()` como un
+// acceso aunque repita documento. El techo real está medido aparte, en
+// `tests/reglas/presupuesto.test.mjs`: el emulador cobra documentos DISTINTOS
+// y no cobra los que la propia transacción escribe, de modo que el alta ocupa
+// 2 de los 20 y deja 18 libres. Lo que se promete aquí es esta cuenta:
+//
+//   lectura de cualquier colección → 1 (el propio voluntario)
+//   sincronización de hora         → 1 (el propio voluntario)
+//   alta o cambio de voluntario    → 2 (el propio voluntario + config/control)
+//   cambio de config/app           → 2 (el propio voluntario + config/control)
+//   alta o edición de libro        → 2 (el propio voluntario + config/control)
+//   cambio de teléfono de lector   → 2 (el propio voluntario + config/control)
+//   alta de lector (3 documentos)  → 10 en la transacción, máximo 4 por
+//                                     operación:
+//     · `lectores/{id}`        4 = voluntario + control + getAfter(clave)
+//                                                       + getAfter(contadores)
+//     · `lectoresClave/{clave}` 3 = voluntario + control + getAfter(lector)
+//     · `config/contadores`     3 = voluntario + control + getAfter(lector)
+//   cambio de nombre de lector     → 6 como máximo (3 del lector + 3 de la
+//                                     clave nueva, si hay que crearla)
+//
+// Lo que estas reglas NO garantizan (declarado a propósito):
+//   · No reproducen la normalización Unicode del cliente: de la `clave`
+//     comprueban su FORMA, no que corresponda al `nombre` (base §5). Eso lo
+//     garantizan `claveDeNombre` y sus pruebas de unidad.
+//   · No comprueban que `categoria` sea una de `config/app.categorias`: el
+//     lenguaje de reglas no puede recorrer una lista de mapas. Lo validan el
+//     cliente y el script de carga.
+//   · No recalculan agregados.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------------------------------------------------------- sesión
+
+    function hayCorreoVerificado() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true;
+    }
+
+    function correo() {
+      return request.auth.token.email.lower();
+    }
+
+    function docVoluntario(bib) {
+      return get(/databases/$(database)/documents/bibliotecas/$(bib)/voluntarios/$(correo()));
+    }
+
+    function activo(doc) {
+      return doc != null && doc.data.get('activo', false) == true;
+    }
+
+    function admin(doc) {
+      return activo(doc) && doc.data.get('rol', '') == 'admin';
+    }
+
+    // Una persona es voluntaria si inició sesión, su correo está verificado y
+    // existe su documento con activo verdadero. Iniciar sesión no basta.
+    function esVoluntario(bib) {
+      return hayCorreoVerificado() && activo(docVoluntario(bib));
+    }
+
+    function esAdmin(bib) {
+      return hayCorreoVerificado() && admin(docVoluntario(bib));
+    }
+
+    // -------------------------------------------------------------- bloqueos
+
+    function docControl(bib) {
+      return get(/databases/$(database)/documents/bibliotecas/$(bib)/config/control);
+    }
+
+    // Un bloqueo de mantenimiento no expira solo: su `hasta` es nulo. Un cierre
+    // lleva `hasta` obligatorio y deja de regir cuando lo pasa request.time.
+    function bloqueoVigente(doc) {
+      return doc.data.get('bloqueo', null) != null
+        && (doc.data.bloqueo.get('hasta', null) == null
+            || request.time < doc.data.bloqueo.hasta);
+    }
+
+    // Sin documento de control no se escribe (contrato §6).
+    function sinBloqueo(bib) {
+      return permiteEscritura(docControl(bib));
+    }
+
+    function permiteEscritura(doc) {
+      return doc != null && !bloqueoVigente(doc);
+    }
+
+    // -------------------------------------------------------------- utilería
+
+    function formatoId(valor) {
+      return valor is string && valor.matches('^[0-9a-f]{32}$');
+    }
+
+    function horaDelServidor(valor) {
+      return valor == request.time;
+    }
+
+    function cambia(permitidos) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(permitidos);
+    }
+
+    // --------------------------------------------- formas de la Etapa 2
+
+    /**
+     * Identificador de un lector: `L` más el correlativo con al menos tres
+     * cifras. El 7 da `L007`; el 1204, `L1204`. Se construye desde el número
+     * en vez de interpretarlo, para que el contador y el identificador no
+     * puedan discrepar.
+     */
+    function idDeLector(n) {
+      return 'L' + (n < 10 ? '00' : (n < 100 ? '0' : '')) + string(n);
+    }
+
+    function formatoIdLector(valor) {
+      return valor is string && valor.matches('^L[0-9]{3,}$');
+    }
+
+    function nombreDeLector(nombre) {
+      return nombre is string && nombre.size() >= 3 && nombre.size() <= 60;
+    }
+
+    /**
+     * Forma de una clave: fichas de letras, dígitos y `ñ` separadas por un
+     * solo espacio, sin espacios en los extremos, y con al menos tres letras.
+     * La segunda expresión es la que exige esas tres letras.
+     */
+    function formatoClave(clave) {
+      return clave is string
+        && clave.size() <= 60
+        && clave.matches('^[a-z0-9ñ]+( [a-z0-9ñ]+)*$')
+        && clave.matches('^[0-9 ]*[a-zñ][0-9 ]*[a-zñ][0-9 ]*[a-zñ][a-z0-9ñ ]*$');
+    }
+
+    function telefonoDeLector(valor) {
+      return valor == null || (valor is string && valor.matches('^569[0-9]{8}$'));
+    }
+
+    /**
+     * Aviso de uso de datos: la casilla obligatoria de la pantalla de alta.
+     * Las reglas la exigen para que no se salte ocultando el botón: lleva la
+     * hora del servidor y el correo de quien inscribe.
+     */
+    function avisoDeDatos(aviso) {
+      return aviso is map
+        && aviso.keys().hasOnly(['fecha', 'por'])
+        && aviso.keys().hasAll(['fecha', 'por'])
+        && aviso.fecha == request.time
+        && aviso.por == correo();
+    }
+
+    function tituloDeLibro(valor) {
+      return valor is string && valor.size() >= 2 && valor.size() <= 120;
+    }
+
+    function autorDeLibro(valor) {
+      return valor is string && valor.size() <= 80;
+    }
+
+    function categoriaDeLibro(valor) {
+      return valor is string && valor.size() >= 1 && valor.size() <= 40;
+    }
+
+    // ------------------------------------- enlaces entre documentos nuevos
+
+    function contadoresDespues(bib) {
+      return getAfter(/databases/$(database)/documents/bibliotecas/$(bib)/config/contadores);
+    }
+
+    function lectorDespues(bib, idLector) {
+      return getAfter(/databases/$(database)/documents/bibliotecas/$(bib)/lectores/$(idLector));
+    }
+
+    function claveDespues(bib, clave) {
+      return getAfter(/databases/$(database)/documents/bibliotecas/$(bib)/lectoresClave/$(clave));
+    }
+
+    /** El contador quedó en el número de este identificador y lo enlaza. */
+    function contadorEnlaza(doc, idLector) {
+      return doc != null
+        && doc.data.get('ultimoLectorId', null) == idLector
+        && doc.data.get('ultimoLector', 0) is int
+        && idDeLector(doc.data.ultimoLector) == idLector;
+    }
+
+    /** El documento de clave quedó apuntando a este lector. */
+    function claveApunta(doc, idLector) {
+      return doc != null && doc.data.get('lector', '') == idLector;
+    }
+
+    /** El lector quedó con esta clave. */
+    function lectorTieneClave(doc, clave) {
+      return doc != null && doc.data.get('clave', '') == clave;
+    }
+
+    /**
+     * El lector enlazado es NUEVO: su `creadoEn` es la hora de esta misma
+     * petición, de modo que no se puede subir el contador apuntando a un
+     * lector que ya existía. Se comprueba así, y no con `exists()`, para no
+     * gastar otro acceso.
+     */
+    function lectorRecienCreado(doc) {
+      return doc != null && doc.data.get('creadoEn', null) == request.time;
+    }
+
+    // ------------------------------------------------------------ biblioteca
+
+    match /bibliotecas/{bib} {
+
+      // --- voluntarios -----------------------------------------------------
+
+      match /voluntarios/{documentoCorreo} {
+
+        // Lo lee cualquier voluntario activo.
+        allow read: if esVoluntario(bib);
+
+        // Lo crea solo un administrador. El identificador es el correo en
+        // minúsculas, y el documento llega con la lista exacta de campos.
+        allow create: if documentoCorreo == documentoCorreo.lower()
+          && request.resource.data.keys().hasOnly([
+               'nombre', 'rol', 'activo',
+               'creadoEn', 'creadoPor', 'creacionId',
+               'ultimaConexion', 'sincronizacionId'
+             ])
+          && request.resource.data.keys().hasAll([
+               'nombre', 'rol', 'activo', 'creadoEn', 'creadoPor', 'creacionId'
+             ])
+          && request.resource.data.nombre is string
+          && request.resource.data.nombre.size() >= 1
+          && request.resource.data.nombre.size() <= 60
+          && request.resource.data.rol in ['admin', 'voluntario']
+          && request.resource.data.activo is bool
+          && horaDelServidor(request.resource.data.creadoEn)
+          && request.resource.data.creadoPor == correo()
+          && formatoId(request.resource.data.creacionId)
+          && request.resource.data.get('ultimaConexion', null) == null
+          && request.resource.data.get('sincronizacionId', null) == null
+          && esAdmin(bib)
+          && sinBloqueo(bib);
+
+        // IMPORTANTE: el orden de estas dos ramas importa para el presupuesto
+        // de accesos. Cada rama comprueba PRIMERO la forma de la escritura,
+        // que es gratis, y solo entonces consulta otros documentos. Y la rama
+        // de la muestra de hora va antes que la del administrador, porque es
+        // la más frecuente y la más barata: así una sincronización gasta un
+        // acceso, no los de la otra rama además.
+
+        // Excepción del contrato §2: cada voluntario escribe EXACTAMENTE su
+        // muestra de hora en su propio documento. No pasa por el bloqueo:
+        // lectura y sincronización siguen disponibles en mantenimiento.
+        allow update: if cambia(['ultimaConexion', 'sincronizacionId'])
+          && documentoCorreo == correo()
+          && horaDelServidor(request.resource.data.ultimaConexion)
+          && formatoId(request.resource.data.sincronizacionId)
+          && hayCorreoVerificado()
+          && activo(docVoluntario(bib));
+
+        // Un administrador cambia nombre, rol y estado. Los metadatos de
+        // operación son parte de la lista permitida y no abren ningún otro
+        // campo. `creacionId`, `creadoEn` y `creadoPor` son inmutables.
+        allow update: if cambia(['nombre', 'rol', 'activo', 'ultimaOperacionId', 'modificadoEn'])
+          && request.resource.data.keys().hasAll(['ultimaOperacionId', 'modificadoEn'])
+          && formatoId(request.resource.data.ultimaOperacionId)
+          && horaDelServidor(request.resource.data.modificadoEn)
+          && request.resource.data.nombre is string
+          && request.resource.data.nombre.size() >= 1
+          && request.resource.data.nombre.size() <= 60
+          && request.resource.data.rol in ['admin', 'voluntario']
+          && request.resource.data.activo is bool
+          // Un administrador no puede desactivarse ni quitarse el rol.
+          && (documentoCorreo != correo()
+              || (request.resource.data.activo == true
+                  && request.resource.data.rol == 'admin'))
+          && esAdmin(bib)
+          && sinBloqueo(bib);
+
+        // Nadie borra un voluntario.
+        allow delete: if false;
+      }
+
+      // --- configuración ---------------------------------------------------
+
+      match /config/app {
+        allow read: if esVoluntario(bib);
+
+        // Lo modifica solo un administrador, respetando tipos y largos.
+        // `juegoCerradoAlgunaVez` es inmutable desde el cliente en esta etapa:
+        // solo lo cambia la operación de cierre de la Etapa 5.
+        allow update: if cambia([
+               'nombreBiblioteca', 'plazoSabadosPorDefecto', 'categorias',
+               'mensajeAtraso', 'mensajePrevio', 'inicioJuego',
+               'ultimaOperacionId', 'modificadoEn'
+             ])
+          && request.resource.data.keys().hasAll(['ultimaOperacionId', 'modificadoEn'])
+          && formatoId(request.resource.data.ultimaOperacionId)
+          && horaDelServidor(request.resource.data.modificadoEn)
+          && request.resource.data.nombreBiblioteca is string
+          && request.resource.data.nombreBiblioteca.size() >= 1
+          && request.resource.data.nombreBiblioteca.size() <= 40
+          && request.resource.data.plazoSabadosPorDefecto is int
+          && request.resource.data.plazoSabadosPorDefecto >= 1
+          && request.resource.data.plazoSabadosPorDefecto <= 4
+          && request.resource.data.categorias is list
+          && request.resource.data.mensajeAtraso is string
+          && request.resource.data.mensajeAtraso.size() >= 10
+          && request.resource.data.mensajeAtraso.size() <= 400
+          && request.resource.data.mensajePrevio is string
+          && request.resource.data.mensajePrevio.size() >= 10
+          && request.resource.data.mensajePrevio.size() <= 400
+          && request.resource.data.inicioJuego is string
+          && request.resource.data.inicioJuego.matches('^[0-9]{4}-[1-6]$')
+          // Una vez que se cerró una temporada, `inicioJuego` no se mueve más
+          // desde la app (contrato §8): cambiarlo escondería una fotografía ya
+          // cerrada. El indicador solo lo levanta la operación de cierre.
+          && (resource.data.get('juegoCerradoAlgunaVez', false) == false
+              || request.resource.data.inicioJuego == resource.data.inicioJuego)
+          && request.resource.data.juegoCerradoAlgunaVez == resource.data.juegoCerradoAlgunaVez
+          && esAdmin(bib)
+          && sinBloqueo(bib);
+
+        // Lo crea y lo borra solo el script del dueño, que no pasa por reglas.
+        allow create, delete: if false;
+      }
+
+      // Los contadores se leen siempre. De escritura, esta etapa abre UNA
+      // rendija: `ultimoLector` de N a N+1 dentro del alta de un lector.
+      // `ultimoPrestamo` y su enlace siguen cerrados hasta la Etapa 3.
+      match /config/contadores {
+        allow read: if esVoluntario(bib);
+
+        // El enlace bidireccional del contrato §3: el contador exige que el
+        // lector enlazado sea nuevo y tenga el número correcto; el lector, por
+        // su lado, exige que el contador lo enlace a él. Subir el contador
+        // solo queda denegado porque `getAfter` del lector no encuentra nada.
+        allow update: if cambia(['ultimoLector', 'ultimoLectorId'])
+          && request.resource.data.ultimoLector is int
+          && request.resource.data.ultimoLector == resource.data.ultimoLector + 1
+          && request.resource.data.ultimoLectorId == idDeLector(request.resource.data.ultimoLector)
+          && esVoluntario(bib)
+          && sinBloqueo(bib)
+          && lectorRecienCreado(lectorDespues(bib, request.resource.data.ultimoLectorId));
+
+        // Los crea y los borra solo el script del dueño, que no pasa por reglas.
+        allow create, delete: if false;
+      }
+
+      // El control del bloqueo se lee para que la app sepa que está cerrada.
+      // El mantenimiento lo pone y lo saca el script del dueño; el cierre llega
+      // en la Etapa 5.
+      match /config/control {
+        allow read: if esVoluntario(bib);
+        allow write: if false;
+      }
+
+      // Cualquier otro documento de config queda denegado por omisión: no hay
+      // regla con comodín para esa colección.
+
+      // --- libros ----------------------------------------------------------
+
+      match /libros/{codigo} {
+
+        // Los lee cualquier voluntario activo.
+        allow read: if esVoluntario(bib);
+
+        // Los crea solo un administrador. Un libro nace en el estante: sin
+        // préstamo abierto, sin veces prestado y sin baja.
+        allow create: if request.resource.data.keys().hasOnly([
+               'codigo', 'titulo', 'autor', 'categoria', 'baja',
+               'prestamoAbierto', 'vecesPrestado',
+               'creadoEn', 'creadoPor', 'creacionId'
+             ])
+          && request.resource.data.keys().hasAll([
+               'codigo', 'titulo', 'autor', 'categoria', 'baja',
+               'prestamoAbierto', 'vecesPrestado',
+               'creadoEn', 'creadoPor', 'creacionId'
+             ])
+          && request.resource.data.codigo == codigo
+          && codigo.matches('^[A-Z]{2,4}[0-9]{3,4}[A-Z]?$')
+          && tituloDeLibro(request.resource.data.titulo)
+          && autorDeLibro(request.resource.data.autor)
+          && categoriaDeLibro(request.resource.data.categoria)
+          && request.resource.data.baja == false
+          && request.resource.data.prestamoAbierto == null
+          && request.resource.data.vecesPrestado is int
+          && request.resource.data.vecesPrestado == 0
+          && horaDelServidor(request.resource.data.creadoEn)
+          && request.resource.data.creadoPor == correo()
+          && formatoId(request.resource.data.creacionId)
+          && esAdmin(bib)
+          && sinBloqueo(bib);
+
+        // Al editar, el administrador cambia solo estos cuatro campos. El
+        // código es el identificador y no se renombra; `prestamoAbierto` y
+        // `vecesPrestado` los mueven los préstamos de la Etapa 3, nunca una
+        // edición (C-07).
+        allow update: if cambia(['titulo', 'autor', 'categoria', 'baja',
+                                 'ultimaOperacionId', 'modificadoEn'])
+          && request.resource.data.keys().hasAll(['ultimaOperacionId', 'modificadoEn'])
+          && formatoId(request.resource.data.ultimaOperacionId)
+          && horaDelServidor(request.resource.data.modificadoEn)
+          && tituloDeLibro(request.resource.data.titulo)
+          && autorDeLibro(request.resource.data.autor)
+          && categoriaDeLibro(request.resource.data.categoria)
+          && request.resource.data.baja is bool
+          && esAdmin(bib)
+          && sinBloqueo(bib);
+
+        // Un libro no se borra: se da de baja (C-08).
+        allow delete: if false;
+      }
+
+      // --- lectores --------------------------------------------------------
+
+      match /lectores/{idLector} {
+
+        allow read: if esVoluntario(bib);
+
+        // Alta de lector: la hace cualquier voluntario, y solo si en la MISMA
+        // transacción queda creado su documento de clave y el contador sube
+        // exactamente hasta el número de este identificador (C-21, C-38).
+        //
+        // El orden importa para el presupuesto: todas las comprobaciones de
+        // forma, que son gratis, van antes de los cuatro accesos.
+        allow create: if request.resource.data.keys().hasOnly([
+               'nombre', 'clave', 'telefono', 'avisoDatos',
+               'fusionadoEn', 'esDestinoFusion',
+               'creadoEn', 'creadoPor', 'creacionId'
+             ])
+          && request.resource.data.keys().hasAll([
+               'nombre', 'clave', 'telefono', 'avisoDatos',
+               'fusionadoEn', 'esDestinoFusion',
+               'creadoEn', 'creadoPor', 'creacionId'
+             ])
+          && formatoIdLector(idLector)
+          && nombreDeLector(request.resource.data.nombre)
+          && formatoClave(request.resource.data.clave)
+          && telefonoDeLector(request.resource.data.telefono)
+          && avisoDeDatos(request.resource.data.avisoDatos)
+          && request.resource.data.fusionadoEn == null
+          // Contrato §7: toda alta inicializa el campo en falso, para que la
+          // unión de la Etapa 6 no se encuentre con lectores inservibles.
+          && request.resource.data.esDestinoFusion == false
+          && horaDelServidor(request.resource.data.creadoEn)
+          && request.resource.data.creadoPor == correo()
+          && formatoId(request.resource.data.creacionId)
+          && esVoluntario(bib)
+          && sinBloqueo(bib)
+          && contadorEnlaza(contadoresDespues(bib), idLector)
+          && claveApunta(claveDespues(bib, request.resource.data.clave), idLector);
+
+        // El orden de estas dos ramas importa para el presupuesto: el cambio
+        // de teléfono es el más frecuente y el más barato, y va primero.
+
+        // Cualquier voluntario cambia el teléfono, y nada más (C-23).
+        allow update: if cambia(['telefono', 'ultimaOperacionId', 'modificadoEn'])
+          && request.resource.data.keys().hasAll(['ultimaOperacionId', 'modificadoEn'])
+          && formatoId(request.resource.data.ultimaOperacionId)
+          && horaDelServidor(request.resource.data.modificadoEn)
+          && telefonoDeLector(request.resource.data.telefono)
+          && esVoluntario(bib)
+          && sinBloqueo(bib);
+
+        // El administrador cambia además el nombre y su clave. La clave nueva
+        // tiene que quedar apuntando a ESTE lector: si su documento ya existe
+        // y apunta a otro, la escritura se deniega, que es el «Ya existe» del
+        // servidor. Si la clave no cambia —corregir una tilde o una mayúscula,
+        // C-37— no hace falta mirar ningún otro documento.
+        allow update: if cambia(['nombre', 'clave', 'telefono',
+                                 'ultimaOperacionId', 'modificadoEn'])
+          && request.resource.data.keys().hasAll(['ultimaOperacionId', 'modificadoEn'])
+          && formatoId(request.resource.data.ultimaOperacionId)
+          && horaDelServidor(request.resource.data.modificadoEn)
+          && nombreDeLector(request.resource.data.nombre)
+          && formatoClave(request.resource.data.clave)
+          && telefonoDeLector(request.resource.data.telefono)
+          && esAdmin(bib)
+          && sinBloqueo(bib)
+          && (request.resource.data.clave == resource.data.clave
+              || claveApunta(claveDespues(bib, request.resource.data.clave), idLector));
+
+        // Un lector no se borra: en la Etapa 6 se une a otro (C-08).
+        allow delete: if false;
+      }
+
+      // --- claves de nombre ------------------------------------------------
+
+      match /lectoresClave/{clave} {
+
+        allow read: if esVoluntario(bib);
+
+        // Se crea solo si no existe —`create` no se aplica a un documento que
+        // ya está— y solo si en la misma transacción queda un lector con esta
+        // clave. Es la otra mitad del enlace del alta.
+        allow create: if request.resource.data.keys().hasOnly([
+               'lector', 'creadoEn', 'creadoPor', 'creacionId'
+             ])
+          && request.resource.data.keys().hasAll([
+               'lector', 'creadoEn', 'creadoPor', 'creacionId'
+             ])
+          && formatoIdLector(request.resource.data.lector)
+          && formatoClave(clave)
+          && horaDelServidor(request.resource.data.creadoEn)
+          && request.resource.data.creadoPor == correo()
+          && formatoId(request.resource.data.creacionId)
+          && esVoluntario(bib)
+          && sinBloqueo(bib)
+          && lectorTieneClave(lectorDespues(bib, request.resource.data.lector), clave);
+
+        // Una clave existente no se redirige en esta etapa, ni siquiera por un
+        // administrador (C-43). La unión de la Etapa 6 llegará con su propia
+        // regla, que exigirá una unión válida hacia la raíz. Y una clave no se
+        // borra: un nombre antiguo queda reservado (contrato §7).
+        allow update, delete: if false;
+      }
+    }
+
+    // Cualquier otra ruta: denegada.
+  }
+}

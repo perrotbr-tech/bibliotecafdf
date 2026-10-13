@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Préstamos de la Biblioteca</title>
+<style>
+/* Layout: app de una columna para el teléfono. Barra superior fija, contenido que fluye,
+   navegación inferior de cinco destinos. El detalle propio del tema es el tejuelo:
+   la etiqueta de lomo con el código del libro, coloreada por categoría. */
+:root{
+  --bg:#F3F6F2; --surface:#FFFFFF; --sunk:#E9EEE8; --fg:#16211B; --muted:#5A6860; --line:#D5DDD6;
+  --accent:#1D6A50; --accent-fg:#FFFFFF; --accent-soft:#DDEEE6;
+  --late:#B3301C; --late-soft:#FBE4DF; --warn:#8A5A00; --warn-soft:#FBEFD2; --ok:#1D6A50; --ok-soft:#DDEEE6;
+  --c-inf:#B4530A; --c-hm:#7A3FA0; --c-fam:#B02A5B; --c-vc:#1F5FA8; --c-nv:#2E7D32; --c-teo:#4A5560;
+  --oro:#D9A514; --plata:#9BA6AF; --bronce:#B8743C; --med-ink:#1E1806;
+  --shadow:0 8px 28px rgba(22,33,27,.16);
+  --f-display:"Bricolage Grotesque","Figtree",system-ui,sans-serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1512; --surface:#18211C; --sunk:#131A16; --fg:#E7EEE9; --muted:#97A79E; --line:#2B3831;
+    --accent:#5FC6A1; --accent-fg:#0B1410; --accent-soft:#1D3229;
+    --late:#FF8D77; --late-soft:#3A1D17; --warn:#E9B955; --warn-soft:#33290F; --ok:#5FC6A1; --ok-soft:#1D3229;
+    --c-inf:#F0A45B; --c-hm:#C79BE6; --c-fam:#F08DB0; --c-vc:#7FB4F0; --c-nv:#86CF8A; --c-teo:#AEBAC4;
+    --oro:#EDBE3A; --plata:#BAC4CC; --bronce:#D08D55; --med-ink:#1E1806;
+    --shadow:0 8px 28px rgba(0,0,0,.5); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1512; --surface:#18211C; --sunk:#131A16; --fg:#E7EEE9; --muted:#97A79E; --line:#2B3831;
+  --accent:#5FC6A1; --accent-fg:#0B1410; --accent-soft:#1D3229;
+  --late:#FF8D77; --late-soft:#3A1D17; --warn:#E9B955; --warn-soft:#33290F; --ok:#5FC6A1; --ok-soft:#1D3229;
+  --c-inf:#F0A45B; --c-hm:#C79BE6; --c-fam:#F08DB0; --c-vc:#7FB4F0; --c-nv:#86CF8A; --c-teo:#AEBAC4;
+  --oro:#EDBE3A; --plata:#BAC4CC; --bronce:#D08D55; --med-ink:#1E1806;
+  --shadow:0 8px 28px rgba(0,0,0,.5); color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+p{margin:0}
+.wrap{max-width:720px;margin-inline:auto;padding-inline:16px}
+
+/* barra superior */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px;min-height:56px}
+.top h1{font-size:20px;flex:1;min-width:0;overflow-wrap:anywhere}
+.top .hoy{font-family:var(--f-mono);font-size:12px;color:var(--muted);white-space:nowrap}
+.back{border:1px solid var(--line);background:var(--surface);border-radius:10px;min-width:44px;min-height:44px;font-size:20px;line-height:1}
+
+main{padding-block:16px 112px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.stack-s{display:flex;flex-direction:column;gap:8px}
+.sec{font-size:17px;margin-top:8px}
+.sub{color:var(--muted);font-size:14px}
+
+/* navegación inferior */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs .wrap{display:grid;grid-template-columns:repeat(5,1fr);padding-inline:4px}
+.tab{background:none;border:0;min-height:60px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:600;color:var(--muted);position:relative}
+.tab svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tab[aria-current="page"]{color:var(--accent)}
+.tab .dot{position:absolute;top:8px;left:calc(50% + 8px);min-width:18px;height:18px;border-radius:9px;background:var(--late);color:var(--surface);font-size:11px;font-family:var(--f-mono);display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+/* cifras de inicio */
+.cifras{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cifra{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:left;display:flex;flex-direction:column;gap:2px;min-width:0}
+.cifra b{font-family:var(--f-display);font-size:32px;line-height:1;font-variant-numeric:tabular-nums}
+.cifra span{font-size:13px;color:var(--muted);font-weight:600}
+.cifra.late b{color:var(--late)}
+
+/* botones */
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:12px;min-height:48px;padding:10px 16px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:var(--fg);text-align:center}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.sm{min-height:40px;padding:6px 12px;font-size:14px;border-radius:10px}
+.btn.wa{background:var(--ok-soft);border-color:var(--ok-soft);color:var(--ok)}
+.btn.danger{color:var(--late);border-color:var(--late)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.block{width:100%}
+.fila-btn{display:flex;gap:8px;flex-wrap:wrap}
+.fila-btn>.btn{flex:1 1 140px}
+.link{background:none;border:0;color:var(--accent);font-weight:700;padding:8px 0;text-align:left;text-decoration:underline;text-underline-offset:3px}
+
+/* tejuelo: etiqueta de lomo */
+.tej{font-family:var(--f-mono);font-size:12px;font-weight:600;letter-spacing:.02em;border:1.5px solid currentColor;border-radius:4px;padding:1px 6px;white-space:nowrap;color:var(--c-teo);background:var(--surface);display:inline-block}
+.tej[data-p="INF"]{color:var(--c-inf)} .tej[data-p="HM"]{color:var(--c-hm)} .tej[data-p="FAM"]{color:var(--c-fam)}
+.tej[data-p="VC"]{color:var(--c-vc)} .tej[data-p="NV"]{color:var(--c-nv)} .tej[data-p="TEO"]{color:var(--c-teo)}
+
+/* píldoras de estado */
+.pill{font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;white-space:nowrap;display:inline-block}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.late{background:var(--late-soft);color:var(--late)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.off{background:var(--sunk);color:var(--muted)}
+
+/* listas */
+.lista{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.item{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-top:1px solid var(--line);min-width:0}
+.item:first-child{border-top:0}
+button.item{background:none;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left}
+.item .t{font-weight:600;overflow-wrap:anywhere}
+.item .m{font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.meta{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.fecha{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.vacio{padding:20px 14px;color:var(--muted);text-align:center}
+
+/* formularios */
+.campo{display:flex;flex-direction:column;gap:6px}
+.campo label{font-size:14px;font-weight:700}
+.in{border:1px solid var(--line);background:var(--surface);border-radius:12px;min-height:48px;padding:10px 14px;width:100%}
+textarea.in{min-height:120px;resize:vertical}
+.err{color:var(--late);font-size:14px;font-weight:600}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;min-height:40px;padding:6px 14px;font-weight:600;font-size:14px;white-space:nowrap;flex:none}
+.chip[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--sunk);border-radius:12px;padding:4px;gap:4px}
+.seg button{border:0;background:none;border-radius:9px;min-height:40px;font-weight:700;font-size:14px;color:var(--muted);padding:4px 6px}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg)}
+
+/* pasos de prestar */
+.paso{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.paso>h2{font-size:16px;display:flex;gap:10px;align-items:center}
+.paso>h2 i{font-style:normal;font-family:var(--f-mono);font-size:13px;width:26px;height:26px;border-radius:50%;background:var(--sunk);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.paso.listo>h2 i{background:var(--accent);color:var(--accent-fg)}
+.elegido{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.elegido>div{min-width:0;display:flex;flex-direction:column;gap:4px}
+.sublista{border:1px solid var(--line);border-radius:12px;overflow:hidden;max-height:320px;overflow-y:auto}
+
+/* avisos */
+.nota{background:var(--warn-soft);color:var(--fg);border-radius:12px;padding:12px 14px;font-size:14px;display:flex;flex-direction:column;gap:6px}
+.nota b{color:var(--warn)}
+.nota.info{background:var(--accent-soft)} .nota.info b{color:var(--accent)}
+
+/* barras de estadísticas */
+.barra{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center}
+.barra .n{font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums}
+.barra .riel{grid-column:1/-1;height:8px;background:var(--sunk);border-radius:4px;overflow:hidden}
+.barra .riel i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.meses{display:flex;align-items:flex-end;gap:4px}
+.mes{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px}
+.mes i{display:block;width:100%;background:var(--accent);border-radius:3px 3px 0 0}
+.mes .v{font-family:var(--f-mono);font-size:10px;color:var(--muted)}
+.mes .l{font-family:var(--f-mono);font-size:10px;color:var(--muted);height:26px;text-align:center;line-height:1.25}
+
+/* hoja inferior */
+.velo{position:fixed;inset:0;z-index:40;background:rgba(10,16,13,.55);display:flex;align-items:flex-end;justify-content:center}
+.hoja{background:var(--bg);width:100%;max-width:720px;max-height:88%;overflow-y:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px));box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px}
+.hoja-cab{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.hoja-cab h2{font-size:20px;min-width:0;overflow-wrap:anywhere}
+.cerrar{border:1px solid var(--line);background:var(--surface);border-radius:10px;min-width:44px;min-height:44px;font-size:18px;flex:none}
+
+/* aviso flotante */
+.toast{position:fixed;left:16px;right:16px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:50;margin-inline:auto;max-width:560px;background:var(--fg);color:var(--bg);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:center;justify-content:space-between;box-shadow:var(--shadow);font-weight:600}
+.toast button{background:none;border:0;color:var(--bg);font-weight:700;text-decoration:underline;text-underline-offset:3px;min-height:36px;flex:none}
+.med{flex:none;display:block}
+.med .cinta{fill:var(--accent)} .med .cinta2{fill:var(--fg)} .med .num{font-family:var(--f-mono);font-weight:600;fill:var(--med-ink)}
+.med .aro{fill:none;stroke:var(--med-ink);stroke-opacity:.28;stroke-width:1.2}
+.med.m1 .disco{fill:var(--oro)} .med.m2 .disco{fill:var(--plata)} .med.m3 .disco{fill:var(--bronce)}
+.tempnav{display:flex;align-items:center;gap:12px}
+.tempt{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px}
+.tempt b{font-family:var(--f-display);font-size:22px;line-height:1.1}
+.back[disabled]{opacity:.35;cursor:not-allowed}
+.podio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:end;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 12px 0}
+.pd{min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.pd .pn{font-weight:700;font-size:14px;line-height:1.2;overflow-wrap:anywhere}
+.pd .pp{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.escalon{width:100%;margin-top:4px;border-radius:8px 8px 0 0;background:var(--sunk);display:flex;align-items:flex-start;justify-content:center;padding-top:6px;font-family:var(--f-display);font-size:22px;color:var(--muted);transform-origin:bottom}
+.escalon.e1{height:92px;background:var(--accent-soft);color:var(--accent)} .escalon.e2{height:64px} .escalon.e3{height:42px}
+@media (prefers-reduced-motion:no-preference){.escalon{animation:crece .5s cubic-bezier(.2,.8,.2,1) both}.escalon.e2{animation-delay:.08s}.escalon.e3{animation-delay:.16s}@keyframes crece{from{transform:scaleY(.25)}to{transform:none}}}
+.reglas{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:6px 14px}
+.regla{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-size:15px}
+.regla:first-child{border-top:0}
+.regla .pts{flex:none;width:44px;font-family:var(--f-display);font-size:22px;text-align:right;font-variant-numeric:tabular-nums}
+.regla .pts small{font-family:var(--f-mono);font-size:10px;color:var(--muted);margin-left:2px}
+.rank .punt{flex:none;font-family:var(--f-display);font-size:20px;line-height:32px;font-variant-numeric:tabular-nums;text-align:right}
+.rank .punt small{display:block;font-family:var(--f-mono);font-size:10px;line-height:1;color:var(--muted)}
+.pie{display:block;width:100%;border:0;border-bottom:1px solid var(--line);background:var(--accent-soft);color:var(--fg);padding:0;text-align:left}
+.pie-in{display:flex;flex-direction:column;justify-content:center;gap:3px;min-height:50px;max-width:720px;margin-inline:auto;padding:5px 16px}
+.pie .fila{display:flex;align-items:center;gap:10px;min-width:0}
+.pie .et{font-family:var(--f-mono);font-size:10px;line-height:1.2;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.pie .g{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:4px;font-size:13px}
+.pie .g span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.pie .g i{flex:none;font-style:normal;font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.pie .sin{font-size:13px;font-weight:600;min-width:0}
+body.conpie main{padding-bottom:168px}
+body.conpie .toast{bottom:calc(128px + env(safe-area-inset-bottom,0px))}
+.rank .item{flex-direction:row;align-items:flex-start;gap:12px}
+.rank .cuerpo{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.pos{flex:none;width:32px;height:32px;border-radius:50%;background:var(--sunk);color:var(--fg);font-family:var(--f-mono);font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.pos.top{background:var(--accent);color:var(--accent-fg)}
+.barra span{min-width:0;overflow-wrap:anywhere}
+.destaca{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.destaca b{font-family:var(--f-display);font-size:20px;line-height:1.2;overflow-wrap:anywhere}
+.menu .item{flex-direction:row;align-items:center;justify-content:space-between;gap:12px;min-height:60px}
+.menu .item .ch{color:var(--muted);font-size:20px}
+.copia{font-family:var(--f-mono);font-size:12px;min-height:160px}
+@media (prefers-reduced-motion:no-preference){.hoja{animation:sube .18s ease-out}@keyframes sube{from{transform:translateY(24px)}to{transform:none}}}
+@media (min-width:640px){.cifra b{font-size:40px}}
+</style>
+
+<header class="top"><div class="wrap">
+  <button class="back" id="volver" data-act="volver" aria-label="Volver" hidden>‹</button>
+  <h1 id="titulo">Biblioteca</h1>
+  <span class="hoy" id="hoy"></span>
+</div></header>
+
+<main><div class="wrap" id="vista"></div></main>
+
+<nav class="tabs" aria-label="Secciones">
+  <button class="pie" id="pie" data-act="irpie" hidden></button>
+  <div class="wrap">
+  <button class="tab" data-act="ir" data-r="inicio"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>Inicio</button>
+  <button class="tab" data-act="ir" data-r="prestar"><svg viewBox="0 0 24 24"><path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M12 9v6M9 12h6"/></svg>Prestar</button>
+  <button class="tab" data-act="ir" data-r="prestamos"><svg viewBox="0 0 24 24"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg>Préstamos<span class="dot" id="dot-late" hidden></span></button>
+  <button class="tab" data-act="ir" data-r="catalogo"><svg viewBox="0 0 24 24"><path d="M5 4v16M9 4v16M13 5l5 15M3 20h18"/></svg>Catálogo</button>
+  <button class="tab" data-act="ir" data-r="mas"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>Más</button>
+</div></nav>
+
+<div id="capa"></div>
+<div id="aviso"></div>
+
+<script id="semilla" type="application/json">{"seq":193,"cats":["Infantil","Hombres y mujeres","Familia","Vida Cristiana","Novelas","Teología"],"books":[{"code":"INF003","title":"¿Cómo estoy seguro de lo que está bien y lo que está mal?","author":"Chris Morpher","cat":"Infantil"},{"code":"INF004","title":"Cercano","author":"Sally Lloyd y Jones y Jago","cat":"Infantil"},{"code":"INF005","title":"¿Dónde se fue mi risa?","author":"Max Lucado","cat":"Infantil"},{"code":"INF006","title":"El amor es bondadoso","author":"Laura Sassi","cat":"Infantil"},{"code":"INF007","title":"El carpintero impaciente","author":"Salem y Agnes de Bezenec","cat":"Infantil"},{"code":"INF008","title":"El Dios que adoramos","author":"Jonathan & Sarah Jérez","cat":"Infantil"},{"code":"INF009","title":"El sembrador","author":"Scott James","cat":"Infantil"},{"code":"INF010","title":"El progreso del peregrino","author":"John Bunyan","cat":"Infantil"},{"code":"INF011","title":"¿Quién soy y por qué importo?","author":"Chris Morphew","cat":"Infantil"},{"code":"INF012","title":"JXSC De la oscuridad a la luz","author":"Jairo Namnúm","cat":"Infantil"},{"code":"INF014","title":"La noche que comenzó la navidad","author":"Biblia para principiantes","cat":"Infantil"},{"code":"INF015","title":"Los hijos del Rey","author":"Max Lucado","cat":"Infantil"},{"code":"INF016","title":"SL ¡Deja ir a mi pueblo! Historia del Éxodo","author":"Super libro","cat":"Infantil"},{"code":"INF017","title":"SL El arca de Noé","author":"Super libro","cat":"Infantil"},{"code":"INF018","title":"SL Los 10 mandamientos, Moisés y La Ley","author":"Super libro","cat":"Infantil"},{"code":"INF019","title":"El Barbero que quería orar","author":"R.C. Sproul","cat":"Infantil"},{"code":"INF020","title":"El jardín, la cortina y la cruz","author":"Carl Laferton","cat":"Infantil"},{"code":"INF021","title":"La copa envenenada del príncipe","author":"R.C. Sproul","cat":"Infantil"},{"code":"INF022","title":"¿Por qué Dios me hizo niña?","author":"Abby Owen y Joe Owen","cat":"Infantil"},{"code":"INF023","title":"¿Por qué Dios me hizo niño?","author":"Abby Owen y Joe Owen","cat":"Infantil"},{"code":"INF024","title":"Perfil de tres Monarcas","author":"Gene Edwards","cat":"Infantil"},{"code":"INF025","title":"Los prisioneros, el terremoto y la canción de media noche","author":"Bob Hartman","cat":"Infantil"},{"code":"INF026","title":"La asombrosa super fantastica fiesta sin fin","author":"Joni Eareckson Tada","cat":"Infantil"},{"code":"INF027","title":"Como yo","author":"Laura Wifler","cat":"Infantil"},{"code":"HM001","title":"Cómo salvar tu matrinonio antes de casarte","author":"Paolo y Karen Lacota","cat":"Hombres y mujeres"},{"code":"HM002","title":"El arte de esperar sin desesperar","author":"Sharon Virkler","cat":"Hombres y mujeres"},{"code":"HM005","title":"La apariencia","author":"Nancy Leigh Demoss","cat":"Hombres y mujeres"},{"code":"HM006","title":"La influencia de un hombre de Dios","author":"Jim George","cat":"Hombres y mujeres"},{"code":"HM007","title":"Llamados a actuar","author":"Vince Miller","cat":"Hombres y mujeres"},{"code":"HM008","title":"Lo que toda chica debería saber","author":"Nancy Buceta","cat":"Hombres y mujeres"},{"code":"HM009","title":"Lo que todo chico debería saber","author":"Nancy Buceta","cat":"Hombres y mujeres"},{"code":"HM010","title":"Los 5 lenguajes del amor","author":"Gary Chapman","cat":"Hombres y mujeres"},{"code":"HM012","title":"Muy bendecida para estar estresada","author":"Debora M Coty","cat":"Hombres y mujeres"},{"code":"HM013","title":"No me metan en la bolsa","author":"Lucas Leys","cat":"Hombres y mujeres"},{"code":"HM014","title":"Oración Ferviente","author":"Priscilla Shirer","cat":"Hombres y mujeres"},{"code":"HM015","title":"Preguntas difíciles 101","author":"Lucas Leys","cat":"Hombres y mujeres"},{"code":"HM016","title":"Ser mujer","author":"Katie J. MacCoy","cat":"Hombres y mujeres"},{"code":"HM018","title":"Una esposa conforme al corazón de Dios","author":"Elizabeth George","cat":"Hombres y mujeres"},{"code":"HM019","title":"Una pareja conforme al corazón de Dios","author":"Jim & Elizabeth George","cat":"Hombres y mujeres"},{"code":"HM020","title":"Un hombre del reino","author":"Tony Evans","cat":"Hombres y mujeres"},{"code":"HM021","title":"Maternidad Redimida","author":"Emily Jensen","cat":"Hombres y mujeres","baja":true},{"code":"HM022","title":"Disciplinas de un joven piadoso","author":"R. Kent Hughes","cat":"Hombres y mujeres"},{"code":"FAM001","title":"Amándolo bien","author":"Gary Thomas","cat":"Familia"},{"code":"FAM002","title":"Criando hijos en un mundo saturado de pantallas","author":"Eliza Huie","cat":"Familia"},{"code":"FAM003","title":"Criando hijos en un mundo hipersexualizado","author":"Eliza Huie","cat":"Familia"},{"code":"FAM004","title":"Criando hijos en un mundo ¡Tú puedes hacerlo!","author":"Eliza Huie","cat":"Familia"},{"code":"FAM005","title":"De regreso a casa","author":"Sixto Porras","cat":"Familia"},{"code":"FAM006","title":"Edificando un matrimonio que en verdad funcione","author":"Kay Arthur y David","cat":"Familia"},{"code":"FAM007","title":"Familias confiadas","author":"Dr. James Dobson","cat":"Familia"},{"code":"FAM008","title":"Familias tecnológicamente confiadas","author":"Andy Crouch","cat":"Familia"},{"code":"FAM009","title":"Lo que las esposas desean que los maridos sepan","author":"Dr. James Dobson","cat":"Familia"},{"code":"FAM011","title":"Pacto matrimonial","author":"John Piper","cat":"Familia"},{"code":"FAM012","title":"Preparándonos para el matrimonio","author":"John Piper","cat":"Familia"},{"code":"FAM013","title":"Una puerta llamada divorcio","author":"David Hormachea","cat":"Familia"},{"code":"FAM014","title":"Una pequeña locura llamada matrimonio","author":"Greg y Erin Smalley","cat":"Familia"},{"code":"FAM015","title":"Padres, hijos y las pantallas","author":"Jonathan McKee","cat":"Familia"},{"code":"FAM016","title":"Cuando pecadores dicen ACEPTO","author":"Dave Harvey","cat":"Familia"},{"code":"FAM017","title":"Crianza Bíbliba","author":"Hector Salcedo","cat":"Familia"},{"code":"VC001","title":"Agua para los sedientos","author":"T. D. Jakes","cat":"Vida Cristiana"},{"code":"VC002","title":"Crecer en Cristo","author":"Arnie Cole y Michael Ross","cat":"Vida Cristiana"},{"code":"VC003","title":"Cómo la biblia moldea tu labor docente","author":"Jhon Shortt","cat":"Vida Cristiana"},{"code":"VC004","title":"Cuando la gente es grande y Dios es pequeño","author":"Edward T. Welch","cat":"Vida Cristiana"},{"code":"VC005","title":"Dios es el evangelio","author":"John Piper","cat":"Vida Cristiana"},{"code":"VC006","title":"El camino hacia Dios","author":"Dwight L. Moody","cat":"Vida Cristiana"},{"code":"VC007","title":"El Dios pródigo","author":"Timothy Keller","cat":"Vida Cristiana"},{"code":"VC008","title":"El misterio de la voluntad de Dios","author":"Charles R. Swindoll","cat":"Vida Cristiana"},{"code":"VC009","title":"El principio de la pureza","author":"Rancy Alcorn","cat":"Vida Cristiana"},{"code":"VC010","title":"El progreso del peregrino","author":"John Bunyan","cat":"Vida Cristiana"},{"code":"VC011","title":"El secreto espiritual de Hudson Taylor","author":"Howard y G Taylor","cat":"Vida Cristiana"},{"code":"VC013","title":"Gracia sobre Gracia","author":"AA.VV","cat":"Vida Cristiana"},{"code":"VC014","title":"¿Hasta cuándo Dios?","author":"Joselo Mercado","cat":"Vida Cristiana"},{"code":"VC015","title":"Hombre eres y no Dios","author":"Jorge Himitian","cat":"Vida Cristiana"},{"code":"VC016","title":"Jesús en nuestra vida hoy","author":"Juan Carlos Ortiz","cat":"Vida Cristiana"},{"code":"VC017","title":"La ansiedad: cómo conocer la paz de Dios","author":"Paul Tautges","cat":"Vida Cristiana"},{"code":"VC018","title":"La conversación suprema","author":"Charles F. Stanley","cat":"Vida Cristiana"},{"code":"VC019","title":"La esperanza del mundo","author":"TD. Jakes","cat":"Vida Cristiana"},{"code":"VC020","title":"Las grandes doctrinas de la biblia","author":"William Evans","cat":"Vida Cristiana"},{"code":"VC021","title":"La iglesia de bendición","author":"Robert Morris","cat":"Vida Cristiana"},{"code":"VC022","title":"La iglesia de bendición","author":"Robert Morris","cat":"Vida Cristiana"},{"code":"VC023","title":"La vida secreta de oración","author":"David Macintyre","cat":"Vida Cristiana"},{"code":"VC024","title":"Licencia para dudar","author":"Chris Du-Pond","cat":"Vida Cristiana"},{"code":"VC025","title":"Mañana será brillante","author":"Jared Mellinger","cat":"Vida Cristiana"},{"code":"VC026","title":"Mi debilidad, Su fortaleza","author":"J. I Packer","cat":"Vida Cristiana"},{"code":"VC027","title":"Mi respirar","author":"Louie Giglio","cat":"Vida Cristiana"},{"code":"VC028","title":"No desperdicie su vida","author":"John Piper","cat":"Vida Cristiana"},{"code":"VC029","title":"Libertad de perdonar","author":"Jairo Namnúm","cat":"Vida Cristiana"},{"code":"VC030","title":"No seas fiel a ti mismo","author":"Kevin Deyoung","cat":"Vida Cristiana"},{"code":"VC031","title":"Nunca antes pasamos por este camino","author":"R. T. Kendall","cat":"Vida Cristiana"},{"code":"VC032","title":"Radical","author":"David Platt","cat":"Vida Cristiana"},{"code":"VC033","title":"¿Realmente Dios tiene el control?","author":"Jarry Bridges","cat":"Vida Cristiana"},{"code":"VC034","title":"Oración","author":"John Bunyan","cat":"Vida Cristiana"},{"code":"VC035","title":"Pablo: su vida, llamado y ministerio","author":"Josué Yrión","cat":"Vida Cristiana"},{"code":"VC036","title":"Pureza bajo presión","author":"Neil T. Anderson y Dave Park","cat":"Vida Cristiana"},{"code":"VC037","title":"¿Quién creó a Dios?","author":"Ravi Zacharias","cat":"Vida Cristiana"},{"code":"VC038","title":"Santos y sinverguenza en la historia de Jesús","author":"Nancy Guthrie","cat":"Vida Cristiana"},{"code":"VC040","title":"Sea auténtico 100%","author":"James Macdonald","cat":"Vida Cristiana"},{"code":"VC042","title":"Se ejemplo","author":"Tim Challies","cat":"Vida Cristiana"},{"code":"VC044","title":"Totalmente por Gracia","author":"Charles H. Spurgeon","cat":"Vida Cristiana"},{"code":"VC045","title":"Una vida con propósito","author":"Rick Warren","cat":"Vida Cristiana"},{"code":"VC046","title":"Un pueblo radical","author":"David Platt","cat":"Vida Cristiana"},{"code":"VC047","title":"Vivir con integridad y sabiduría","author":"Miguel Nuñez","cat":"Vida Cristiana"},{"code":"VC048","title":"¡AYUDA! Quiero salir de la depresión","author":"Carol Trahan","cat":"Vida Cristiana"},{"code":"VC049","title":"¿Prosperidad? En busca del verdadero evangelio","author":"Mbagua/ Maura","cat":"Vida Cristiana"},{"code":"VC050","title":"Creciendo en santidad","author":"R.C. Sproul","cat":"Vida Cristiana"},{"code":"VC051","title":"Viviendo su voluntad","author":"Sebastien Franz","cat":"Vida Cristiana"},{"code":"VC052","title":"Lo que contemplas te trasforma","author":"Ana Ávila","cat":"Vida Cristiana"},{"code":"VC053","title":"La soberanía de Dios","author":"Jeffrey D. Johnson","cat":"Vida Cristiana"},{"code":"VC054","title":"Como no leer la biblia","author":"Dan Kimball","cat":"Vida Cristiana"},{"code":"VC055","title":"Los atributos de Dios","author":"Arthur W.Pink","cat":"Vida Cristiana"},{"code":"VC056","title":"La santidad de Dios","author":"R.C. Sproul","cat":"Vida Cristiana"},{"code":"VC057","title":"La ansiedad; en busca de una mejor historia","author":"Liz Edrington","cat":"Vida Cristiana"},{"code":"VC058","title":"Loco amor; asombrado por un Dios incesante","author":"Francis Chan","cat":"Vida Cristiana"},{"code":"VC059","title":"El progreso del peregrino","author":"John Bunyan","cat":"Vida Cristiana"},{"code":"VC060","title":"El caos dentro de mí","author":"Edyah Ramos","cat":"Vida Cristiana"},{"code":"VC061","title":"Cambios profundos","author":"Nicolás Tranchini","cat":"Vida Cristiana"},{"code":"NV001","title":"El color del corazón","author":"Mario Escobar","cat":"Novelas"},{"code":"NV002","title":"El hilo escarlata","author":"Francine Rivers","cat":"Novelas"},{"code":"NV003","title":"Hombres de valor","author":"Francine Rivers","cat":"Novelas"},{"code":"NV005","title":"Un linaje de gracia","author":"Francine Rivers","cat":"Novelas"},{"code":"NV006","title":"Tiempo de bailar","author":"Karen Kingsbury","cat":"Novelas"},{"code":"NV007","title":"Todo llora el cielo","author":"Ted Dekker","cat":"Novelas"},{"code":"TEO001","title":"Maduros en Cristo (Santiago)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO002","title":"Fieles en Cristo (Timoteo, Tito y Filemón)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO003","title":"Justos en Cristo (Romanos)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO004","title":"Esperanzados en Cristo (1 Pedro)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO005","title":"Alertas en Cristo (2° Pedro, 2° y 3° de Juan, Judas)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO006","title":"Libres en Cristo (Gálatas)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO007","title":"Gozosos en Cristo (Filipenses)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO008","title":"Dinámicos en Cristo (Hechos 1-12)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO025","title":"Intrépidos en Cristo (Hechos 13-28)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO009","title":"Sabios en Cristo (1 Corintios)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO010","title":"Animados en Cristo (2 Corintios)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO011","title":"Compasivos en Cristo (Lucas 1-13)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO012","title":"Valientes en Cristo (Lucas 14-24)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO013","title":"Preparados en Cristo (Tesalonicenses)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO014","title":"Completos en Cristo (Colosenses)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO015","title":"Genuinos en Cristo (1 Juan)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO016","title":"Confiados en Cristo (Hebreos)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO017","title":"Ricos en Cristo (Efesios)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO018","title":"Vivos en Cristo (Juan 1-12)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO019","title":"Transformados en Cristo (Juan 13-21)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO021","title":"Leales en Cristo (Mateo)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO022","title":"Diligentes en Cristo (Marcos)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO023","title":"Victoriosas en Cristo (Apocalipsis)","author":"Warren W. Wiersbe","cat":"Teología"},{"code":"TEO024","title":"Apologética en 10 respuestas","author":"Antonio Cruz","cat":"Teología"}],"readers":[{"id":"L001","name":"Emilio Espejo","tel":true},{"id":"L002","name":"Ciro Navarrete","tel":true},{"id":"L003","name":"Mateo Sepúlveda","tel":true},{"id":"L004","name":"Ismael Figueroa","tel":true},{"id":"L005","name":"Ismael Donoso","tel":true},{"id":"L006","name":"Lautaro Espejo","tel":true},{"id":"L007","name":"Héctor Figueroa","tel":true},{"id":"L008","name":"Pascual Zúñiga","tel":true},{"id":"L009","name":"Gaspar Bustos","tel":false},{"id":"L010","name":"Yolanda Aravena","tel":true},{"id":"L011","name":"Leonor Sepúlveda","tel":true},{"id":"L012","name":"Abel Valdés","tel":true},{"id":"L013","name":"Ximena Catalán","tel":true},{"id":"L014","name":"Leonor Mellado","tel":true},{"id":"L015","name":"Jimena Ibáñez","tel":true},{"id":"L016","name":"Ismael Ibáñez","tel":true},{"id":"L017","name":"Teresa Figueroa","tel":false},{"id":"L018","name":"Facundo Donoso","tel":false},{"id":"L019","name":"Fabiola Zúñiga","tel":false},{"id":"L020","name":"Ismael Henríquez","tel":true},{"id":"L021","name":"Gracia Valdés","tel":true},{"id":"L022","name":"Néstor Oyarzún","tel":true},{"id":"L023","name":"Renato Mellado","tel":true},{"id":"L024","name":"Magdalena Navarrete","tel":true},{"id":"L025","name":"Vicente Bustos","tel":true},{"id":"L026","name":"Gracia Oyarzún","tel":true},{"id":"L027","name":"Benjamín Catalán","tel":true},{"id":"L028","name":"Simón Zúñiga","tel":true},{"id":"L029","name":"Sofía Alarcón","tel":false},{"id":"L030","name":"Jimena Garrido","tel":false},{"id":"L031","name":"Abel Henríquez","tel":true},{"id":"L032","name":"Fabiola Sepúlveda","tel":false},{"id":"L033","name":"Lautaro Navarrete","tel":true},{"id":"L034","name":"Jimena Valdés","tel":true},{"id":"L035","name":"Belén Zúñiga","tel":true},{"id":"L036","name":"Néstor Toledo","tel":true},{"id":"L037","name":"Benjamín Aravena","tel":false},{"id":"L038","name":"Mateo Bustos","tel":true},{"id":"L039","name":"Irene Garrido","tel":true},{"id":"L040","name":"Belén Espejo","tel":true},{"id":"L041","name":"Octavio Quezada","tel":true},{"id":"L042","name":"Teresa Aravena","tel":false},{"id":"L043","name":"Tomás Henríquez","tel":true},{"id":"L044","name":"Abel Donoso","tel":false},{"id":"L045","name":"Mateo Zúñiga","tel":true},{"id":"L046","name":"Irene Espejo","tel":true},{"id":"L047","name":"Julián Cárdenas","tel":true},{"id":"L048","name":"Gracia Aravena","tel":false},{"id":"L049","name":"Mateo Ibáñez","tel":true},{"id":"L050","name":"Olivia Figueroa","tel":true},{"id":"L051","name":"Néstor Ulloa","tel":false},{"id":"L052","name":"Delia Espejo","tel":false},{"id":"L053","name":"Gracia Donoso","tel":true},{"id":"L054","name":"Sofía Sepúlveda","tel":true},{"id":"L055","name":"Damián Durán","tel":true},{"id":"L056","name":"Ciro Valdés","tel":false},{"id":"L057","name":"Fabiola Figueroa","tel":false},{"id":"L058","name":"Sofía Durán","tel":true},{"id":"L059","name":"Jimena Bustos","tel":true},{"id":"L060","name":"Hilda Toledo","tel":true},{"id":"L061","name":"Ximena Oyarzún","tel":false},{"id":"L062","name":"Paulina Zúñiga","tel":true},{"id":"L063","name":"Jimena Donoso","tel":true},{"id":"L064","name":"Renato Durán","tel":false},{"id":"L065","name":"Tomás Zúñiga","tel":true},{"id":"L066","name":"Mateo Quezada","tel":false},{"id":"L067","name":"Hilda Oyarzún","tel":true},{"id":"L068","name":"Ximena Cárdenas","tel":false},{"id":"L069","name":"Irene Yáñez","tel":true},{"id":"L070","name":"Paulina Espejo","tel":true},{"id":"L071","name":"Aurora Lagos","tel":false},{"id":"L072","name":"Rafaela Riquelme","tel":true},{"id":"L073","name":"Néstor Ibáñez","tel":true},{"id":"L074","name":"Pascual Quezada","tel":true},{"id":"L075","name":"Hilda Cárdenas","tel":true},{"id":"L076","name":"Julián Quezada","tel":true},{"id":"L077","name":"Sofía Ibáñez","tel":true},{"id":"L078","name":"Fabiola Oyarzún","tel":true},{"id":"L079","name":"Aurora Henríquez","tel":true},{"id":"L080","name":"Héctor Ulloa","tel":true}],"loans":[{"id":"P001","book":"HM012","reader":"L031","out":"2025-11-01","due":"2025-11-18","ret":true,"back":null},{"id":"P002","book":"VC060","reader":"L041","out":"2025-11-01","due":"2025-11-15","ret":true,"back":null},{"id":"P003","book":"FAM003","reader":"L077","out":"2025-11-01","due":"2025-11-15","ret":true,"back":null},{"id":"P004","book":"TEO012","reader":"L067","out":"2025-11-01","due":"2025-11-08","ret":true,"back":null},{"id":"P005","book":"INF019","reader":"L035","out":"2025-11-08","due":"2025-11-15","ret":true,"back":null},{"id":"P006","book":"TEO010","reader":"L069","out":"2025-11-08","due":"2026-02-21","ret":true,"back":null},{"id":"P007","book":"TEO009","reader":"L016","out":"2025-11-08","due":"2025-11-22","ret":true,"back":null},{"id":"P008","book":"INF010","reader":"L032","out":"2025-11-08","due":"2025-11-22","ret":true,"back":null},{"id":"P009","book":"TEO016","reader":"L043","out":"2025-11-15","due":"2025-11-22","ret":true,"back":null},{"id":"P010","book":"HM002","reader":"L071","out":"2025-11-29","due":"2025-12-06","ret":true,"back":null},{"id":"P011","book":"INF004","reader":"L012","out":"2025-11-29","due":"2025-12-13","ret":true,"back":null},{"id":"P012","book":"VC056","reader":"L064","out":"2025-12-13","due":"2025-12-20","ret":true,"back":null},{"id":"P013","book":"VC033","reader":"L037","out":"2025-12-13","due":"2026-01-03","ret":true,"back":null},{"id":"P014","book":"VC016","reader":"L044","out":"2025-12-20","due":"2026-01-03","ret":false,"back":null},{"id":"P015","book":"VC035","reader":"L035","out":"2025-12-27","due":"2026-01-03","ret":true,"back":null},{"id":"P016","book":"HM009","reader":"L005","out":"2026-01-03","due":"2026-01-10","ret":true,"back":null},{"id":"P017","book":"INF008","reader":"L013","out":"2026-01-17","due":"2026-02-07","ret":true,"back":null},{"id":"P018","book":"NV007","reader":"L026","out":"2026-01-17","due":"2026-01-31","ret":true,"back":null},{"id":"P019","book":"TEO025","reader":"L021","out":"2026-01-24","due":"2026-02-14","ret":false,"back":null},{"id":"P020","book":"VC055","reader":"L007","out":"2026-01-24","due":"2026-02-14","ret":true,"back":null},{"id":"P021","book":"HM012","reader":"L075","out":"2026-01-24","due":"2026-02-21","ret":false,"back":null},{"id":"P022","book":"VC034","reader":"L027","out":"2026-02-14","due":"2026-02-21","ret":true,"back":null},{"id":"P023","book":"VC057","reader":"L034","out":"2026-02-14","due":"2026-02-28","ret":true,"back":null},{"id":"P024","book":"TEO013","reader":"L070","out":"2026-02-21","due":"2026-02-28","ret":false,"back":null},{"id":"P025","book":"HM007","reader":"L025","out":"2026-03-07","due":"2026-03-28","ret":true,"back":"2026-03-21"},{"id":"P026","book":"FAM006","reader":"L023","out":"2026-03-07","due":"2026-03-21","ret":false,"back":null},{"id":"P027","book":"VC050","reader":"L034","out":"2026-03-07","due":"2026-03-14","ret":true,"back":"2026-03-14"},{"id":"P028","book":"VC047","reader":"L002","out":"2026-03-07","due":"2026-03-14","ret":true,"back":"2026-03-14"},{"id":"P029","book":"VC036","reader":"L055","out":"2026-03-07","due":"2026-03-28","ret":true,"back":"2026-03-28"},{"id":"P030","book":"HM016","reader":"L006","out":"2026-03-14","due":"2026-03-28","ret":true,"back":"2026-03-28"},{"id":"P031","book":"INF007","reader":"L018","out":"2026-03-14","due":"2026-03-21","ret":true,"back":"2026-03-21"},{"id":"P032","book":"VC025","reader":"L064","out":"2026-03-14","due":"2026-03-21","ret":true,"back":"2026-03-21"},{"id":"P033","book":"INF018","reader":"L067","out":"2026-03-14","due":"2026-03-28","ret":true,"back":"2026-03-21"},{"id":"P034","book":"VC015","reader":"L060","out":"2026-03-14","due":"2026-03-28","ret":true,"back":"2026-03-21"},{"id":"P035","book":"TEO003","reader":"L071","out":"2026-03-21","due":"2026-03-28","ret":true,"back":"2026-03-28"},{"id":"P036","book":"TEO008","reader":"L003","out":"2026-03-21","due":"2026-03-28","ret":true,"back":"2026-03-28"},{"id":"P037","book":"INF018","reader":"L015","out":"2026-03-21","due":"2026-03-28","ret":true,"back":"2026-03-28"},{"id":"P038","book":"TEO021","reader":"L010","out":"2026-03-21","due":"2026-04-04","ret":false,"back":null},{"id":"P039","book":"INF016","reader":"L020","out":"2026-03-28","due":"2026-04-04","ret":true,"back":"2026-04-04"},{"id":"P040","book":"VC003","reader":"L034","out":"2026-03-28","due":"2026-04-25","ret":true,"back":"2026-04-25"},{"id":"P041","book":"VC031","reader":"L035","out":"2026-03-28","due":"2026-04-18","ret":true,"back":"2026-04-18"},{"id":"P042","book":"VC023","reader":"L006","out":"2026-03-28","due":"2026-04-25","ret":true,"back":"2026-04-25"},{"id":"P043","book":"VC015","reader":"L032","out":"2026-04-04","due":"2026-04-18","ret":false,"back":null},{"id":"P044","book":"VC057","reader":"L058","out":"2026-04-04","due":"2026-04-18","ret":true,"back":"2026-04-18"},{"id":"P045","book":"VC001","reader":"L034","out":"2026-04-04","due":"2026-04-18","ret":true,"back":"2026-04-11"},{"id":"P046","book":"INF021","reader":"L028","out":"2026-04-11","due":"2026-04-25","ret":true,"back":"2026-04-18"},{"id":"P047","book":"VC056","reader":"L077","out":"2026-04-11","due":"2026-05-02","ret":true,"back":"2026-05-02"},{"id":"P048","book":"INF020","reader":"L071","out":"2026-04-11","due":"2026-04-25","ret":true,"back":"2026-04-25"},{"id":"P049","book":"INF023","reader":"L035","out":"2026-04-11","due":"2026-04-18","ret":true,"back":"2026-04-18"},{"id":"P050","book":"INF006","reader":"L043","out":"2026-04-18","due":"2026-05-16","ret":true,"back":"2026-05-16"},{"id":"P051","book":"INF004","reader":"L022","out":"2026-04-18","due":"2026-05-02","ret":false,"back":null},{"id":"P052","book":"VC054","reader":"L022","out":"2026-04-18","due":"2026-05-02","ret":true,"back":"2026-04-25"},{"id":"P053","book":"TEO014","reader":"L076","out":"2026-04-18","due":"2026-04-25","ret":true,"back":"2026-04-25"},{"id":"P054","book":"TEO014","reader":"L051","out":"2026-04-25","due":"2026-05-23","ret":true,"back":"2026-05-23"},{"id":"P055","book":"VC048","reader":"L006","out":"2026-04-25","due":"2026-05-09","ret":true,"back":"2026-05-02"},{"id":"P056","book":"VC011","reader":"L049","out":"2026-05-02","due":"2026-05-09","ret":true,"back":"2026-05-09"},{"id":"P057","book":"VC001","reader":"L011","out":"2026-05-02","due":"2026-05-09","ret":true,"back":"2026-05-09"},{"id":"P058","book":"HM001","reader":"L074","out":"2026-05-02","due":"2026-05-16","ret":true,"back":"2026-05-16"},{"id":"P059","book":"VC014","reader":"L022","out":"2026-05-02","due":"2026-05-09","ret":true,"back":"2026-05-09"},{"id":"P060","book":"INF023","reader":"L066","out":"2026-05-02","due":"2026-05-16","ret":true,"back":"2026-05-30"},{"id":"P061","book":"HM005","reader":"L077","out":"2026-05-02","due":"2026-05-16","ret":false,"back":null},{"id":"P062","book":"INF016","reader":"L022","out":"2026-05-09","due":"2026-05-23","ret":true,"back":"2026-05-23"},{"id":"P063","book":"INF020","reader":"L051","out":"2026-05-09","due":"2026-05-23","ret":false,"back":null},{"id":"P064","book":"VC010","reader":"L035","out":"2026-05-09","due":"2026-05-16","ret":true,"back":"2026-05-23"},{"id":"P065","book":"NV006","reader":"L074","out":"2026-05-09","due":"2026-06-06","ret":true,"back":"2026-06-06"},{"id":"P066","book":"FAM003","reader":"L077","out":"2026-05-09","due":"2026-05-30","ret":true,"back":"2026-05-30"},{"id":"P067","book":"VC028","reader":"L018","out":"2026-05-16","due":"2026-05-23","ret":true,"back":"2026-05-23"},{"id":"P068","book":"VC008","reader":"L067","out":"2026-05-16","due":"2026-05-23","ret":true,"back":"2026-05-23"},{"id":"P069","book":"NV005","reader":"L035","out":"2026-05-16","due":"2026-05-23","ret":true,"back":"2026-05-23"},{"id":"P070","book":"VC034","reader":"L041","out":"2026-05-16","due":"2026-05-30","ret":true,"back":"2026-06-20"},{"id":"P071","book":"TEO012","reader":"L044","out":"2026-05-23","due":"2026-06-06","ret":true,"back":"2026-06-06"},{"id":"P072","book":"FAM014","reader":"L074","out":"2026-05-23","due":"2026-06-06","ret":true,"back":"2026-06-06"},{"id":"P073","book":"INF021","reader":"L002","out":"2026-05-23","due":"2026-06-13","ret":true,"back":"2026-07-04"},{"id":"P074","book":"HM001","reader":"L035","out":"2026-05-23","due":"2026-05-30","ret":true,"back":"2026-05-30"},{"id":"P075","book":"INF022","reader":"L022","out":"2026-05-23","due":"2026-05-30","ret":true,"back":"2026-05-30"},{"id":"P076","book":"INF007","reader":"L049","out":"2026-05-23","due":"2026-06-06","ret":true,"back":"2026-06-06"},{"id":"P077","book":"VC042","reader":"L063","out":"2026-05-30","due":"2026-06-20","ret":true,"back":"2026-06-20"},{"id":"P078","book":"HM015","reader":"L021","out":"2026-05-30","due":"2026-06-13","ret":false,"back":null},{"id":"P079","book":"HM019","reader":"L035","out":"2026-05-30","due":"2026-06-13","ret":true,"back":"2026-06-13"},{"id":"P080","book":"VC048","reader":"L034","out":"2026-05-30","due":"2026-06-06","ret":true,"back":"2026-06-20"},{"id":"P081","book":"VC017","reader":"L032","out":"2026-05-30","due":"2026-06-20","ret":true,"back":"2026-06-20"},{"id":"P082","book":"VC001","reader":"L064","out":"2026-06-06","due":"2026-07-04","ret":true,"back":"2026-07-11"},{"id":"P083","book":"HM013","reader":"L051","out":"2026-06-06","due":"2026-06-20","ret":true,"back":"2026-06-13"},{"id":"P084","book":"VC029","reader":"L043","out":"2026-06-06","due":"2026-06-20","ret":false,"back":null},{"id":"P085","book":"TEO022","reader":"L071","out":"2026-06-06","due":"2026-06-27","ret":false,"back":null},{"id":"P086","book":"TEO010","reader":"L035","out":"2026-06-06","due":"2026-06-20","ret":true,"back":"2026-06-20"},{"id":"P087","book":"VC037","reader":"L040","out":"2026-06-06","due":"2026-06-27","ret":true,"back":"2026-07-04"},{"id":"P088","book":"INF024","reader":"L051","out":"2026-06-13","due":"2026-06-20","ret":true,"back":"2026-06-20"},{"id":"P089","book":"VC054","reader":"L015","out":"2026-06-13","due":"2026-06-27","ret":true,"back":"2026-07-11"},{"id":"P090","book":"INF014","reader":"L066","out":"2026-06-13","due":"2026-07-04","ret":true,"back":"2026-07-04"},{"id":"P091","book":"FAM011","reader":"L053","out":"2026-06-13","due":"2026-07-04","ret":true,"back":"2026-07-04"},{"id":"P092","book":"VC023","reader":"L012","out":"2026-06-13","due":"2026-06-27","ret":true,"back":"2026-07-18"},{"id":"P093","book":"VC026","reader":"L055","out":"2026-06-20","due":"2026-07-04","ret":true,"back":"2026-07-04"},{"id":"P094","book":"INF007","reader":"L006","out":"2026-06-20","due":"2026-07-04","ret":false,"back":null},{"id":"P095","book":"VC061","reader":"L071","out":"2026-06-20","due":"2026-06-27","ret":true,"back":"2026-06-27"},{"id":"P096","book":"INF019","reader":"L077","out":"2026-06-20","due":"2026-06-27","ret":true,"back":"2026-06-27"},{"id":"P097","book":"INF016","reader":"L067","out":"2026-06-20","due":"2026-06-27","ret":true,"back":"2026-07-18"},{"id":"P098","book":"VC004","reader":"L080","out":"2026-06-20","due":"2026-07-18","ret":true,"back":"2026-07-18"},{"id":"P099","book":"INF010","reader":"L055","out":"2026-06-27","due":"2026-07-11","ret":true,"back":"2026-07-04"},{"id":"P100","book":"HM007","reader":"L058","out":"2026-06-27","due":"2026-07-04","ret":true,"back":"2026-07-04"},{"id":"P101","book":"FAM001","reader":"L024","out":"2026-06-27","due":"2026-07-11","ret":true,"back":"2026-07-04"},{"id":"P102","book":"VC049","reader":"L001","out":"2026-06-27","due":"2026-07-11","ret":true,"back":"2026-07-18"},{"id":"P103","book":"HM001","reader":"L022","out":"2026-06-27","due":"2026-07-04","ret":true,"back":"2026-07-04"},{"id":"P104","book":"VC027","reader":"L043","out":"2026-06-27","due":"2026-07-11","ret":true,"back":"2026-07-11"},{"id":"P105","book":"HM006","reader":"L055","out":"2026-06-27","due":"2026-07-11","ret":true,"back":"2026-07-11"},{"id":"P106","book":"VC011","reader":"L034","out":"2026-06-27","due":"2026-07-04","ret":true,"back":"2026-07-11"},{"id":"P107","book":"VC014","reader":"L055","out":"2026-07-04","due":"2026-07-11","ret":true,"back":"2026-07-11"},{"id":"P108","book":"VC032","reader":"L049","out":"2026-07-04","due":"2026-07-25","ret":true,"back":"2026-08-01"},{"id":"P109","book":"VC007","reader":"L049","out":"2026-07-04","due":"2026-07-11","ret":false,"back":null},{"id":"P110","book":"HM022","reader":"L066","out":"2026-07-04","due":"2026-07-25","ret":true,"back":"2026-07-25"},{"id":"P111","book":"TEO012","reader":"L066","out":"2026-07-04","due":"2026-07-18","ret":true,"back":"2026-07-11"},{"id":"P112","book":"HM016","reader":"L053","out":"2026-07-04","due":"2026-07-11","ret":true,"back":"2026-07-11"},{"id":"P113","book":"TEO007","reader":"L075","out":"2026-07-04","due":"2026-07-18","ret":true,"back":"2026-07-18"},{"id":"P114","book":"HM009","reader":"L073","out":"2026-07-11","due":"2026-07-25","ret":true,"back":"2026-08-15"},{"id":"P115","book":"TEO004","reader":"L067","out":"2026-07-11","due":"2026-07-25","ret":true,"back":"2026-07-18"},{"id":"P116","book":"TEO009","reader":"L032","out":"2026-07-11","due":"2026-07-25","ret":true,"back":"2026-08-15"},{"id":"P117","book":"TEO006","reader":"L036","out":"2026-07-11","due":"2026-07-18","ret":true,"back":"2026-08-01"},{"id":"P118","book":"VC013","reader":"L055","out":"2026-07-11","due":"2026-07-25","ret":false,"back":null},{"id":"P119","book":"VC005","reader":"L078","out":"2026-07-18","due":"2026-08-01","ret":true,"back":"2026-08-01"},{"id":"P120","book":"TEO004","reader":"L037","out":"2026-07-18","due":"2026-08-01","ret":false,"back":null},{"id":"P121","book":"TEO011","reader":"L071","out":"2026-07-18","due":"2026-08-08","ret":false,"back":null},{"id":"P122","book":"VC033","reader":"L058","out":"2026-07-18","due":"2026-08-01","ret":true,"back":"2026-08-01"},{"id":"P123","book":"VC040","reader":"L064","out":"2026-07-18","due":"2026-08-01","ret":true,"back":"2026-08-01"},{"id":"P124","book":"INF018","reader":"L055","out":"2026-07-18","due":"2026-08-08","ret":true,"back":"2026-08-08"},{"id":"P125","book":"FAM016","reader":"L049","out":"2026-07-25","due":"2026-08-08","ret":true,"back":"2026-08-08"},{"id":"P126","book":"TEO014","reader":"L037","out":"2026-07-25","due":"2026-08-08","ret":true,"back":"2026-08-01"},{"id":"P127","book":"TEO012","reader":"L012","out":"2026-07-25","due":"2026-08-08","ret":true,"back":"2026-08-08"},{"id":"P128","book":"VC048","reader":"L043","out":"2026-07-25","due":"2026-08-08","ret":true,"back":"2026-08-08"},{"id":"P129","book":"NV005","reader":"L071","out":"2026-07-25","due":"2026-08-01","ret":true,"back":"2026-08-01"},{"id":"P130","book":"HM002","reader":"L017","out":"2026-08-01","due":"2026-08-08","ret":true,"back":"2026-08-08"},{"id":"P131","book":"INF010","reader":"L033","out":"2026-08-01","due":"2026-08-08","ret":false,"back":null},{"id":"P132","book":"FAM017","reader":"L021","out":"2026-08-01","due":"2026-08-08","ret":true,"back":"2026-08-15"},{"id":"P133","book":"VC019","reader":"L035","out":"2026-08-01","due":"2026-08-29","ret":true,"back":"2026-08-22"},{"id":"P134","book":"VC011","reader":"L077","out":"2026-08-01","due":"2026-08-15","ret":false,"back":null},{"id":"P135","book":"TEO018","reader":"L005","out":"2026-08-01","due":"2026-08-15","ret":true,"back":"2026-08-15"},{"id":"P136","book":"TEO024","reader":"L014","out":"2026-08-01","due":"2026-08-08","ret":true,"back":"2026-08-08"},{"id":"P137","book":"TEO006","reader":"L016","out":"2026-08-01","due":"2026-08-15","ret":true,"back":"2026-08-15"},{"id":"P138","book":"TEO017","reader":"L068","out":"2026-08-01","due":"2026-08-08","ret":true,"back":"2026-08-08"},{"id":"P139","book":"NV003","reader":"L039","out":"2026-08-08","due":"2026-08-22","ret":true,"back":"2026-08-29"},{"id":"P140","book":"TEO017","reader":"L080","out":"2026-08-08","due":"2026-08-15","ret":true,"back":"2026-08-15"},{"id":"P141","book":"INF022","reader":"L049","out":"2026-08-08","due":"2026-08-22","ret":true,"back":"2026-08-22"},{"id":"P142","book":"VC014","reader":"L067","out":"2026-08-08","due":"2026-08-29","ret":true,"back":"2026-08-22"},{"id":"P143","book":"TEO017","reader":"L077","out":"2026-08-15","due":"2026-08-29","ret":true,"back":"2026-08-29"},{"id":"P144","book":"FAM017","reader":"L001","out":"2026-08-15","due":"2026-08-29","ret":true,"back":"2026-08-29"},{"id":"P145","book":"TEO006","reader":"L049","out":"2026-08-15","due":"2026-08-29","ret":true,"back":"2026-09-12"},{"id":"P146","book":"NV006","reader":"L022","out":"2026-08-15","due":"2026-08-22","ret":true,"back":"2026-09-12"},{"id":"P147","book":"VC040","reader":"L066","out":"2026-08-15","due":"2026-08-22","ret":true,"back":"2026-08-22"},{"id":"P148","book":"VC049","reader":"L035","out":"2026-08-22","due":"2026-08-29","ret":true,"back":"2026-09-05"},{"id":"P149","book":"VC058","reader":"L035","out":"2026-08-22","due":"2026-08-29","ret":false,"back":null},{"id":"P150","book":"INF008","reader":"L034","out":"2026-08-22","due":"2026-09-19","ret":true,"back":"2026-09-19"},{"id":"P151","book":"INF026","reader":"L038","out":"2026-08-22","due":"2026-09-19","ret":false,"back":null},{"id":"P152","book":"VC048","reader":"L067","out":"2026-08-22","due":"2026-09-19","ret":true,"back":"2026-09-19"},{"id":"P153","book":"VC024","reader":"L042","out":"2026-08-22","due":"2026-09-05","ret":true,"back":"2026-08-29"},{"id":"P154","book":"VC026","reader":"L021","out":"2026-08-22","due":"2026-09-12","ret":true,"back":"2026-09-12"},{"id":"P155","book":"VC025","reader":"L035","out":"2026-08-22","due":"2026-09-12","ret":true,"back":"2026-09-05"},{"id":"P156","book":"TEO018","reader":"L020","out":"2026-08-29","due":"2026-09-05","ret":false,"back":null},{"id":"P157","book":"INF016","reader":"L047","out":"2026-08-29","due":"2026-09-19","ret":true,"back":"2026-09-12"},{"id":"P158","book":"HM020","reader":"L036","out":"2026-08-29","due":"2026-09-05","ret":true,"back":"2026-09-05"},{"id":"P159","book":"TEO017","reader":"L018","out":"2026-08-29","due":"2026-09-26","ret":true,"back":"2026-09-26"},{"id":"P160","book":"VC020","reader":"L015","out":"2026-08-29","due":"2026-09-05","ret":true,"back":"2026-09-05"},{"id":"P161","book":"FAM016","reader":"L077","out":"2026-09-05","due":"2026-09-19","ret":false,"back":null},{"id":"P162","book":"TEO008","reader":"L022","out":"2026-09-05","due":"2026-09-19","ret":true,"back":"2026-09-12"},{"id":"P163","book":"VC030","reader":"L067","out":"2026-09-05","due":"2026-09-19","ret":true,"back":"2026-09-19"},{"id":"P164","book":"TEO003","reader":"L071","out":"2026-09-05","due":"2026-09-26","ret":true,"back":"2026-09-19"},{"id":"P165","book":"VC010","reader":"L077","out":"2026-09-05","due":"2026-09-12","ret":true,"back":"2026-09-19"},{"id":"P166","book":"FAM003","reader":"L077","out":"2026-09-05","due":"2026-09-12","ret":true,"back":"2026-09-12"},{"id":"P167","book":"VC038","reader":"L049","out":"2026-09-12","due":"2026-09-26","ret":true,"back":"2026-09-26"},{"id":"P168","book":"VC005","reader":"L063","out":"2026-09-12","due":"2026-09-26","ret":true,"back":"2026-09-26"},{"id":"P169","book":"VC001","reader":"L063","out":"2026-09-12","due":"2026-10-10","ret":true,"back":"2026-10-03"},{"id":"P170","book":"FAM017","reader":"L048","out":"2026-09-12","due":"2026-10-03","ret":true,"back":"2026-10-03"},{"id":"P171","book":"INF018","reader":"L077","out":"2026-09-12","due":"2026-10-10","ret":false,"back":null},{"id":"P172","book":"FAM012","reader":"L035","out":"2026-09-12","due":"2026-09-19","ret":true,"back":"2026-09-19"},{"id":"P173","book":"TEO008","reader":"L039","out":"2026-09-19","due":"2026-10-10","ret":false,"back":null},{"id":"P174","book":"INF019","reader":"L035","out":"2026-09-19","due":"2026-10-03","ret":false,"back":null},{"id":"P175","book":"HM010","reader":"L077","out":"2026-09-19","due":"2026-10-03","ret":true,"back":"2026-10-03"},{"id":"P176","book":"FAM009","reader":"L016","out":"2026-09-19","due":"2026-10-03","ret":false,"back":null},{"id":"P177","book":"VC035","reader":"L067","out":"2026-09-19","due":"2026-10-03","ret":true,"back":"2026-10-03"},{"id":"P178","book":"HM006","reader":"L043","out":"2026-09-26","due":"2026-10-10","ret":true,"back":"2026-10-10"},{"id":"P179","book":"VC026","reader":"L077","out":"2026-09-26","due":"2026-10-03","ret":true,"back":"2026-10-03"},{"id":"P180","book":"VC021","reader":"L009","out":"2026-09-26","due":"2026-10-17","ret":true,"back":"2026-10-10"},{"id":"P181","book":"VC014","reader":"L078","out":"2026-09-26","due":"2026-10-10","ret":true,"back":"2026-10-10"},{"id":"P182","book":"VC028","reader":"L049","out":"2026-09-26","due":"2026-10-03","ret":true,"back":"2026-10-03"},{"id":"P183","book":"VC017","reader":"L001","out":"2026-09-26","due":"2026-10-03","ret":true,"back":"2026-10-10"},{"id":"P184","book":"TEO012","reader":"L034","out":"2026-10-03","due":"2026-10-10","ret":true,"back":"2026-10-10"},{"id":"P185","book":"TEO002","reader":"L049","out":"2026-10-03","due":"2026-10-24","ret":false,"back":null},{"id":"P186","book":"HM013","reader":"L070","out":"2026-10-03","due":"2026-10-24","ret":false,"back":null},{"id":"P187","book":"VC004","reader":"L077","out":"2026-10-03","due":"2026-10-17","ret":false,"back":null},{"id":"P188","book":"INF012","reader":"L064","out":"2026-10-03","due":"2026-10-10","ret":true,"back":"2026-10-10"},{"id":"P189","book":"VC010","reader":"L042","out":"2026-10-03","due":"2026-10-24","ret":false,"back":null},{"id":"P190","book":"FAM004","reader":"L016","out":"2026-10-03","due":"2026-10-31","ret":false,"back":null},{"id":"P191","book":"VC052","reader":"L008","out":"2026-10-03","due":"2026-10-31","ret":false,"back":null},{"id":"P192","book":"TEO007","reader":"L037","out":"2026-10-03","due":"2026-10-24","ret":false,"back":null},{"id":"P193","book":"VC002","reader":"L043","out":"2026-10-03","due":"2026-10-17","ret":false,"back":null}],"dup":[{"a":"L012","b":"L031","why":"Comparten el mismo teléfono"},{"a":"L008","b":"L053","why":"Comparten el mismo teléfono"}],"notes":{"codigos":[],"nombres":[],"fechas":[],"estado":[]}}</script>
+<script>
+(function(){
+'use strict';
+var SEED = JSON.parse(document.getElementById('semilla').textContent);
+var KEY = 'biblioteca-prestamos-v1';
+var MSG = 'Hola {nombre}, te escribimos de la biblioteca. El libro «{titulo}» venció el {fecha}. ¿Puedes traerlo este sábado? ¡Gracias!';
+var PREF = {'Infantil':'INF','Hombres y mujeres':'HM','Familia':'FAM','Vida Cristiana':'VC','Novelas':'NV','Teología':'TEO'};
+var DIAS = ['dom','lun','mar','mié','jue','vie','sáb'];
+var MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+/* ---------- estado ---------- */
+function nuevo(){
+  return JSON.parse(JSON.stringify({
+    books: SEED.books, readers: SEED.readers, loans: SEED.loans,
+    settings: {name:'Biblioteca', days:14, msg:MSG},
+    seq: SEED.seq, rseq: SEED.readers.length, descartes: []
+  }));
+}
+function esFecha(s){ return typeof s==='string' && /^\d{4}-\d{2}-\d{2}$/.test(s); }
+function valido(o){
+  try{
+    if(!o || typeof o!=='object') return false;
+    if(!Array.isArray(o.books)||!Array.isArray(o.readers)||!Array.isArray(o.loans)||!Array.isArray(o.descartes)) return false;
+    if(!o.settings || typeof o.settings.name!=='string' || typeof o.settings.msg!=='string') return false;
+    if([7,14,21,28].indexOf(o.settings.days)<0) return false;
+    if(typeof o.seq!=='number' || typeof o.rseq!=='number') return false;
+    var codes={}, ids={};
+    for(var i=0;i<o.books.length;i++){ var b=o.books[i]; if(!b||typeof b.code!=='string'||typeof b.title!=='string'||typeof b.cat!=='string') return false; codes[b.code]=1; }
+    for(i=0;i<o.readers.length;i++){ var r=o.readers[i]; if(!r||typeof r.id!=='string'||typeof r.name!=='string') return false; ids[r.id]=1; }
+    for(i=0;i<o.loans.length;i++){ var l=o.loans[i]; if(!l||typeof l.id!=='string'||!codes[l.book]||!ids[l.reader]||!esFecha(l.out)||!esFecha(l.due)) return false; }
+    return true;
+  }catch(e){ return false; }
+}
+var guardadoRoto = false;
+function cargar(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(raw){ var o = JSON.parse(raw); if(valido(o)) return o; guardadoRoto = true; }
+  }catch(e){ guardadoRoto = true; }
+  return nuevo();
+}
+function guardar(){ ver+=1; try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+var S = cargar();
+
+/* ---------- utilidades ---------- */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function p2(n){ return (n<10?'0':'')+n; }
+function iso(d){ return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()); }
+function hoy(){ return iso(new Date()); }
+function aFecha(s){ var p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+function suma(s,n){ var d=aFecha(s); d.setDate(d.getDate()+n); return iso(d); }
+function dif(a,b){ return Math.round((aFecha(a)-aFecha(b))/86400000); }
+function f(s,conAnio){ if(!s) return 'sin fecha'; var d=aFecha(s); return DIAS[d.getDay()]+' '+d.getDate()+' '+MESES[d.getMonth()]+((conAnio||d.getFullYear()!==new Date().getFullYear())?' '+d.getFullYear():''); }
+function fx(s){ if(!s) return ''; var p=s.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function llave(s){ return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim(); }
+function pref(code){ var m=/^[A-Z]+/.exec(code); return m?m[0]:''; }
+function tej(code){ return '<span class="tej" data-p="'+esc(pref(code))+'">'+esc(code)+'</span>'; }
+function libro(code){ for(var i=0;i<S.books.length;i++) if(S.books[i].code===code) return S.books[i]; return null; }
+function lector(id){ for(var i=0;i<S.readers.length;i++) if(S.readers[i].id===id) return S.readers[i]; return null; }
+function abiertos(){ return S.loans.filter(function(l){return !l.ret;}); }
+function atrasado(l){ return !l.ret && l.due < hoy(); }
+var ver=0, idxV=-1, idx=null;
+function abiertoDe(code){
+  if(idxV!==ver){ idx={}; S.loans.forEach(function(l){ if(!l.ret) (idx[l.book]=idx[l.book]||[]).push(l); }); idxV=ver; }
+  return idx[code]||[];
+}
+function estado(b){
+  if(b.baja) return {k:'off',t:'Dado de baja'};
+  var a=abiertoDe(b.code);
+  if(!a.length) return {k:'ok',t:'Disponible'};
+  return a.some(atrasado) ? {k:'late',t:'Atrasado'} : {k:'warn',t:'Prestado'};
+}
+function pill(e){ return '<span class="pill '+e.k+'">'+esc(e.t)+'</span>'; }
+function plural(n,a,b){ return n+' '+(n===1?a:b); }
+function pillPrestamo(l){
+  if(l.ret) return '<span class="pill off">Devuelto</span>';
+  var d=dif(l.due,hoy());
+  if(d<=-60) return '<span class="pill late">Atrasado '+Math.floor(-d/30)+' meses</span>';
+  if(d<0) return '<span class="pill late">Atrasado '+plural(-d,'día','días')+'</span>';
+  if(d===0) return '<span class="pill warn">Vence hoy</span>';
+  return '<span class="pill ok">Vence en '+plural(d,'día','días')+'</span>';
+}
+function mensaje(l){
+  var r=lector(l.reader), b=libro(l.book);
+  return S.settings.msg.replace(/\{nombre\}/g,(r?r.name:'').split(' ')[0]).replace(/\{titulo\}/g,b?b.title:'').replace(/\{fecha\}/g,f(l.due,true));
+}
+function enlaceWA(l){
+  var r=lector(l.reader), tel=(r&&r.phone)?r.phone:'';
+  return 'https://wa.me/'+tel+'?text='+encodeURIComponent(mensaje(l));
+}
+function posteriorMismoLibro(l){
+  return S.loans.some(function(o){ return o.id!==l.id && o.book===l.book && o.out>l.out; });
+}
+
+/* ---------- acciones sobre los datos ---------- */
+function prestar(code, rid, dias){
+  var b=libro(code), r=lector(rid);
+  if(!b) return 'Ese libro no está en el catálogo.';
+  if(b.baja) return 'Ese libro está dado de baja.';
+  if(!r) return 'Elige un lector.';
+  if([7,14,21,28].indexOf(dias)<0) return 'Elige un plazo.';
+  if(abiertoDe(code).length) return 'Ese libro ya está prestado. Registra primero su devolución.';
+  S.seq+=1;
+  var id='P'+(S.seq<1000?('00'+S.seq).slice(-3):S.seq);
+  while(S.loans.some(function(l){return l.id===id;})){ S.seq+=1; id='P'+(S.seq<1000?('00'+S.seq).slice(-3):S.seq); }
+  S.loans.push({id:id,book:code,reader:rid,out:hoy(),due:suma(hoy(),dias),ret:false,back:null});
+  guardar(); return {id:id};
+}
+function devolver(id){
+  var l=S.loans.filter(function(x){return x.id===id;})[0];
+  if(!l||l.ret) return false;
+  l.ret=true; l.back=hoy(); guardar(); return true;
+}
+function normTel(t){
+  var d=String(t||'').replace(/\D/g,'');
+  if(!d) return '';
+  if(d.length===9 && d[0]==='9') return '56'+d;
+  if(d.length===11 && d.indexOf('569')===0) return d;
+  return null;
+}
+function crearLector(nombre, tel){
+  var n=String(nombre||'').replace(/\s+/g,' ').trim();
+  if(n.length<3) return {e:'Escribe el nombre y el apellido.'};
+  if(n.length>60) return {e:'El nombre es demasiado largo (máximo 60 letras).'};
+  if(S.readers.some(function(r){return llave(r.name)===llave(n);})) return {e:'Ya existe un lector con ese nombre. Búscalo en la lista.'};
+  var t=normTel(tel);
+  if(t===null) return {e:'El teléfono debe tener 9 dígitos y empezar con 9. Ejemplo: 9 1234 5678.'};
+  S.rseq+=1; var id='L'+('00'+S.rseq).slice(-3);
+  while(lector(id)){ S.rseq+=1; id='L'+S.rseq; }
+  var r={id:id,name:n,tel:!!t}; if(t) r.phone=t;
+  S.readers.push(r); guardar(); return {r:r};
+}
+function sugerirCodigo(cat){
+  var p=PREF[cat]||'LIB', max=0;
+  S.books.forEach(function(b){ var m=new RegExp('^'+p+'(\\d+)').exec(b.code); if(m) max=Math.max(max,+m[1]); });
+  return p+('00'+(max+1)).slice(-3);
+}
+function crearLibro(code,title,author,cat){
+  var c=String(code||'').replace(/\s+/g,'').toUpperCase(), t=String(title||'').replace(/\s+/g,' ').trim();
+  if(!/^[A-Z]{2,4}\d{3,4}[A-Z]?$/.test(c)) return {e:'El código lleva letras y tres números. Ejemplo: VC062.'};
+  if(libro(c)) return {e:'El código '+c+' ya existe.'};
+  if(t.length<2) return {e:'Escribe el título.'};
+  if(t.length>120) return {e:'El título es demasiado largo (máximo 120 letras).'};
+  if(SEED.cats.indexOf(cat)<0) return {e:'Elige una categoría.'};
+  S.books.push({code:c,title:t,author:String(author||'').replace(/\s+/g,' ').trim().slice(0,80),cat:cat});
+  guardar(); return {b:c};
+}
+function unir(a,b){
+  var ra=lector(a), rb=lector(b); if(!ra||!rb||a===b) return false;
+  S.loans.forEach(function(l){ if(l.reader===b) l.reader=a; });
+  if(rb.tel) ra.tel=true; if(rb.phone&&!ra.phone) ra.phone=rb.phone;
+  S.readers=S.readers.filter(function(r){return r.id!==b;});
+  guardar(); return true;
+}
+
+/* ---------- navegación ---------- */
+var ruta='inicio', pila=[];
+var ui={ q:'', cat:'', est:'todos', filtro:'curso', lim:40, rmodo:'temp', temp:null, pr:{book:null,reader:null,days:null,q:'',cat:'',rq:'',alta:false,err:''}, err:'', confirma:false, copia:'' };
+var TITULOS={inicio:null,prestar:'Prestar un libro',prestamos:'Préstamos',catalogo:'Catálogo',mas:'Más',lectores:'Lectores',estadisticas:'Estadísticas',ranking:'Ranking',revisar:'Datos por revisar',exportar:'Copiar para Excel',ajustes:'Ajustes',altalibro:'Agregar libro'};
+var RAIZ=['inicio','prestar','prestamos','catalogo','mas'];
+function ir(r, guardarPila){
+  if(guardarPila) pila.push(ruta); else if(RAIZ.indexOf(r)>=0) pila=[];
+  ruta=r; ui.q=''; ui.err=''; ui.lim=(r==='ranking'?10:40); ui.confirma=false; ui.copia='';
+  if(r==='catalogo'){ ui.cat=''; ui.est='todos'; }
+  pintar(); window.scrollTo(0,0);
+}
+
+/* ---------- vistas ---------- */
+function vInicio(){
+  var ab=abiertos(), late=ab.filter(atrasado).sort(function(a,b){return a.due<b.due?-1:1;});
+  var prestados={}; ab.forEach(function(l){prestados[l.book]=1;});
+  var disp=S.books.filter(function(b){return !b.baja && !prestados[b.code];}).length;
+  var h='<div class="stack">';
+  if(guardadoRoto) h+='<div class="nota"><b>No se pudo leer lo guardado en este teléfono.</b>Se cargaron de nuevo los datos de ejemplo.</div>';
+  h+='<div class="cifras">'+
+    '<button class="cifra" data-act="filtro" data-f="curso"><b>'+ab.length+'</b><span>En curso</span></button>'+
+    '<button class="cifra late" data-act="filtro" data-f="atrasados"><b>'+late.length+'</b><span>Atrasados</span></button>'+
+    '<button class="cifra" data-act="disponibles"><b>'+disp+'</b><span>Disponibles</span></button></div>';
+  h+='<div class="fila-btn"><button class="btn pri" data-act="ir" data-r="prestar">Prestar un libro</button><button class="btn" data-act="filtro" data-f="curso">Registrar devolución</button></div>';
+  h+='<h2 class="sec">Más tiempo atrasados</h2>';
+  if(late.length){
+    h+='<div class="lista">'+late.slice(0,4).map(filaPrestamo).join('')+'</div>';
+    if(late.length>4) h+='<button class="link" data-act="filtro" data-f="atrasados">Ver los '+late.length+' atrasados</button>';
+  } else h+='<div class="lista"><div class="vacio">Ningún préstamo atrasado.</div></div>';
+  var ult=S.loans.slice().sort(function(a,b){return a.out<b.out?1:(a.out>b.out?-1:(a.id<b.id?1:-1));}).slice(0,5);
+  h+='<h2 class="sec">Últimos préstamos</h2><div class="lista">'+ult.map(function(l){
+    var b=libro(l.book), r=lector(l.reader);
+    return '<div class="item"><div class="meta">'+tej(l.book)+pillPrestamo(l)+'</div><div class="t">'+esc(b.title)+'</div><div class="m">'+esc(r.name)+' · '+f(l.out)+'</div></div>';
+  }).join('')+'</div>';
+  h+='<div class="nota info"><b>Esto es un prototipo.</b>Trae datos de ejemplo inventados. Lo que registres se guarda solo en este teléfono y no lo ven los demás voluntarios. En «Más» puedes volver a los datos originales.</div>';
+  return h+'</div>';
+}
+function filaPrestamo(l){
+  var b=libro(l.book), r=lector(l.reader), late=atrasado(l);
+  var h='<div class="item"><div class="meta">'+tej(l.book)+pillPrestamo(l)+'</div><div class="t">'+esc(b.title)+'</div>'+
+    '<div class="m">'+esc(r.name)+'</div><div class="fecha">'+esc(l.id)+' · salió '+f(l.out)+' · vence '+f(l.due)+(l.ret?(' · volvió '+(l.back?f(l.back):'sin fecha registrada')):'')+'</div>';
+  if(!l.ret){
+    h+='<div class="fila-btn"><button class="btn sm pri" data-act="devolver" data-id="'+esc(l.id)+'">Devolver</button>';
+    if(late) h+='<a class="btn sm wa" href="'+esc(enlaceWA(l))+'" target="_blank" rel="noopener">Recordar por WhatsApp</a><button class="btn sm" data-act="copiarmsg" data-id="'+esc(l.id)+'">Copiar mensaje</button>';
+    h+='</div>';
+  }
+  return h+'</div>';
+}
+function listaPrestamos(){
+  var q=llave(ui.q), arr;
+  if(ui.filtro==='curso') arr=abiertos().sort(function(a,b){return a.due<b.due?-1:1;});
+  else if(ui.filtro==='atrasados') arr=abiertos().filter(atrasado).sort(function(a,b){return a.due<b.due?-1:1;});
+  else arr=S.loans.filter(function(l){return l.ret;}).sort(function(a,b){return a.out<b.out?1:-1;});
+  if(q) arr=arr.filter(function(l){ var b=libro(l.book), r=lector(l.reader); return llave(b.title+' '+l.book+' '+r.name+' '+l.id).indexOf(q)>=0; });
+  if(!arr.length) return '<div class="lista"><div class="vacio">'+(q?'Nada coincide con «'+esc(ui.q)+'».':(ui.filtro==='atrasados'?'Ningún préstamo atrasado.':'No hay préstamos aquí.'))+'</div></div>';
+  var h='<div class="lista">'+arr.slice(0,ui.lim).map(filaPrestamo).join('')+'</div>';
+  if(arr.length>ui.lim) h+='<button class="btn block" data-act="mas">Mostrar más ('+(arr.length-ui.lim)+' restantes)</button>';
+  return h;
+}
+function vPrestamos(){
+  var ab=abiertos(), nl=ab.filter(atrasado).length, nh=S.loans.length-ab.length;
+  return '<div class="stack"><div class="seg" role="group" aria-label="Filtro">'+
+    [['curso','En curso '+ab.length],['atrasados','Atrasados '+nl],['historial','Devueltos '+nh]].map(function(x){return '<button data-act="filtro" data-f="'+x[0]+'" aria-pressed="'+(ui.filtro===x[0])+'">'+x[1]+'</button>';}).join('')+
+    '</div><div class="campo"><label for="q-prestamos">Buscar</label><input class="in" id="q-prestamos" data-q="1" type="search" autocomplete="off" placeholder="Título, código o lector" value="'+esc(ui.q)+'"></div>'+
+    (ui.filtro==='atrasados'?'<p class="sub">En el prototipo, WhatsApp te pide elegir el contacto. La app definitiva abre directo el chat del lector.</p>':'')+
+    '<div id="lista" class="stack-s">'+listaPrestamos()+'</div></div>';
+}
+function chipsCat(sel,act){
+  return '<div class="chips" role="group" aria-label="Categoría"><button class="chip" data-act="'+act+'" data-c="" aria-pressed="'+(sel==='')+'">Todas</button>'+
+    SEED.cats.map(function(c){return '<button class="chip" data-act="'+act+'" data-c="'+esc(c)+'" aria-pressed="'+(sel===c)+'">'+esc(c)+'</button>';}).join('')+'</div>';
+}
+function listaCatalogo(){
+  var q=llave(ui.q);
+  var arr=S.books.filter(function(b){
+    if(ui.cat && b.cat!==ui.cat) return false;
+    var e=estado(b).k;
+    if(ui.est==='disp' && e!=='ok') return false;
+    if(ui.est==='prest' && e!=='warn' && e!=='late') return false;
+    return !q || llave(b.title+' '+b.code+' '+b.author).indexOf(q)>=0;
+  });
+  if(!arr.length) return '<div class="lista"><div class="vacio">'+(q?'Nada coincide con «'+esc(ui.q)+'».':'No hay libros con ese filtro.')+'</div></div>';
+  var h='<p class="sub">'+plural(arr.length,'libro','libros')+'</p><div class="lista">'+arr.slice(0,ui.lim).map(function(b){
+    return '<button class="item" data-act="verlibro" data-code="'+esc(b.code)+'"><div class="meta">'+tej(b.code)+pill(estado(b))+'</div><div class="t">'+esc(b.title)+'</div>'+(b.author?'<div class="m">'+esc(b.author)+'</div>':'')+'</button>';
+  }).join('')+'</div>';
+  if(arr.length>ui.lim) h+='<button class="btn block" data-act="mas">Mostrar más ('+(arr.length-ui.lim)+' restantes)</button>';
+  return h;
+}
+function vCatalogo(){
+  return '<div class="stack"><div class="campo"><label for="q-catalogo">Buscar</label><input class="in" id="q-catalogo" data-q="1" type="search" autocomplete="off" placeholder="Título, autor o código" value="'+esc(ui.q)+'"></div>'+
+    chipsCat(ui.cat,'cat')+
+    '<div class="seg" role="group" aria-label="Estado">'+[['todos','Todos'],['disp','Disponibles'],['prest','Prestados']].map(function(x){return '<button data-act="est" data-e="'+x[0]+'" aria-pressed="'+(ui.est===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>'+
+    '<div id="lista" class="stack-s">'+listaCatalogo()+'</div><button class="btn block" data-act="ir2" data-r="altalibro">Agregar un libro</button></div>';
+}
+function listaLibrosPrestar(){
+  var q=llave(ui.pr.q);
+  var arr=S.books.filter(function(b){ return estado(b).k==='ok' && (!ui.pr.cat||b.cat===ui.pr.cat) && (!q||llave(b.title+' '+b.code+' '+b.author).indexOf(q)>=0); });
+  if(!arr.length){
+    var ocup=q?S.books.filter(function(b){return estado(b).k!=='ok' && llave(b.title+' '+b.code).indexOf(q)>=0;}).length:0;
+    return '<div class="vacio">'+(ocup?'Lo que buscas está prestado o dado de baja.':'Ningún libro disponible coincide.')+'</div>';
+  }
+  return '<div class="sublista">'+arr.slice(0,30).map(function(b){
+    return '<button class="item" data-act="elegirlibro" data-code="'+esc(b.code)+'"><div class="meta">'+tej(b.code)+'</div><div class="t">'+esc(b.title)+'</div>'+(b.author?'<div class="m">'+esc(b.author)+'</div>':'')+'</button>';
+  }).join('')+'</div>'+(arr.length>30?'<p class="sub">Se muestran 30 de '+arr.length+'. Escribe para acotar.</p>':'');
+}
+function listaLectoresPrestar(){
+  var q=llave(ui.pr.rq);
+  var arr=S.readers.filter(function(r){return !q||llave(r.name).indexOf(q)>=0;}).sort(function(a,b){return llave(a.name)<llave(b.name)?-1:1;});
+  if(!arr.length) return '<div class="vacio">Nadie coincide con «'+esc(ui.pr.rq)+'». Puedes inscribirlo abajo.</div>';
+  return '<div class="sublista">'+arr.slice(0,30).map(function(r){
+    var nl=S.loans.filter(function(l){return l.reader===r.id && atrasado(l);}).length;
+    return '<button class="item" data-act="elegirlector" data-id="'+esc(r.id)+'"><div class="t">'+esc(r.name)+'</div>'+(nl?'<div class="meta"><span class="pill late">Tiene '+plural(nl,'libro atrasado','libros atrasados')+'</span></div>':'')+'</button>';
+  }).join('')+'</div>'+(arr.length>30?'<p class="sub">Se muestran 30 de '+arr.length+'. Escribe para acotar.</p>':'');
+}
+function vPrestar(){
+  var p=ui.pr, b=p.book?libro(p.book):null, r=p.reader?lector(p.reader):null, dias=p.days||S.settings.days;
+  if(b && estado(b).k!=='ok'){ p.book=null; b=null; }
+  var h='<div class="stack">';
+  h+='<section class="paso'+(b?' listo':'')+'"><h2><i>1</i>Libro</h2>';
+  if(b) h+='<div class="elegido"><div><div class="meta">'+tej(b.code)+'</div><div class="t" style="font-weight:600">'+esc(b.title)+'</div><div class="sub">'+esc(b.author)+'</div></div><button class="btn sm" data-act="quitarlibro">Cambiar</button></div>';
+  else h+='<div class="campo"><label for="q-libro">Busca el libro</label><input class="in" id="q-libro" data-pq="libro" type="search" autocomplete="off" placeholder="Título, autor o código" value="'+esc(p.q)+'"></div><button class="btn sm" data-act="escanear">Escanear etiqueta</button>'+chipsCat(p.cat,'pcat')+'<div id="lista-libros" class="stack-s">'+listaLibrosPrestar()+'</div>';
+  h+='</section>';
+  h+='<section class="paso'+(r?' listo':'')+'"><h2><i>2</i>Lector</h2>';
+  if(r){
+    var nl=S.loans.filter(function(l){return l.reader===r.id && atrasado(l);}).length;
+    h+='<div class="elegido"><div><div class="t" style="font-weight:600">'+esc(r.name)+'</div>'+(nl?'<div class="meta"><span class="pill late">Tiene '+plural(nl,'libro atrasado','libros atrasados')+'</span></div>':'')+'</div><button class="btn sm" data-act="quitarlector">Cambiar</button></div>';
+  } else if(p.alta){
+    h+='<div class="campo"><label for="n-nombre">Nombre y apellido</label><input class="in" id="n-nombre" autocomplete="off" maxlength="60"></div>'+
+       '<div class="campo"><label for="n-tel">Teléfono (opcional)</label><input class="in" id="n-tel" inputmode="tel" autocomplete="off" placeholder="9 1234 5678"></div>'+
+       '<p class="sub">Al inscribir, avísale que su nombre y teléfono se usan solo para los préstamos de la biblioteca.</p>'+
+       (p.err?'<p class="err" role="alert">'+esc(p.err)+'</p>':'')+
+       '<div class="fila-btn"><button class="btn pri" data-act="guardarlector">Inscribir</button><button class="btn" data-act="cancelaralta">Cancelar</button></div>';
+  } else {
+    h+='<div class="campo"><label for="q-lector">Busca al lector</label><input class="in" id="q-lector" data-pq="lector" type="search" autocomplete="off" placeholder="Nombre" value="'+esc(p.rq)+'"></div><div id="lista-lectores" class="stack-s">'+listaLectoresPrestar()+'</div><button class="btn sm" data-act="alta">Inscribir un lector nuevo</button>';
+  }
+  h+='</section>';
+  h+='<section class="paso listo"><h2><i>3</i>Plazo</h2><div class="seg" role="group" aria-label="Plazo">'+[7,14,21,28].map(function(d){return '<button data-act="dias" data-d="'+d+'" aria-pressed="'+(dias===d)+'">'+d+' días</button>';}).join('')+'</div><p>Debe volver el <b>'+f(suma(hoy(),dias),true)+'</b>.</p></section>';
+  if(ui.err) h+='<p class="err" role="alert">'+esc(ui.err)+'</p>';
+  h+='<button class="btn pri block" data-act="confirmarprestamo"'+((b&&r)?'':' disabled')+'>'+((b&&r)?'Prestar a '+esc(r.name.split(' ')[0]):'Elige libro y lector')+'</button>';
+  return h+'</div>';
+}
+function vMas(){
+  var n=pendientes().total;
+  var it=[['ranking','Ranking','Podio de la temporada, medallas y lo más pedido'],['lectores','Lectores',S.readers.length+' inscritos'],['estadisticas','Estadísticas','Préstamos por mes y libros que nunca salen'],['revisar','Datos por revisar',n?(n+' casos de ejemplo por confirmar'):'Sin casos pendientes'],['exportar','Copiar para Excel','Lleva los datos a tu archivo maestro'],['ajustes','Ajustes','Nombre, plazo y mensaje de recordatorio']];
+  return '<div class="stack"><div class="lista menu">'+it.map(function(x){return '<button class="item" data-act="ir2" data-r="'+x[0]+'"><div><div class="t">'+x[1]+'</div><div class="m">'+esc(x[2])+'</div></div><span class="ch">›</span></button>';}).join('')+'</div></div>';
+}
+function listaLectores(){
+  var q=llave(ui.q);
+  var arr=S.readers.filter(function(r){return !q||llave(r.name).indexOf(q)>=0;}).sort(function(a,b){return llave(a.name)<llave(b.name)?-1:1;});
+  if(!arr.length) return '<div class="lista"><div class="vacio">Nadie coincide con «'+esc(ui.q)+'».</div></div>';
+  var h='<div class="lista">'+arr.slice(0,ui.lim).map(function(r){
+    var ls=S.loans.filter(function(l){return l.reader===r.id;}), ab=ls.filter(function(l){return !l.ret;}), late=ab.filter(atrasado).length;
+    return '<button class="item" data-act="verlector" data-id="'+esc(r.id)+'"><div class="t">'+esc(r.name)+'</div><div class="meta"><span class="m">'+plural(ls.length,'préstamo','préstamos')+'</span>'+(late?'<span class="pill late">'+late+' atrasado'+(late>1?'s':'')+'</span>':(ab.length?'<span class="pill warn">'+ab.length+' en curso</span>':''))+(r.tel?'':'<span class="pill off">Sin teléfono</span>')+'</div></button>';
+  }).join('')+'</div>';
+  if(arr.length>ui.lim) h+='<button class="btn block" data-act="mas">Mostrar más ('+(arr.length-ui.lim)+' restantes)</button>';
+  return h;
+}
+function vLectores(){
+  var sin=S.readers.filter(function(r){return !r.tel;}).length;
+  return '<div class="stack"><p class="sub">'+S.readers.length+' lectores. '+sin+' no tienen teléfono, así que no se les puede recordar por WhatsApp.</p><div class="campo"><label for="q-lectores">Buscar</label><input class="in" id="q-lectores" data-q="1" type="search" autocomplete="off" placeholder="Nombre" value="'+esc(ui.q)+'"></div><div id="lista" class="stack-s">'+listaLectores()+'</div></div>';
+}
+function barras(arr,max){
+  return '<div class="stack-s">'+arr.map(function(x){return '<div class="barra"><span>'+x[0]+'</span><span class="n">'+x[1]+'</span><div class="riel"><i style="width:'+Math.max(2,Math.round(100*x[1]/max))+'%"></i></div></div>';}).join('')+'</div>';
+}
+function vEstadisticas(){
+  var porLibro={}, porCat={}, porLector={}, porMes={};
+  S.loans.forEach(function(l){ porLibro[l.book]=(porLibro[l.book]||0)+1; var b=libro(l.book); porCat[b.cat]=(porCat[b.cat]||0)+1; porLector[l.reader]=(porLector[l.reader]||0)+1; var m=l.out.slice(0,7); porMes[m]=(porMes[m]||0)+1; });
+  var nunca=S.books.filter(function(b){return !b.baja && !porLibro[b.code];});
+  var meses=Object.keys(porMes).sort(), serie=[];
+  if(meses.length){ var y=+meses[0].slice(0,4), m=+meses[0].slice(5), fin=meses[meses.length-1]; for(var g=0;g<36;g++){ var k=y+'-'+p2(m); serie.push([k,porMes[k]||0]); if(k===fin) break; m++; if(m>12){m=1;y++;} } }
+  var mx=Math.max.apply(null,serie.map(function(x){return x[1];}).concat([1]));
+  var dev=S.loans.filter(function(l){return l.ret;}).length;
+  var h='<div class="stack"><div class="cifras"><div class="cifra"><b>'+S.loans.length+'</b><span>Préstamos</span></div><div class="cifra"><b>'+Object.keys(porLector).length+'</b><span>Lectores activos</span></div><div class="cifra"><b>'+nunca.length+'</b><span>Nunca prestados</span></div></div>';
+  h+='<p class="sub">'+dev+' de '+S.loans.length+' préstamos tienen la devolución registrada.</p>';
+  h+='<h2 class="sec">Préstamos por mes</h2><div class="paso"><div class="meses">'+serie.map(function(x){var mm=+x[0].slice(5);return '<div class="mes"><span class="v">'+(x[1]||'')+'</span><i style="height:'+Math.max(2,Math.round(110*x[1]/mx))+'px"></i><span class="l">'+MESES[mm-1].charAt(0).toUpperCase()+((mm===1||x===serie[0])?'<br>'+x[0].slice(2,4):'')+'</span></div>';}).join('')+'</div><p class="sub">Datos de ejemplo.</p></div>';
+  h+='<button class="btn block" data-act="ir2" data-r="ranking">Ver ranking de lectores, categorías y libros</button>';
+  h+='<h2 class="sec">Nunca prestados</h2><div class="lista">'+nunca.slice(0,ui.lim).map(function(b){return '<div class="item"><div class="meta">'+tej(b.code)+'</div><div class="t">'+esc(b.title)+'</div></div>';}).join('')+'</div>';
+  if(nunca.length>ui.lim) h+='<button class="btn block" data-act="mas">Mostrar más ('+(nunca.length-ui.lim)+' restantes)</button>';
+  return h+'</div>';
+}
+/* ---------- juego: temporadas de dos meses, puntos y medallas ---------- */
+function tempDe(fecha){ return fecha.slice(0,4)+'-'+Math.floor((+fecha.slice(5,7)-1)/2); }
+function tempInfo(id){
+  var p=id.split('-'), y=+p[0], k=+p[1], m1=k*2+1, m2=m1+1;
+  return {id:id, ini:y+'-'+p2(m1)+'-01', fin:iso(new Date(y,m2,0)), corta:MESES[m1-1]+'–'+MESES[m2-1], nombre:MESES[m1-1]+'–'+MESES[m2-1]+' '+y};
+}
+function tempMover(id,d){ var p=id.split('-'), y=+p[0], k=+p[1]+d; if(k<0){k=5;y-=1;} if(k>5){k=0;y+=1;} return y+'-'+k; }
+function primeraTemp(){
+  var min=null; S.loans.forEach(function(l){ if(min===null||l.out<min) min=l.out; });
+  var cur=tempDe(hoy()); if(!min) return cur;
+  var a=tempDe(min); return a>cur && a.slice(0,4)>=cur.slice(0,4) ? cur : a;
+}
+function puntosDe(l,h){ if(l.ret) return (l.back && l.back>l.due) ? 5 : 15; return l.due<h ? 0 : 10; }
+function tabla(ini,fin){
+  var h=hoy(), BM={}, porCatLibros={};
+  S.books.forEach(function(b){ BM[b.code]=b; if(!b.baja) porCatLibros[b.cat]=(porCatLibros[b.cat]||0)+1; });
+  var late={}; S.loans.forEach(function(l){ if(!l.ret && l.due<h) late[l.reader]=(late[l.reader]||0)+1; });
+  var R={}, porB={}, porC={}, n=0, sinFecha=0;
+  S.loans.forEach(function(l){
+    if((ini && l.out<ini) || (fin && l.out>fin)) return;
+    n+=1; var r=R[l.reader]||(R[l.reader]={pts:0,n:0,at:0,tarde:0,curso:0,atras:0});
+    var p=puntosDe(l,h); r.pts+=p; r.n+=1;
+    if(p===15) r.at+=1; else if(p===5) r.tarde+=1; else if(p===10) r.curso+=1; else r.atras+=1;
+    if(l.ret && !l.back) sinFecha+=1;
+    porB[l.book]=(porB[l.book]||0)+1; var b=BM[l.book]; if(b) porC[b.cat]=(porC[b.cat]||0)+1;
+  });
+  var todos=Object.keys(R).filter(function(id){return lector(id);}).map(function(id){ var x=R[id]; x.id=id; x.name=lector(id).name; x.late=late[id]||0; return x; });
+  var ord=function(a,b){ return b.pts-a.pts || b.at-a.at || (llave(a.name)<llave(b.name)?-1:1); };
+  var eleg=todos.filter(function(x){return !x.late && x.pts>0;}).sort(ord), fuera=todos.filter(function(x){return x.late>0;}).sort(ord);
+  var prev=null, pos=0; eleg.forEach(function(x,i){ if(x.pts!==prev){ pos=i+1; prev=x.pts; } x.pos=pos; });
+  var libros=Object.keys(porB).filter(function(c){return BM[c];}).map(function(c){ return {code:c, title:BM[c].title, n:porB[c]}; }).sort(function(a,b){ return b.n-a.n || (a.code<b.code?-1:1); });
+  prev=null; pos=0; libros.forEach(function(x,i){ if(x.n!==prev){ pos=i+1; prev=x.n; } x.pos=pos; });
+  var cats=SEED.cats.map(function(c){ var k=porC[c]||0, nb=porCatLibros[c]||0; return {cat:c, n:k, libros:nb, porLibro: nb?k/nb:0}; }).sort(function(a,b){ return b.n-a.n; });
+  return {n:n, eleg:eleg, fuera:fuera, libros:libros, cats:cats, sinFecha:sinFecha};
+}
+function salon(){
+  var cur=tempDe(hoy()), id=tempMover(cur,-1), prim=primeraTemp(), out=[], g=0;
+  if(prim===cur) return out;
+  while(g<60){ g+=1; var inf=tempInfo(id), T=tabla(inf.ini,inf.fin), gan=T.eleg.filter(function(x){return x.pos===1;});
+    if(T.n) out.push({info:inf, gan:gan, top:T.eleg.slice(0,3)});
+    if(id===prim) break; id=tempMover(id,-1); }
+  return out;
+}
+function datosPie(){
+  var cur=tempDe(hoy()), inf=tempInfo(cur), T=tabla(inf.ini,inf.fin);
+  if(T.eleg.length) return {id:cur, et:'Temporada '+inf.corta, top:T.eleg.slice(0,3)};
+  var s=salon(); for(var i=0;i<s.length;i++) if(s[i].top.length) return {id:s[i].info.id, et:'Ganadores '+s[i].info.corta, top:s[i].top};
+  return {id:cur, et:'Temporada '+inf.corta, top:[]};
+}
+function med(pos,w){
+  var hh=Math.round(w*1.25);
+  return '<svg class="med m'+pos+'" width="'+w+'" height="'+hh+'" viewBox="0 0 32 40" aria-hidden="true"><path class="cinta" d="M8 0h7l3 13h-7z"/><path class="cinta2" d="M24 0h-7l-3 13h7z"/><circle class="disco" cx="16" cy="26" r="12"/><circle class="aro" cx="16" cy="26" r="8.6"/><text class="num" x="16" y="30.6" font-size="13" text-anchor="middle">'+pos+'</text></svg>';
+}
+function dec(x){ return (Math.round(x*10)/10).toFixed(1).replace('.',','); }
+function detalle(x){
+  var p=[]; if(x.at) p.push(x.at+' a tiempo'); if(x.curso) p.push(x.curso+' en curso'); if(x.tarde) p.push(x.tarde+' con atraso'); if(x.atras) p.push(x.atras+' sin devolver');
+  return plural(x.n,'libro','libros')+': '+p.join(', ');
+}
+function periodoActual(){
+  if(ui.rmodo!=='temp') return {temp:false, ini:'', fin:'', nombre:'todo el historial'};
+  var cur=tempDe(hoy()), id=ui.temp||cur, inf=tempInfo(id);
+  return {temp:true, id:id, cur:cur, enCurso:id===cur, ini:inf.ini, fin:inf.fin, nombre:'temporada '+inf.nombre, info:inf};
+}
+function textoRanking(){
+  var P=periodoActual(), T=tabla(P.ini,P.fin);
+  var L=['Ranking de lectores · '+P.nombre+' (al '+fx(hoy())+')'];
+  T.eleg.slice(0,10).forEach(function(x){ L.push(x.pos+'. '+x.name+' — '+x.pts+' puntos'); });
+  if(!T.eleg.length) L.push('Todavía nadie tiene medalla.');
+  if(T.n && T.cats[0].n) L.push('', 'Categoría que más sale: '+T.cats[0].cat+' ('+T.cats[0].n+')');
+  if(T.libros.length) L.push('Libro más pedido: '+T.libros.filter(function(x){return x.pos===1;}).map(function(x){return x.title;}).join(' / ')+' ('+T.libros[0].n+')');
+  return L.join('\n');
+}
+function vRanking(){
+  var P=periodoActual(), T=tabla(P.ini,P.fin), pen=pendientes();
+  var h='<div class="stack"><div class="seg" role="group" aria-label="Período">'+[['temp','Temporada'],['todo','Todo el historial']].map(function(x){return '<button data-act="rmodo" data-m="'+x[0]+'" aria-pressed="'+(ui.rmodo===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>';
+  if(P.temp){
+    h+='<div class="tempnav"><button class="back" data-act="temp" data-d="-1" aria-label="Temporada anterior"'+(P.id===primeraTemp()?' disabled':'')+'>‹</button>'+
+       '<div class="tempt"><b>'+esc(P.info.nombre)+'</b><span class="sub">'+(P.enCurso?('En curso · '+(dif(P.fin,hoy())>0?'quedan '+plural(dif(P.fin,hoy()),'día','días'):'termina hoy')):'Temporada cerrada')+'</span></div>'+
+       '<button class="back" data-act="temp" data-d="1" aria-label="Temporada siguiente"'+(P.enCurso?' disabled':'')+'>›</button></div>';
+  }
+  if(T.eleg.length){
+    var e=T.eleg, orden=[e[1],e[0],e[2]];
+    h+='<div class="podio">'+orden.map(function(x){
+      if(!x) return '<div class="pd"></div>';
+      return '<div class="pd">'+med(x.pos, x.pos===1?44:36)+'<span class="pn">'+esc(x.name)+'</span><span class="pp">'+x.pts+' pts</span><div class="escalon e'+x.pos+'">'+x.pos+'</div></div>';
+    }).join('')+'</div>';
+    var ult=e[Math.min(2,e.length-1)], extra=e.filter(function(x){return x.pos===ult.pos;}).length - e.slice(0,3).filter(function(x){return x.pos===ult.pos;}).length;
+    if(extra>0) h+='<p class="sub">'+plural(extra,'lector más empata','lectores más empatan')+' en el puesto '+ult.pos+' con '+ult.pts+' puntos. Están en la tabla de puntos.</p>';
+  } else {
+    h+='<div class="lista"><div class="vacio">'+(T.n?(P.temp&&P.enCurso?'Todavía nadie tiene medalla esta temporada. Quien devuelva a tiempo sube al podio.':'Nadie ganó medalla en este período: todos tienen libros atrasados.'):'No hay préstamos en este período.')+'</div></div>';
+  }
+  h+='<h2 class="sec">Cómo se gana</h2><div class="reglas">'+
+     '<div class="regla"><span class="pts">15</span><span>Por cada libro devuelto a tiempo</span></div>'+
+     '<div class="regla"><span class="pts">10</span><span>Por cada libro en curso, dentro del plazo</span></div>'+
+     '<div class="regla"><span class="pts">5</span><span>Por cada libro devuelto con atraso</span></div>'+
+     '<div class="regla"><span class="pts">0</span><span>Por un libro atrasado sin devolver, que además deja sin medalla hasta entregarlo</span></div></div>';
+  if(T.sinFecha) h+='<p class="sub">Las devoluciones anteriores a la app no tienen fecha y se cuentan como a tiempo.</p>';
+  if(!T.n) return h+'</div>';
+  if(T.eleg.length){
+    h+='<h2 class="sec">Tabla de puntos</h2>';
+    if(pen.dup.length) h+='<div class="nota"><b>El orden puede cambiar.</b>Hay '+plural(pen.dup.length,'par de lectores que puede','pares de lectores que pueden')+' ser la misma persona. Resuélvelos en «Datos por revisar» antes de premiar.</div>';
+    h+='<div class="lista rank">'+T.eleg.slice(0,ui.lim).map(function(x){
+      return '<button class="item" data-act="verlector" data-id="'+esc(x.id)+'">'+(x.pos<=3?med(x.pos,26):'<span class="pos">'+x.pos+'</span>')+'<span class="cuerpo"><span class="t">'+esc(x.name)+'</span><span class="m">'+detalle(x)+'</span></span><span class="punt">'+x.pts+'<small>pts</small></span></button>';
+    }).join('')+'</div>';
+    if(T.eleg.length>ui.lim) h+='<button class="btn block" data-act="mas">Mostrar más ('+(T.eleg.length-ui.lim)+' restantes)</button>';
+    h+='<button class="btn block" data-act="copiarranking">Copiar los 10 primeros</button>';
+  }
+  if(T.fuera.length){
+    h+='<h2 class="sec">En pausa por atrasos ('+T.fuera.length+')</h2><p class="sub">Vuelven a competir cuando devuelvan lo que deben.</p><div class="lista rank">'+T.fuera.slice(0,ui.lim).map(function(x){
+      return '<button class="item" data-act="verlector" data-id="'+esc(x.id)+'"><span class="pos">–</span><span class="cuerpo"><span class="t">'+esc(x.name)+'</span><span class="m">'+detalle(x)+'</span><span class="meta"><span class="pill late">Debe '+plural(x.late,'libro','libros')+'</span></span></span><span class="punt">'+x.pts+'<small>pts</small></span></button>';
+    }).join('')+'</div>';
+  }
+  if(P.temp){
+    var s=salon();
+    if(s.length){
+      h+='<h2 class="sec">Ganadores de cada temporada</h2><div class="lista rank">'+s.map(function(x){
+        return '<button class="item" data-act="irtemp" data-id="'+x.info.id+'">'+(x.gan.length?med(1,26):'<span class="pos">–</span>')+'<span class="cuerpo"><span class="t">'+(x.gan.length?(x.gan.length<=2?x.gan.map(function(g){return esc(g.name);}).join(' y '):esc(x.gan[0].name)+', '+esc(x.gan[1].name)+' y '+(x.gan.length-2)+' más'):'Sin ganador')+'</span><span class="m">'+esc(x.info.nombre)+(x.gan.length?' · '+x.gan[0].pts+' puntos'+(x.gan.length>1?' · empate':''):' · todos con atrasos')+'</span></span></button>';
+      }).join('')+'</div>';
+    }
+  }
+  var c0=T.cats[0], cp=T.cats.slice().sort(function(a,b){return b.porLibro-a.porLibro;})[0];
+  h+='<h2 class="sec">Categoría que más sale</h2><div class="destaca"><b>'+esc(c0.cat)+'</b><span class="sub">'+plural(c0.n,'préstamo','préstamos')+', el '+Math.round(100*c0.n/T.n)+'% del período.</span>'+
+     (cp.cat!==c0.cat?'<span class="sub">Por libro, la más pedida es <b style="font-family:inherit;font-size:inherit">'+esc(cp.cat)+'</b>: '+dec(cp.porLibro)+' préstamos por cada libro que tiene.</span>':'')+'</div>';
+  h+='<div class="paso">'+barras(T.cats.map(function(x){return [esc(x.cat)+' <span class="sub">· '+plural(x.libros,'libro','libros')+' · '+dec(x.porLibro)+' por libro</span>', x.n];}), c0.n||1)+'</div>';
+  var primeros=T.libros.filter(function(x){return x.pos===1;});
+  h+='<h2 class="sec">Libro más pedido</h2><div class="destaca"><b>'+primeros.slice(0,3).map(function(x){return esc(x.title);}).join(' · ')+(primeros.length>3?' y '+(primeros.length-3)+' más':'')+'</b><span class="sub">'+(primeros.length>1?'Empatan con ':'')+plural(primeros[0].n,'préstamo','préstamos')+(primeros.length>1?' cada uno.':'.')+'</span></div>';
+  h+='<div class="lista rank">'+T.libros.slice(0,10).map(function(x){
+    return '<button class="item" data-act="verlibro" data-code="'+esc(x.code)+'"><span class="pos'+(x.pos<=3?' top':'')+'">'+x.pos+'</span><span class="cuerpo"><span class="meta">'+tej(x.code)+'</span><span class="t">'+esc(x.title)+'</span><span class="m">'+plural(x.n,'préstamo','préstamos')+'</span></span></button>';
+  }).join('')+'</div>';
+  return h+'</div>';
+}
+function pintarPie(){
+  var el=document.getElementById('pie'), ver=ruta!=='ranking';
+  el.hidden=!ver; document.body.classList.toggle('conpie',ver);
+  if(!ver) return;
+  var d=datosPie();
+  el.setAttribute('aria-label','Ver ranking de lectores');
+  el.innerHTML='<span class="pie-in"><span class="et">'+esc(d.et)+'</span><span class="fila">'+(d.top.length?d.top.map(function(x){return '<span class="g">'+med(x.pos,16)+'<span>'+esc(x.name.split(' ')[0])+'</span><i>'+x.pts+'</i></span>';}).join(''):'<span class="sin">Todavía sin medallas. Toca para ver cómo se gana.</span>')+'</span></span>';
+}
+function pendientes(){
+  var ab=abiertos();
+  var prob=ab.filter(posteriorMismoLibro);
+  var dup=SEED.dup.filter(function(d){ return lector(d.a)&&lector(d.b)&&S.descartes.indexOf(d.a+'|'+d.b)<0; });
+  var est=SEED.notes.estado.filter(function(c){ return S.descartes.indexOf('est|'+c)<0; });
+  return {prob:prob,dup:dup,est:est,total:prob.length+dup.length+est.length};
+}
+function vRevisar(){
+  var p=pendientes(), N=SEED.notes;
+  var h='<div class="stack"><p class="sub">Casos de ejemplo que conviene confirmar. Alguien que conozca la biblioteca debe confirmarlos antes de pasar a la app definitiva.</p>';
+  h+='<h2 class="sec">Préstamos abiertos de un libro que se volvió a prestar ('+p.prob.length+')</h2><p class="sub">Si el libro salió de nuevo, lo más probable es que haya vuelto y no se marcó.</p>';
+  h+=p.prob.length?'<div class="lista">'+p.prob.map(filaPrestamo).join('')+'</div>':'<div class="lista"><div class="vacio">Resuelto.</div></div>';
+  h+='<h2 class="sec">Lectores que pueden ser la misma persona ('+p.dup.length+')</h2>';
+  h+=p.dup.length?'<div class="lista">'+p.dup.map(function(d){var a=lector(d.a),b=lector(d.b);return '<div class="item"><div class="t">'+esc(a.name)+' y '+esc(b.name)+'</div><div class="m">'+esc(d.why)+'.</div><div class="fila-btn"><button class="btn sm pri" data-act="unir" data-a="'+d.a+'" data-b="'+d.b+'">Son la misma: unir</button><button class="btn sm" data-act="descartar" data-k="'+d.a+'|'+d.b+'">Son distintas</button></div></div>';}).join('')+'</div>':'<div class="lista"><div class="vacio">Resuelto.</div></div>';
+  h+='<h2 class="sec">Marcados «Prestado» sin préstamo abierto ('+p.est.length+')</h2><p class="sub">Aquí figuran disponibles. Confirma que están en el estante.</p>';
+  h+=p.est.length?'<div class="lista">'+p.est.map(function(c){var b=libro(c);return '<div class="item"><div class="meta">'+tej(c)+pill(estado(b))+'</div><div class="t">'+esc(b.title)+'</div><div class="fila-btn"><button class="btn sm" data-act="descartar" data-k="est|'+c+'">Está en el estante</button></div></div>';}).join('')+'</div>':'<div class="lista"><div class="vacio">Resuelto.</div></div>';
+  h+='<h2 class="sec">Correcciones hechas al traer los datos</h2><div class="lista">'+N.codigos.concat(N.fechas,N.nombres).map(function(t){return '<div class="item"><div class="m">'+esc(t)+'</div></div>';}).join('')+'</div>';
+  return h+'</div>';
+}
+function tsv(tipo){
+  var rows=[];
+  if(tipo==='catalogo'){ rows.push(['Código','Título','Autor','Categoría','Estado']); S.books.forEach(function(b){rows.push([b.code,b.title,b.author||'',b.cat,estado(b).t]);}); }
+  if(tipo==='lectores'){ rows.push(['ID','Nombre','Préstamos','En curso']); S.readers.forEach(function(r){var ls=S.loans.filter(function(l){return l.reader===r.id;});rows.push([r.id,r.name,ls.length,ls.filter(function(l){return !l.ret;}).length]);}); }
+  if(tipo==='prestamos'){ rows.push(['ID','Código','Título','Lector','Fecha préstamo','Vence','Devuelto','Fecha devolución','Estado']); S.loans.forEach(function(l){rows.push([l.id,l.book,libro(l.book).title,lector(l.reader).name,fx(l.out),fx(l.due),l.ret?'Sí':'No',fx(l.back),l.ret?'Devuelto':(atrasado(l)?'Atrasado':'En curso')]);}); }
+  return rows.map(function(r){return r.map(function(c){return String(c).replace(/[\t\r\n]+/g,' ');}).join('\t');}).join('\n');
+}
+function vExportar(){
+  var h='<div class="stack"><p class="sub">Toca una tabla, abre tu Excel y pega. Cada dato cae en su columna.</p><div class="stack-s">'+
+    [['catalogo','Catálogo',S.books.length+' libros'],['lectores','Lectores',S.readers.length+' personas, sin teléfonos'],['prestamos','Préstamos',S.loans.length+' registros']].map(function(x){return '<button class="btn block" data-act="copiartabla" data-t="'+x[0]+'">Copiar '+x[1]+' ('+x[2]+')</button>';}).join('')+'</div>';
+  if(ui.copia) h+='<div class="campo"><label for="copia">No se pudo copiar solo. Selecciona todo este texto y cópialo:</label><textarea class="in copia" id="copia" readonly>'+esc(ui.copia)+'</textarea></div>';
+  return h+'</div>';
+}
+function vAjustes(){
+  var s=S.settings;
+  var h='<div class="stack"><div class="campo"><label for="a-nombre">Nombre de la biblioteca</label><input class="in" id="a-nombre" maxlength="40" value="'+esc(s.name)+'"></div>'+
+    '<div class="campo"><span style="font-size:14px;font-weight:700">Plazo habitual</span><div class="seg" role="group" aria-label="Plazo habitual">'+[7,14,21,28].map(function(d){return '<button data-act="plazo" data-d="'+d+'" aria-pressed="'+(s.days===d)+'">'+d+' días</button>';}).join('')+'</div></div>'+
+    '<div class="campo"><label for="a-msg">Mensaje de recordatorio</label><textarea class="in" id="a-msg" maxlength="400">'+esc(s.msg)+'</textarea><p class="sub">{nombre}, {titulo} y {fecha} se reemplazan solos.</p></div>'+
+    (ui.err?'<p class="err" role="alert">'+esc(ui.err)+'</p>':'')+
+    '<button class="btn pri block" data-act="guardarajustes">Guardar</button>'+
+    '<h2 class="sec">Datos del prototipo</h2><p class="sub">Borra lo que registraste aquí y vuelve a cargar los datos de ejemplo.</p>';
+  h+=ui.confirma?'<div class="fila-btn"><button class="btn danger" data-act="reiniciar">Sí, borrar mis pruebas</button><button class="btn" data-act="noreiniciar">Cancelar</button></div>':'<button class="btn block" data-act="pedirreinicio">Volver a los datos de ejemplo</button>';
+  return h+'</div>';
+}
+function vAltaLibro(){
+  var cat=ui.altaCat||SEED.cats[0];
+  return '<div class="stack"><div class="campo"><span style="font-size:14px;font-weight:700">Categoría</span><div class="chips" role="group" aria-label="Categoría">'+SEED.cats.map(function(c){return '<button class="chip" data-act="altacat" data-c="'+esc(c)+'" aria-pressed="'+(cat===c)+'">'+esc(c)+'</button>';}).join('')+'</div></div>'+
+    '<div class="campo"><label for="l-codigo">Código</label><input class="in" id="l-codigo" autocomplete="off" maxlength="9" value="'+esc(sugerirCodigo(cat))+'"><p class="sub">Se propone el siguiente número libre de la categoría.</p></div>'+
+    '<div class="campo"><label for="l-titulo">Título</label><input class="in" id="l-titulo" autocomplete="off" maxlength="120"></div>'+
+    '<div class="campo"><label for="l-autor">Autor</label><input class="in" id="l-autor" autocomplete="off" maxlength="80"></div>'+
+    (ui.err?'<p class="err" role="alert">'+esc(ui.err)+'</p>':'')+
+    '<button class="btn pri block" data-act="guardarlibro">Agregar al catálogo</button></div>';
+}
+var VISTAS={inicio:vInicio,prestar:vPrestar,prestamos:vPrestamos,catalogo:vCatalogo,mas:vMas,lectores:vLectores,estadisticas:vEstadisticas,ranking:vRanking,revisar:vRevisar,exportar:vExportar,ajustes:vAjustes,altalibro:vAltaLibro};
+
+function pintar(){
+  document.getElementById('vista').innerHTML=VISTAS[ruta]();
+  document.getElementById('titulo').textContent=TITULOS[ruta]||S.settings.name;
+  document.getElementById('hoy').textContent=f(hoy(),true);
+  document.getElementById('volver').hidden=RAIZ.indexOf(ruta)>=0;
+  var raiz=RAIZ.indexOf(ruta)>=0?ruta:'mas'; if(ruta==='altalibro') raiz='catalogo';
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'),function(t){ if(t.dataset.r===raiz) t.setAttribute('aria-current','page'); else t.removeAttribute('aria-current'); });
+  pintarPie();
+  var nl=abiertos().filter(atrasado).length, dot=document.getElementById('dot-late'); dot.hidden=!nl; dot.textContent=nl;
+  try{ document.title=S.settings.name==='Biblioteca'?'Préstamos de la Biblioteca':'Préstamos · '+S.settings.name; }catch(e){}
+}
+
+/* ---------- hoja y avisos ---------- */
+function abrirHoja(titulo, cuerpo){
+  document.getElementById('capa').innerHTML='<div class="velo" data-act="cerrarvelo"><div class="hoja" role="dialog" aria-modal="true" aria-label="'+esc(titulo)+'"><div class="hoja-cab"><h2>'+esc(titulo)+'</h2><button class="cerrar" data-act="cerrar" aria-label="Cerrar">✕</button></div>'+cuerpo+'</div></div>';
+  var c=document.querySelector('.cerrar'); if(c) c.focus();
+}
+function cerrarHoja(){ document.getElementById('capa').innerHTML=''; }
+var tAviso=null, deshacer=null;
+function aviso(txt, undo){
+  deshacer=undo||null; clearTimeout(tAviso);
+  document.getElementById('aviso').innerHTML='<div class="toast" role="status"><span>'+esc(txt)+'</span>'+(undo?'<button data-act="deshacer">Deshacer</button>':'')+'</div>';
+  tAviso=setTimeout(function(){ document.getElementById('aviso').innerHTML=''; deshacer=null; }, undo?7000:3500);
+}
+function hojaLibro(code){
+  var b=libro(code); if(!b) return;
+  var ls=S.loans.filter(function(l){return l.book===code;}).sort(function(a,b){return a.out<b.out?1:-1;}), e=estado(b);
+  var h='<div class="meta">'+tej(b.code)+pill(e)+'<span class="pill off">'+esc(b.cat)+'</span></div>'+(b.author?'<p class="sub">'+esc(b.author)+'</p>':'')+
+    '<p>Prestado '+plural(ls.length,'vez','veces')+'.</p>';
+  if(e.k==='ok') h+='<button class="btn pri block" data-act="prestareste" data-code="'+esc(code)+'">Prestar este libro</button>';
+  h+='<h3 style="font-size:16px">Historial</h3>'+(ls.length?'<div class="lista">'+ls.map(function(l){return '<div class="item"><div class="meta">'+pillPrestamo(l)+'</div><div class="t">'+esc(lector(l.reader).name)+'</div><div class="fecha">'+esc(l.id)+' · salió '+f(l.out)+' · vence '+f(l.due)+'</div>'+(l.ret?'':'<div class="fila-btn"><button class="btn sm pri" data-act="devolver" data-id="'+esc(l.id)+'">Devolver</button></div>')+'</div>';}).join('')+'</div>':'<div class="lista"><div class="vacio">Nunca se ha prestado.</div></div>');
+  abrirHoja(b.title,h);
+}
+function hojaLector(id){
+  var r=lector(id); if(!r) return;
+  var ls=S.loans.filter(function(l){return l.reader===id;}).sort(function(a,b){return a.out<b.out?1:-1;});
+  var h='<p class="sub">'+plural(ls.length,'préstamo','préstamos')+'. '+(r.tel?'Tiene teléfono registrado.':'No tiene teléfono registrado.')+'</p>'+
+    (ls.length?'<div class="lista">'+ls.map(filaPrestamo).join('')+'</div>':'<div class="lista"><div class="vacio">Todavía no ha pedido libros.</div></div>');
+  abrirHoja(r.name,h);
+}
+function copiar(txt, ok, falla){
+  var hecho=false;
+  try{ if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(ok,falla); hecho=true; } }catch(e){}
+  if(!hecho) falla();
+}
+
+/* ---------- eventos ---------- */
+var A={
+  ir:function(d){ ir(d.r,false); },
+  ir2:function(d){ if(d.r==='altalibro') ui.altaCat=ui.cat||SEED.cats[0]; if(d.r==='ranking'){ ui.rmodo='temp'; ui.temp=null; } ir(d.r,true); },
+  volver:function(){ var r=pila.pop()||'inicio'; ruta=r; ui.q=''; ui.err=''; ui.lim=40; ui.confirma=false; ui.copia=''; pintar(); window.scrollTo(0,0); },
+  filtro:function(d){ ui.filtro=d.f; if(ruta!=='prestamos'){ ir('prestamos',false); ui.filtro=d.f; pintar(); } else { ui.lim=40; pintar(); } },
+  disponibles:function(){ ir('catalogo',false); ui.est='disp'; pintar(); },
+  mas:function(){ ui.lim+=40; pintar(); },
+  cat:function(d){ ui.cat=d.c; ui.lim=40; pintar(); },
+  est:function(d){ ui.est=d.e; ui.lim=40; pintar(); },
+  pcat:function(d){ ui.pr.cat=d.c; pintar(); },
+  verlibro:function(d){ hojaLibro(d.code); },
+  verlector:function(d){ hojaLector(d.id); },
+  cerrar:function(){ cerrarHoja(); },
+  cerrarvelo:function(d,el,ev){ if(ev.target===el) cerrarHoja(); },
+  escanear:function(){ abrirHoja('Escanear etiqueta','<p>En la app definitiva este botón abre la cámara y lee la etiqueta QR pegada en el libro. Así el libro queda elegido sin escribir nada.</p><p class="sub">El prototipo no puede usar la cámara. Por ahora busca el libro por título o código.</p><button class="btn pri block" data-act="cerrar">Entendido</button>'); },
+  elegirlibro:function(d){ ui.pr.book=d.code; ui.pr.q=''; ui.err=''; pintar(); },
+  quitarlibro:function(){ ui.pr.book=null; pintar(); },
+  elegirlector:function(d){ ui.pr.reader=d.id; ui.pr.rq=''; ui.err=''; pintar(); },
+  quitarlector:function(){ ui.pr.reader=null; pintar(); },
+  alta:function(){ ui.pr.alta=true; ui.pr.err=''; pintar(); var n=document.getElementById('n-nombre'); if(n){ n.value=ui.pr.rq; n.focus(); } },
+  cancelaralta:function(){ ui.pr.alta=false; ui.pr.err=''; pintar(); },
+  guardarlector:function(){
+    var nom=document.getElementById('n-nombre').value, tel=document.getElementById('n-tel').value, r=crearLector(nom,tel);
+    if(r.e){ ui.pr.err=r.e; pintar(); document.getElementById('n-nombre').value=nom; document.getElementById('n-tel').value=tel; return; }
+    ui.pr.alta=false; ui.pr.err=''; ui.pr.reader=r.r.id; ui.pr.rq=''; pintar(); aviso('Inscrito: '+r.r.name);
+  },
+  rmodo:function(d){ ui.rmodo=d.m; ui.lim=10; pintar(); },
+  temp:function(d){
+    var cur=tempDe(hoy()), id=ui.temp||cur, prim=primeraTemp();
+    if((+d.d<0 && id===prim) || (+d.d>0 && id===cur)) return;
+    id=tempMover(id,+d.d); ui.temp=(id===cur?null:id); ui.lim=10; pintar();
+  },
+  irtemp:function(d){ ui.rmodo='temp'; ui.temp=(d.id===tempDe(hoy())?null:d.id); ui.lim=10; pintar(); window.scrollTo(0,0); },
+  irpie:function(){ var d=datosPie(); ui.rmodo='temp'; ui.temp=(d.id===tempDe(hoy())?null:d.id); ir('ranking',true); },
+  copiarranking:function(){
+    var m=textoRanking();
+    copiar(m,function(){aviso('Ranking copiado');},function(){ abrirHoja('Ranking','<p class="sub">Selecciona el texto y cópialo.</p><textarea class="in copia" readonly>'+esc(m)+'</textarea>'); });
+  },
+  dias:function(d){ ui.pr.days=+d.d; pintar(); },
+  confirmarprestamo:function(){
+    var p=ui.pr, r=prestar(p.book,p.reader,p.days||S.settings.days);
+    if(typeof r==='string'){ ui.err=r; pintar(); return; }
+    var b=libro(p.book), le=lector(p.reader), id=r.id, due=S.loans[S.loans.length-1].due;
+    ui.pr={book:null,reader:null,days:null,q:'',cat:'',rq:'',alta:false,err:''}; ui.err='';
+    ir('inicio',false);
+    aviso('Prestado a '+le.name.split(' ')[0]+' hasta el '+f(due), function(){ S.loans=S.loans.filter(function(l){return l.id!==id;}); guardar(); });
+  },
+  prestareste:function(d){ cerrarHoja(); ui.pr.book=d.code; ir('prestar',false); },
+  devolver:function(d){
+    var l=S.loans.filter(function(x){return x.id===d.id;})[0]; if(!l) return;
+    var abierta=document.querySelector('.hoja'), b=libro(l.book);
+    if(devolver(d.id)){
+      if(abierta) cerrarHoja();
+      pintar();
+      aviso('Devuelto: '+b.title.slice(0,40)+(b.title.length>40?'…':''), function(){ l.ret=false; l.back=null; guardar(); });
+    }
+  },
+  deshacer:function(){ if(deshacer){ deshacer(); deshacer=null; clearTimeout(tAviso); document.getElementById('aviso').innerHTML=''; pintar(); aviso('Deshecho'); } },
+  copiarmsg:function(d){
+    var l=S.loans.filter(function(x){return x.id===d.id;})[0]; if(!l) return; var m=mensaje(l);
+    copiar(m,function(){aviso('Mensaje copiado');},function(){ abrirHoja('Mensaje de recordatorio','<p class="sub">Selecciona el texto y cópialo.</p><textarea class="in" readonly>'+esc(m)+'</textarea>'); });
+  },
+  unir:function(d){ var a=lector(d.a), b=lector(d.b); if(unir(d.a,d.b)){ pintar(); aviso('Unidos como '+a.name); } },
+  descartar:function(d){ if(S.descartes.indexOf(d.k)<0){ S.descartes.push(d.k); guardar(); } pintar(); },
+  copiartabla:function(d){
+    var t=tsv(d.t);
+    copiar(t,function(){ ui.copia=''; pintar(); aviso('Copiado. Pégalo en Excel.'); },function(){ ui.copia=t; pintar(); var c=document.getElementById('copia'); if(c){ c.focus(); c.select(); } });
+  },
+  plazo:function(d){ var n=document.getElementById('a-nombre').value, m=document.getElementById('a-msg').value; S.settings.days=+d.d; guardar(); pintar(); document.getElementById('a-nombre').value=n; document.getElementById('a-msg').value=m; },
+  guardarajustes:function(){
+    var n=document.getElementById('a-nombre').value.replace(/\s+/g,' ').trim(), m=document.getElementById('a-msg').value.trim();
+    if(!n){ ui.err='Escribe el nombre de la biblioteca.'; pintar(); return; }
+    if(m.length<10){ ui.err='El mensaje es muy corto.'; pintar(); document.getElementById('a-nombre').value=n; return; }
+    S.settings.name=n.slice(0,40); S.settings.msg=m.slice(0,400); ui.err=''; guardar(); pintar(); aviso('Ajustes guardados');
+  },
+  pedirreinicio:function(){ ui.confirma=true; pintar(); },
+  noreiniciar:function(){ ui.confirma=false; pintar(); },
+  reiniciar:function(){ S=nuevo(); guardadoRoto=false; guardar(); ui.confirma=false; ir('inicio',false); aviso('Datos de ejemplo cargados de nuevo'); },
+  altacat:function(d){ var t=document.getElementById('l-titulo').value, a=document.getElementById('l-autor').value; ui.altaCat=d.c; pintar(); document.getElementById('l-titulo').value=t; document.getElementById('l-autor').value=a; },
+  guardarlibro:function(){
+    var c=document.getElementById('l-codigo').value, t=document.getElementById('l-titulo').value, a=document.getElementById('l-autor').value;
+    var r=crearLibro(c,t,a,ui.altaCat||SEED.cats[0]);
+    if(r.e){ ui.err=r.e; pintar(); document.getElementById('l-codigo').value=c; document.getElementById('l-titulo').value=t; document.getElementById('l-autor').value=a; return; }
+    ui.err=''; pila=[]; ir('catalogo',false); ui.q=r.b; pintar(); aviso('Agregado: '+r.b);
+  }
+};
+document.addEventListener('click',function(ev){
+  var el=ev.target.closest('[data-act]'); if(!el) return;
+  if(el.disabled) return;
+  var fn=A[el.dataset.act]; if(fn) fn(el.dataset,el,ev);
+});
+document.addEventListener('input',function(ev){
+  var t=ev.target;
+  if(t.dataset.q){ ui.q=t.value; ui.lim=40; var L=document.getElementById('lista'); if(L) L.innerHTML=(ruta==='prestamos'?listaPrestamos():ruta==='catalogo'?listaCatalogo():listaLectores()); }
+  else if(t.dataset.pq==='libro'){ ui.pr.q=t.value; document.getElementById('lista-libros').innerHTML=listaLibrosPrestar(); }
+  else if(t.dataset.pq==='lector'){ ui.pr.rq=t.value; document.getElementById('lista-lectores').innerHTML=listaLectoresPrestar(); }
+});
+document.addEventListener('keydown',function(ev){ if(ev.key==='Escape') cerrarHoja(); });
+
+window.__biblio={tabla:tabla,pie:datosPie,salon:salon,tempInfo:tempInfo,tempDe:tempDe,texto:textoRanking,estado:function(){return S;},prestar:prestar,devolver:devolver,crearLector:crearLector,crearLibro:crearLibro,valido:valido,tsv:tsv,KEY:KEY};
+pintar();
+})();
+</script>
+
+</body>
+</html>

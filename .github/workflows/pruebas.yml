@@ -1,0 +1,70 @@
+name: Pruebas
+
+on:
+  pull_request:
+  push:
+    # En cada solicitud de cambios, como pide la Etapa 1. También al empujar una
+    # rama de etapa, para no tener que abrir el PR solo para ver las pruebas.
+    branches: [main, 'etapa-*']
+
+permissions:
+  contents: read
+
+# Un empujón nuevo a la misma rama deja sin sentido la corrida anterior.
+concurrency:
+  group: pruebas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node con la versión del proyecto
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Java para el emulador de Firestore
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Instalar dependencias exactas
+        run: npm ci
+
+      - name: Navegador de Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Escáner del repositorio
+        run: npm run revisar
+
+      - name: Pruebas de unidad
+        run: npm run prueba:unidad
+
+      - name: Pruebas de reglas
+        run: npm run prueba:reglas
+
+      - name: Pruebas de los scripts
+        run: npm run prueba:scripts
+
+      - name: Pruebas de extremo a extremo
+        run: npm run prueba:e2e
+
+      - name: Prueba de carga
+        run: npm run prueba:carga
+
+      - name: Guardar el informe de Playwright si algo falló
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

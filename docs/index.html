@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Préstamos de la Biblioteca</title>
+    <meta name="description" content="Registro de préstamos de la biblioteca. Solo para voluntarios autorizados." />
+    <meta name="theme-color" content="#1D6A50" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0F1512" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- Rutas relativas: la app instalada conserva su subcarpeta de publicación. -->
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="iconos/icono.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="iconos/icono-192.png" />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body>
+    <!-- Franja de ambiente: EMULADOR o ENSAYO. En producción no aparece. -->
+    <div id="franja" class="franja" hidden></div>
+
+    <header id="barra-superior" class="barra-superior" hidden>
+      <div class="barra-superior__texto">
+        <h1 id="nombre-biblioteca" class="barra-superior__nombre">Biblioteca</h1>
+        <p id="fecha-hoy" class="barra-superior__fecha">Hora pendiente</p>
+      </div>
+    </header>
+
+    <!-- Región de avisos. Se lee en voz alta sin robar el foco. -->
+    <div id="avisos" class="avisos" role="status" aria-live="polite" aria-atomic="false"></div>
+
+    <main id="pantalla" class="pantalla" tabindex="-1">
+      <p class="cargando">Abriendo la biblioteca…</p>
+    </main>
+
+    <nav id="barra-inferior" class="barra-inferior" aria-label="Secciones" hidden></nav>
+
+
+    <script type="module" src="js/main.js"></script>
+    <noscript>
+      <p class="aviso aviso--error">
+        Esta app necesita JavaScript para funcionar. Actívalo en tu navegador y vuelve a abrirla.
+      </p>
+    </noscript>
+  </body>
+</html>
