@@ -361,7 +361,12 @@ cumplido en los tres casos:
   la revisión del diff había encontrado horas antes y ya estaba corregido. La
   contraprueba añadió un caso que faltaba: cuando la cuenta pierde el permiso,
   ni el contador se puede leer, y ahí también hay que devolver la denegación tal
-  cual en vez de reetiquetarla como carrera.
+  cual en vez de reetiquetarla como carrera. La segunda pasada lo dio por
+  cerrado y dejó anotado que ese camino no tenía prueba dedicada; ahora la
+  tiene, en `tests/unidad/operaciones.test.mjs`, y **falla sin la corrección y
+  pasa con ella**. Ese archivo prueba la clasificación que hace el cliente al
+  recibir una denegación, no las reglas: que las reglas denieguen está probado
+  contra el emulador en `tests/reglas/lectores.test.mjs`.
 - **H-03, menor, sobre este informe.** El «1,04 ms por documento» se presentaba
   como dato de la etapa sin anclarlo a la máquina. En la del revisor dio 0,67.
   La sección 3 ahora dice de dónde sale cada cifra y qué parte es del diseño.
@@ -420,13 +425,13 @@ sin que cambie nada del código.
 | Abrir Lectores, 100 lectores (tamaño real) | 498 ms | 304–500 | 1.000 ms | **Sí** |
 | Abrir Catálogo, 5.000 libros | 5.225 ms | 5.206–6.158 | 1.000 ms | **No** |
 | Abrir Lectores, 3.000 lectores | 2.935 ms | 2.496–3.124 | 1.000 ms | **No** |
+| Abrir Voluntarios, 202 voluntarios, en frío | 580 ms | 437–794 | 1.000 ms | **A veces**; otra corrida dio 1.098 ms de mediana |
+| La misma lista con los documentos ya en el SDK | 510 ms | 445–629 | — | referencia |
 
 Las mismas medidas en la máquina de la contraprueba, para que se vea cuánto
 depende del host: Catálogo 150 → 407 ms; Lectores 100 → 166 ms; Catálogo 5.000 →
 3.373 ms; Lectores 3.000 → 1.695 ms; tecla del catálogo → 9 ms; tecla de
 lectores → 5 ms. Los veredictos no cambian.
-| Abrir Voluntarios, 202 voluntarios, en frío | 580 ms | 437–794 | 1.000 ms | **A veces**; otra corrida dio 1.098 ms de mediana |
-| La misma lista con los documentos ya en el SDK | 510 ms | 445–629 | — | referencia |
 
 **El límite por tecla se cumple con holgura, y eso es lo que el diseño de esta
 etapa compró.** El texto de cada libro se normaliza UNA vez al recibir la
@@ -580,11 +585,12 @@ Ninguna de estas la puede hacer el agente, y ninguna está hecha.
 - **Nada se ha probado en un proyecto real.** Todo corre contra
   `demo-biblioteca` en el emulador. El agente no despliega, no lee credenciales
   de producción y no fusiona a `main` (AGENTS.md).
-- **La contraprueba revisó el SHA `f64b78f`, no este.** Sus tres hallazgos están
-  corregidos aquí, y su propio informe lo pide expresamente: «tras corregir,
-  contraprobar de nuevo el mismo SHA de corrección; no bastan afirmaciones
-  documentales». Esa segunda pasada está pendiente, y es corta: son tres
-  hallazgos con prueba cada uno.
+- ~~La contraprueba revisó el SHA `f64b78f`, no este.~~ **Resuelto.** La segunda
+  pasada se hizo sobre `59353a4` y está en
+  `informes/contraprueba-etapa-2-ronda-2.md`: cerró los tres hallazgos —quitando
+  el arreglo de H-01 para ver fallar la prueba y restituyéndolo— y no encontró
+  nada nuevo en `4453fce`. De ahí salieron las dos últimas correcciones de este
+  informe: la prueba dedicada de H-02 y el formato de la tabla de la sección 3.
 - **El catálogo no escala más allá de unos mil documentos**, por tiempo y por
   cuota (sección 3).
 - **Las reglas no comprueban dos cosas, a propósito y declarado en su
@@ -644,9 +650,9 @@ Ninguna de estas la puede hacer el agente, y ninguna está hecha.
 | Dato | Valor |
 |---|---|
 | Rama | `etapa-2` |
-| SHA entregado | `4453fce`, el último commit de código; encima solo va este informe |
-| Commits de la etapa | `84c0e64` puras · `6e351fd` reglas · `33decf6` scripts · `2b556c6` pantallas y concurrencia · `644f9c0` informe · `d5a8e69` repaso del diff · `dcd9e5f` el escáner y los archivos nuevos · `f64b78f` encargo de contraprueba · `4453fce` las 18 correcciones |
-| Corridas de integración continua | 26, 27, 28 y 30 en verde; la **29 falló** por el escáner (sección 2.5) y la 31 corre sobre el SHA entregado |
+| SHA entregado | `07aa424`, el último commit de código; encima solo va este informe |
+| Commits de la etapa | `84c0e64` puras · `6e351fd` reglas · `33decf6` scripts · `2b556c6` pantallas y concurrencia · `644f9c0` informe · `d5a8e69` repaso del diff · `dcd9e5f` el escáner y los archivos nuevos · `f64b78f` encargo de contraprueba · `4453fce` las 18 correcciones · `07aa424` la prueba de H-02 que pidió la ronda 2 |
+| Corridas de integración continua | 26, 27, 28 y 30 en verde; la **29 falló** por el escáner (sección 2.5); la última corre sobre el SHA entregado |
 | Node | 22.22.0 (local) y 22 en la integración continua |
 | npm | 10.9.4 |
 | Java | OpenJDK 21.0.12.1 local; Temurin 21 en la integración continua |
@@ -659,11 +665,12 @@ Ninguna de estas la puede hacer el agente, y ninguna está hecha.
 | @playwright/test | 1.56.1 |
 | Chromium | 141.0.7390.37 |
 | Proyecto usado | `demo-biblioteca`, solo emulador |
-| Pruebas ejecutadas | **327**: 143 unidad, 72 reglas, 25 scripts, 81 extremo a extremo, 6 carga |
+| Pruebas ejecutadas | **332**: 148 unidad, 72 reglas, 25 scripts, 81 extremo a extremo, 6 carga |
 | Pruebas en rojo | ninguna |
 | Casos del documento cubiertos | **43 de 43**, todos automatizados y ejecutados |
 | Límites del documento no cumplidos | abrir con 5.000 libros y 3.000 lectores (sección 3) |
 | Datos personales versionados | ninguno; el escáner pasa sin hallazgos |
-| Contraprueba independiente | **sí**, sobre `f64b78f`, en `informes/contraprueba-etapa-2.md`; tres hallazgos, los tres corregidos |
+| Contraprueba independiente | **sí, dos rondas.** `f64b78f` en `informes/contraprueba-etapa-2.md` (tres hallazgos) y `59353a4` en `informes/contraprueba-etapa-2-ronda-2.md` (los tres cerrados, nada nuevo) |
 | Hallazgos de las dos revisiones | 18 en total: 15 de la revisión del diff y 3 de la contraprueba; todos corregidos con prueba |
-| Pendiente de la contraprueba | la segunda pasada sobre el SHA de las correcciones |
+| Pendiente de la contraprueba | nada; la segunda pasada se hizo y cerró los tres hallazgos |
+| Pendiente del dueño | desplegar reglas e índices en el proyecto de ensayo, y las pruebas manuales, que se acumulan para la sesión con teléfonos antes de la carga real (PASOS-DEL-DUENO.md) |
