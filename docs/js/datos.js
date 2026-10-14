@@ -223,10 +223,18 @@ export function crearDatos({ db, sdk, red = globalThis.navigator, contadores = c
 
   /** Escucha una colección. Solo suma los documentos que CAMBIARON. */
   function escucharColeccion(ruta, alCambiar, alFallar) {
+    return escucharConsulta(sdk.collection(db, ruta), alCambiar, alFallar);
+  }
+
+  /**
+   * Escucha una consulta de Firestore (filtros / orden / límite). Misma
+   * telemetría que `escucharColeccion`.
+   */
+  function escucharConsulta(consulta, alCambiar, alFallar) {
     let veniaDeCache = false;
     let primera = true;
     const soltar = sdk.onSnapshot(
-      sdk.collection(db, ruta),
+      consulta,
       { includeMetadataChanges: true },
       (instantanea) => {
         contarReconexion(instantanea.metadata, () => veniaDeCache, (valor) => {
@@ -243,8 +251,6 @@ export function crearDatos({ db, sdk, red = globalThis.navigator, contadores = c
           }
         }
         if (instantanea.empty) contadores.sumar('consultasVacias');
-        // El tercer argumento es cuántos documentos cambiaron: una pantalla
-        // puede así ignorar un evento que no trae cambios.
         alCambiar(
           instantanea.docs.map((d) => ({ id: d.id, ...d.data() })),
           instantanea.metadata,
@@ -258,6 +264,36 @@ export function crearDatos({ db, sdk, red = globalThis.navigator, contadores = c
       escuchas.delete(soltar);
       soltar();
     };
+  }
+
+  /**
+   * Lectura puntual de una consulta contra el servidor.
+   * @returns {{estado:string, documentos:Array, ultimoDoc:object|null}}
+   */
+  async function consultar(consulta) {
+    try {
+      const instantanea = await sdk.getDocs(consulta);
+      contadores.sumar('documentosDelServidor', instantanea.size);
+      contadores.sumar('lecturasDeReglasEstimadas', ACCESOS_DE_REGLAS.lectura);
+      if (instantanea.empty) contadores.sumar('consultasVacias');
+      const documentos = instantanea.docs.map((d) => ({ id: d.id, ...d.data(), __snap: d }));
+      return {
+        estado: 'ok',
+        documentos,
+        ultimoDoc: instantanea.docs.at(-1) ?? null,
+      };
+    } catch (error) {
+      const codigo = error?.code ?? '';
+      if (codigo.includes('permission-denied')) {
+        return { estado: 'denegada', documentos: [], ultimoDoc: null };
+      }
+      return { estado: 'sin-conexion', documentos: [], ultimoDoc: null };
+    }
+  }
+
+  /** Construye una consulta tipada sobre una colección. */
+  function consultaDe(ruta, ...restricciones) {
+    return sdk.query(sdk.collection(db, ruta), ...restricciones);
   }
 
   /** Cancela TODAS las escuchas. Se usa al cerrar sesión o al perder el acceso. */
@@ -340,6 +376,14 @@ export function crearDatos({ db, sdk, red = globalThis.navigator, contadores = c
     leerDelServidor,
     escucharDocumento,
     escucharColeccion,
+    escucharConsulta,
+    consultar,
+    consultaDe,
+    where: (...args) => sdk.where(...args),
+    orderBy: (...args) => sdk.orderBy(...args),
+    limit: (...args) => sdk.limit(...args),
+    startAfter: (...args) => sdk.startAfter(...args),
+    timestampDesdeDate: (fecha) => sdk.Timestamp.fromDate(fecha),
     cancelarEscuchas,
     guardar,
     hayRed,
