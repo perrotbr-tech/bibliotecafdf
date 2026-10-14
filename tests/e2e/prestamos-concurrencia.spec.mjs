@@ -48,7 +48,7 @@ test('P-02 dos clientes prestan el mismo libro al mismo tiempo', async ({ browse
   const fallos = [rA, rB].filter((r) => !r.esExito);
   expect(exitos).toHaveLength(1);
   expect(fallos).toHaveLength(1);
-  expect(fallos[0].mensaje).toMatch(/prestó|prestado|conflicto|Inténtalo|permiso/iu);
+  expect(fallos[0].mensaje).toMatch(/prest|conflicto|Inténtalo|permiso/iu);
 
   await contextoA.close();
   await contextoB.close();

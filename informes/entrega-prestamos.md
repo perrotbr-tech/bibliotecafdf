@@ -4,7 +4,7 @@ specs/03 + specs/04 · rama `entrega-prestamos`
 
 ## 1. SHA entregado y versiones instaladas
 
-- SHA: `5655138`
+- SHA: `60e47a6`
 - Node `v22.14.0` · npm `10.9.7` · OpenJDK `21.0.10` · firebase-tools `15.33.0`
 - firebase SDK `12.19.0` · firebase-admin `14.5.0` · @firebase/rules-unit-testing `5.0.2`
 - @playwright/test `1.56.1`
