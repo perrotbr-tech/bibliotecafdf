@@ -19,6 +19,8 @@ export const RUTAS = {
   libro: (codigo) => `bibliotecas/${BIB}/libros/${codigo}`,
   lector: (id) => `bibliotecas/${BIB}/lectores/${id}`,
   clave: (clave) => `bibliotecas/${BIB}/lectoresClave/${clave}`,
+  prestamo: (id) => `bibliotecas/${BIB}/prestamos/${id}`,
+  calendario: (dia) => `bibliotecas/${BIB}/calendario/${dia}`,
 };
 
 export const ADMIN = 'admin@example.com';
@@ -206,4 +208,74 @@ export function bloqueoMantenimiento() {
     hasta: null,
     temporada: null,
   };
+}
+
+/**
+ * Documento de calendario. Por defecto abre una ventana amplia alrededor de
+ * «ahora» del emulador para que las pruebas de reglas puedan prestar sin
+ * depender del día civil (contrato §2: calendario sintético solo en demo).
+ */
+export async function sembrarCalendario(
+  entorno,
+  salidaDia,
+  {
+    inicio = new Date(Date.now() - 12 * 60 * 60 * 1000),
+    finExclusivo = new Date(Date.now() + 12 * 60 * 60 * 1000),
+    temporada = null,
+    vencimientos = null,
+  } = {},
+) {
+  const { documentoDeCalendario, temporadaDe } = await import('../../docs/js/fechas.js');
+  let datos;
+  try {
+    datos = documentoDeCalendario(salidaDia);
+  } catch {
+    datos = {
+      temporada: temporadaDe(salidaDia),
+      vencimientos: [1, 2, 3, 4].map(() => new Date(Date.now() + 7 * 86_400_000)),
+    };
+  }
+  await entorno.withSecurityRulesDisabled(async (contexto) => {
+    await contexto.firestore().doc(RUTAS.calendario(salidaDia)).set({
+      inicio,
+      finExclusivo,
+      temporada: temporada ?? datos.temporada,
+      vencimientos: (vencimientos ?? datos.vencimientos).map((v) =>
+        v?.toDate ? v : v instanceof Date ? v : new Date(v),
+      ),
+    });
+  });
+}
+
+/** Préstamo ya existente, sembrado sin pasar por reglas. */
+export async function sembrarPrestamo(entorno, id, campos = {}) {
+  await entorno.withSecurityRulesDisabled(async (contexto) => {
+    const ahora = new Date();
+    await contexto.firestore().doc(RUTAS.prestamo(id)).set({
+      numero: 1,
+      libro: 'INF001',
+      lector: 'L001',
+      prestadoEn: ahora,
+      salidaDia: '2026-10-10',
+      plazoSabados: 2,
+      registroDiferido: false,
+      motivoRegistroDiferido: null,
+      venceEl: new Date(ahora.getTime() + 14 * 86_400_000),
+      temporada: '2026-5',
+      estado: 'abierto',
+      devueltoEn: null,
+      devueltoATiempo: null,
+      correccionATiempo: null,
+      devueltoPor: null,
+      anuladoEn: null,
+      anuladoPor: null,
+      recordadoEn: null,
+      recordadoPor: null,
+      creadoEn: ahora,
+      creadoPor: VOLUNTARIA,
+      creacionId: ID('p'),
+      origen: 'app',
+      ...campos,
+    });
+  });
 }

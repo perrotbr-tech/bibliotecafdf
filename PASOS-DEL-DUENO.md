@@ -61,6 +61,23 @@ Las especificaciones siguen siendo siete documentos, pero se construyen agrupada
 2. Desplegar reglas e índices en el proyecto de **ensayo** con el comando que indique el informe.
 3. Fusionar la rama.
 
+Desde la entrega **Préstamos** el despliegue deja de ser solo reglas: hay un índice compuesto real (`estado` + `prestadoEn` para Devueltos). Sin él, la vista Devueltos falla solo en el proyecto real (el emulador no lo exige). Comando:
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes --project biblioteca-fdf-ensayo
+# y, cuando toque el real:
+firebase deploy --only firestore:rules,firestore:indexes --project biblioteca-fdf
+```
+
+Espera a que el índice termine de construirse en la consola antes de probar Devueltos.
+
+También hay que cargar el calendario de confianza antes del primer préstamo real:
+
+```bash
+node scripts/generar-calendario.mjs --desde 2025-01-01 --hasta 2028-12-31 \
+  --proyecto biblioteca-fdf-ensayo --confirmo-proyecto-real
+```
+
 Las pruebas marcadas «(manual)» y las pruebas de humo de cada documento **no se hacen entrega por entrega**: se acumulan y se corren juntas, en una sesión con dos teléfonos reales sobre el proyecto de ensayo, antes de la carga de los datos reales. Esa carga ya estaba fijada para justo antes del primer sábado de uso, así que el ensayo cae en el momento correcto: cuando la app ya hace todo lo que se va a usar ese día. Recién ahí se despliegan reglas e índices en el proyecto **real**.
 
 Una vez, cuando se fusione la primera entrega:

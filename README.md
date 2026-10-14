@@ -4,10 +4,9 @@ Sitio estático sin paso de compilación: HTML, CSS y módulos ES nativos. Se pu
 tal cual desde `docs/` con GitHub Pages. La base de datos es Cloud Firestore en
 plan gratuito, y se entra con una cuenta de Google.
 
-**Estado: base y acceso, catálogo y lectores.** Préstamos, recordatorios, juego
-y estadísticas llegan en las dos entregas siguientes; sus pantallas dicen
-«Disponible pronto». La agrupación de las entregas que faltan está en
-`AGENTS.md`.
+**Estado: base, acceso, catálogo, lectores y préstamos** (incluye recordatorios
+por WhatsApp). Juego y estadísticas llegan en la entrega siguiente. La
+agrupación de las entregas está en `AGENTS.md`.
 
 La especificación manda sobre el código: `specs/00-contrato-operativo.md`,
 `specs/00-base.md` y el documento de cada etapa. `referencia/prototipo.html` es
@@ -139,6 +138,16 @@ Lo hace el dueño, con sus credenciales, siguiendo `PASOS-DEL-DUENO.md`. El
 agente no despliega reglas ni índices, no toca proyectos reales y no fusiona a
 `main`.
 
+Desde Préstamos el comando incluye el índice compuesto de Devueltos:
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes --project <ensayo|produccion>
+```
+
+Si se despliegan solo las reglas, Devueltos falla en el proyecto real. El
+calendario de confianza se genera con `scripts/generar-calendario.mjs` (ver
+`PASOS-DEL-DUENO.md`).
+
 ## Dónde está cada cosa
 
 ```
@@ -147,8 +156,8 @@ docs/          la app publicada
                vistas/ y ui/
 firestore.rules
 tests/         unidad/, reglas/, scripts/, e2e/, carga/, ayuda/, fixtures/
-scripts/       inicializar, cargar-datos, respaldar, restaurar,
-               revisar-repositorio, servir, arrancar-local
+scripts/       inicializar, cargar-datos, generar-calendario, respaldar,
+               restaurar, revisar-repositorio, servir, arrancar-local
   comun/       destino, mantenimiento, manifiesto, biblioteca, datos-exportados
 specs/         la especificación; manda sobre el código
 informes/      un informe por etapa

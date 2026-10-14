@@ -98,12 +98,10 @@ test('de config/contadores la app solo puede subir ultimoLector; el control, nad
 
 test('A-12 una ruta que no figura en las reglas queda denegada', async () => {
   const db = comoCuenta(entorno, ADMIN);
-  // `libros`, `lectores` y `lectoresClave` salieron de esta lista en la
-  // Etapa 2: ahora tienen reglas propias y sus pruebas al lado.
+  // `libros`, `lectores`, `lectoresClave`, `prestamos` y `calendario` salieron
+  // de esta lista: tienen reglas propias. Quedan las rutas sin regla.
   for (const ruta of [
-    `bibliotecas/${BIB}/prestamos/p1`,
     `bibliotecas/${BIB}/temporadas/2026-5`,
-    `bibliotecas/${BIB}/calendario/2026-10-10`,
     `bibliotecas/${BIB}/config/otra-cosa`,
     `bibliotecas/${BIB}`,
     'otraColeccion/x',
@@ -111,9 +109,8 @@ test('A-12 una ruta que no figura en las reglas queda denegada', async () => {
     await assertFails(getDoc(doc(db, ruta)));
     await assertFails(setDoc(doc(db, ruta), { algo: 1 }));
   }
-  for (const coleccion of [`bibliotecas/${BIB}/prestamos`, 'bibliotecas']) {
-    await assertFails(getDocs(collection(db, coleccion)));
-  }
+  await assertFails(setDoc(doc(db, `bibliotecas/${BIB}/calendario/2026-10-10`), { algo: 1 }));
+  await assertFails(getDocs(collection(db, 'bibliotecas')));
 });
 
 test('A-12 la configuración se crea y se borra solo con el script del dueño', async () => {

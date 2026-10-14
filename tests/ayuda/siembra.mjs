@@ -43,7 +43,14 @@ export async function limpiarBase() {
   for (const ruta of [rutas.configApp(), rutas.configContadores(), rutas.configControl()]) {
     await base.doc(ruta).delete();
   }
-  for (const coleccion of [rutas.voluntarios(), rutas.libros(), rutas.lectores(), rutas.lectoresClave()]) {
+  for (const coleccion of [
+    rutas.voluntarios(),
+    rutas.libros(),
+    rutas.lectores(),
+    rutas.lectoresClave(),
+    rutas.prestamos(),
+    rutas.calendario(),
+  ]) {
     const documentos = await base.collection(coleccion).get();
     await Promise.all(documentos.docs.map((uno) => uno.ref.delete()));
   }
@@ -252,4 +259,70 @@ export async function sembrarVolumen({ libros = 0, lectores = 0 } = {}) {
 export async function cambiarCategorias(categorias) {
   const { db: base } = await baseDemo();
   await base.doc(rutas.configApp()).update({ categorias });
+}
+
+/**
+ * Calendario sintético cuya ventana incluye `ahora` (contrato §2). Solo demo.
+ * Si `salidaDia` es sábado usa vencimientos canónicos; si no, inventa cuatro.
+ */
+export async function sembrarCalendarioSintetico(salidaDia, { ahora = new Date() } = {}) {
+  const { db: base, FieldValue: _fv } = await baseDemo();
+  const { Timestamp } = await import('firebase-admin/firestore');
+  const { documentoDeCalendario, esSabado, temporadaDe, venceElDe } = await import('../../docs/js/fechas.js');
+  const inicio = new Date(ahora.getTime() - 12 * 60 * 60 * 1000);
+  const finExclusivo = new Date(ahora.getTime() + 12 * 60 * 60 * 1000);
+  let vencimientos;
+  let temporada;
+  if (esSabado(salidaDia)) {
+    const doc = documentoDeCalendario(salidaDia);
+    vencimientos = doc.vencimientos;
+    temporada = doc.temporada;
+  } else {
+    temporada = temporadaDe(salidaDia);
+    vencimientos = [1, 2, 3, 4].map((k) => {
+      try {
+        return venceElDe(salidaDia, k);
+      } catch {
+        return new Date(ahora.getTime() + k * 7 * 86_400_000);
+      }
+    });
+  }
+  await base.doc(rutas.diaCalendario(salidaDia)).set({
+    inicio: Timestamp.fromDate(inicio),
+    finExclusivo: Timestamp.fromDate(finExclusivo),
+    temporada,
+    vencimientos: vencimientos.map((v) => Timestamp.fromDate(v instanceof Date ? v : new Date(v))),
+    sintetico: true,
+  });
+}
+
+export async function ponerPrestamo(id, campos = {}) {
+  const { db: base, FieldValue: camposFv } = await baseDemo();
+  const ahora = new Date();
+  await base.doc(rutas.prestamo(id)).set({
+    numero: 1,
+    libro: 'INF001',
+    lector: 'L001',
+    prestadoEn: ahora,
+    salidaDia: '2026-10-10',
+    plazoSabados: 2,
+    registroDiferido: false,
+    motivoRegistroDiferido: null,
+    venceEl: new Date(ahora.getTime() + 14 * 86_400_000),
+    temporada: '2026-5',
+    estado: 'abierto',
+    devueltoEn: null,
+    devueltoATiempo: null,
+    correccionATiempo: null,
+    devueltoPor: null,
+    anuladoEn: null,
+    anuladoPor: null,
+    recordadoEn: null,
+    recordadoPor: null,
+    creadoEn: camposFv.serverTimestamp(),
+    creadoPor: VOLUNTARIA,
+    creacionId: 'p'.repeat(32),
+    origen: 'app',
+    ...campos,
+  });
 }
