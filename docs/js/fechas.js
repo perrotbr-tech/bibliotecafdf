@@ -7,10 +7,10 @@
 // La Etapa 2 añade lo que la carga inicial necesita para convertir las fechas
 // del Excel en instantes: el mediodía y el fin de un día en Chile.
 //
-// Los sábados, el calendario canónico, los vencimientos calculados y el avance
-// de temporada son de la Etapa 3 y NO se adelantan (contrato §4 y §9). Lo de
-// aquí convierte una fecha que YA viene verificada en el archivo; no decide si
-// un día es hábil para prestar.
+// La Etapa 3 añade sábados, vencimientos y atrasos. El calendario canónico
+// que las reglas exigen vive en `calendario/{salidaDia}` y lo genera
+// `scripts/generar-calendario.mjs`; estas funciones calculan lo mismo en el
+// cliente para armar la UI y cotejar antes de escribir.
 
 export const ZONA = 'America/Santiago';
 
@@ -225,4 +225,167 @@ export function sabadosEntre(desde, hasta, tope = Number.POSITIVE_INFINITY) {
     }
   }
   return cuantos;
+}
+
+// ---------------------------------------------------------------------------
+// Etapa 3: sábados, vencimientos y atrasos.
+// ---------------------------------------------------------------------------
+
+/**
+ * Próximo sábado a partir de un día (si el día ya es sábado, el siguiente).
+ * «Hoy sábado» en «Para recordar» pide el sábado que viene, no el de hoy.
+ */
+export function sabadoSiguiente(dia) {
+  let candidato = diaDesplazado(dia, 1);
+  while (!esSabado(candidato)) candidato = diaDesplazado(candidato, 1);
+  return candidato;
+}
+
+/**
+ * El sábado de una jornada: si `dia` es sábado, él mismo; si no, el próximo.
+ * Lo usa Inicio fuera de sábado («Próximo sábado, …»).
+ */
+export function sabadoDeJornada(dia) {
+  return esSabado(dia) ? dia : sabadoSiguiente(dia);
+}
+
+/**
+ * Día de vencimiento de un préstamo con plazo de `k` sábados (base §8).
+ * Si salió un sábado, vence exactamente `7 × k` días después. Si no, el
+ * k-ésimo sábado posterior al día de salida.
+ */
+export function diaDeVencimiento(salidaDia, plazoSabados) {
+  const k = Number(plazoSabados);
+  if (!Number.isInteger(k) || k < 1 || k > 4) {
+    throw new RangeError(`plazoSabados fuera de rango: ${plazoSabados}`);
+  }
+  if (esSabado(salidaDia)) return diaDesplazado(salidaDia, 7 * k);
+  let dia = salidaDia;
+  for (let i = 0; i < k; i += 1) dia = sabadoSiguiente(dia);
+  return dia;
+}
+
+/**
+ * `venceEl`: un milisegundo antes del primer instante del domingo que sigue
+ * al sábado de vencimiento, en America/Santiago (base §5 / §8).
+ */
+export function venceElDe(salidaDia, plazoSabados) {
+  return finDelDiaEnChile(diaDeVencimiento(salidaDia, plazoSabados));
+}
+
+/** Días civiles entre dos fechas `AAAA-MM-DD` (hasta − desde). */
+export function diasEntre(desde, hasta) {
+  const [ay, am, ad] = numerosDeDia(desde);
+  const [by, bm, bd] = numerosDeDia(hasta);
+  const a = Date.UTC(ay, am - 1, ad);
+  const b = Date.UTC(by, bm - 1, bd);
+  return Math.round((b - a) / 86_400_000);
+}
+
+/**
+ * Texto de atraso de un préstamo abierto (base §8 / P-42).
+ * `ahora` es la hora corregida; `venceEl` el Timestamp del préstamo.
+ */
+export function textoAtraso(venceEl, ahora) {
+  const instanteVence = venceEl instanceof Date ? venceEl : venceEl?.toDate?.() ?? new Date(venceEl);
+  const instanteAhora = ahora instanceof Date ? ahora : new Date(ahora);
+  if (instanteAhora.getTime() <= instanteVence.getTime()) return null;
+  const diaVence = diaEnChile(instanteVence);
+  const hoy = diaEnChile(instanteAhora);
+  const dias = diasEntre(diaVence, hoy);
+  if (dias < 1) return null;
+  if (dias <= 6) {
+    return esSabado(diaVence) ? 'Venció el sábado' : `Venció el ${textoDiaCorto(diaVence)}`;
+  }
+  if (dias <= 62) {
+    const n = Math.floor(dias / 7);
+    return n === 1 ? 'Atrasado 1 sábado' : `Atrasado ${n} sábados`;
+  }
+  const meses = Math.floor(dias / 30);
+  return meses === 1 ? 'Atrasado 1 mes' : `Atrasado ${meses} meses`;
+}
+
+/** «sábado 24 de octubre» o con año si no es el año en curso (specs/04). */
+export function textoFechaVencimiento(venceElODia, { anioDeReferencia = null } = {}) {
+  const dia =
+    typeof venceElODia === 'string' && FORMATO_DIA.test(venceElODia)
+      ? venceElODia
+      : diaEnChile(venceElODia instanceof Date ? venceElODia : venceElODia?.toDate?.() ?? new Date(venceElODia));
+  const [anio, mes, numero] = numerosDeDia(dia);
+  const instante = mediodiaEnChile(dia);
+  const { weekday, day, month, year } = partes(instante, TEXTO_LARGO);
+  const anioRef = anioDeReferencia ?? new Date().getFullYear();
+  if (Number(year) === Number(anioRef) || anio === anioRef) {
+    return `${weekday} ${day} de ${month}`;
+  }
+  return `${weekday} ${day} de ${month} de ${year}`;
+}
+
+function textoDiaCorto(dia) {
+  const instante = mediodiaEnChile(dia);
+  const { weekday, day, month } = partes(instante, TEXTO_LARGO);
+  return `${weekday} ${day} de ${month}`;
+}
+
+/**
+ * ¿La devolución fue a tiempo? Contrato §5: si hay booleano de corrección o
+ * legado, se usa; si no, se compara `devueltoEn <= venceEl`.
+ */
+export function fueATiempo(prestamo) {
+  if (prestamo?.devueltoATiempo === true || prestamo?.devueltoATiempo === false) {
+    return prestamo.devueltoATiempo;
+  }
+  const devuelto = prestamo?.devueltoEn;
+  const vence = prestamo?.venceEl;
+  if (devuelto == null || vence == null) return null;
+  const a = devuelto instanceof Date ? devuelto : devuelto?.toDate?.() ?? new Date(devuelto);
+  const b = vence instanceof Date ? vence : vence?.toDate?.() ?? new Date(vence);
+  return a.getTime() <= b.getTime();
+}
+
+/** La ventana de arrepentimiento de las reglas: diez minutos. */
+export const VENTANA_DE_DESHACER_MS = 10 * 60 * 1000;
+
+/**
+ * ¿`marca` está dentro de la ventana de diez minutos contada desde `ahora`?
+ *
+ * La cota es ESTRICTA, igual que la regla:
+ * `request.time < desde + duration.value(10, 'm')`. Con `<=`, justo en el
+ * minuto diez el botón de deshacer aparecía y el servidor denegaba la
+ * escritura (H-06 de la contraprueba de Préstamos). Vive aquí, y no en la
+ * ficha, porque es la misma clase de regla de fecha que el resto de este
+ * archivo y así se puede fijar el borde al milisegundo.
+ */
+export function dentroDeDiezMinutos(marca, ahora) {
+  if (!marca || !ahora) return false;
+  const desde = marca instanceof Date ? marca : marca?.toDate?.() ?? new Date(marca);
+  const transcurrido = ahora.getTime() - desde.getTime();
+  return transcurrido >= 0 && transcurrido < VENTANA_DE_DESHACER_MS;
+}
+
+/**
+ * Documento de calendario para un sábado: inicio, finExclusivo, temporada y
+ * los cuatro vencimientos (plazo 1..4). Lo escribe el script del dueño.
+ */
+export function documentoDeCalendario(salidaDia) {
+  if (!esSabado(salidaDia)) {
+    throw new RangeError(`El calendario solo admite sábados: ${salidaDia}`);
+  }
+  return {
+    inicio: primerInstanteEnChile(salidaDia),
+    finExclusivo: primerInstanteEnChile(diaDesplazado(salidaDia, 1)),
+    temporada: temporadaDe(salidaDia),
+    vencimientos: [1, 2, 3, 4].map((k) => venceElDe(salidaDia, k)),
+  };
+}
+
+/** Todos los sábados desde `desde` hasta `hasta`, ambos inclusive si son sábado. */
+export function sabadosEnRango(desde, hasta) {
+  const lista = [];
+  let dia = esSabado(desde) ? desde : sabadoSiguiente(desde);
+  while (dia <= hasta) {
+    lista.push(dia);
+    dia = diaDesplazado(dia, 7);
+  }
+  return lista;
 }

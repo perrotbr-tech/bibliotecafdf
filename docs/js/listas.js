@@ -9,8 +9,10 @@
 // Con cinco mil libros, normalizar por pulsación no entra en los 100 ms que
 // pide la etapa.
 
+import { diaEnChile, textoAtraso } from './fechas.js';
 import {
   coincideBusqueda,
+  normalizarBusqueda,
   normalizarCodigo,
   prepararBusquedaDeLector,
   prepararBusquedaDeLibro,
@@ -18,6 +20,9 @@ import {
 
 /** Filas que se muestran antes de «Mostrar más» (etapa 2 §Pantallas). */
 export const FILAS_POR_TANDA = 40;
+
+/** Página de Devueltos / Atrasados al cargar más. */
+export const DEVUELTOS_POR_PAGINA = 40;
 
 export const ESTADOS_DE_LIBRO = [
   { id: 'todos', texto: 'Todos' },
@@ -125,6 +130,81 @@ export function codigosDeCategoria(libros, prefijo) {
   return (libros ?? [])
     .map((libro) => normalizarCodigo(libro.codigo ?? libro.id))
     .filter((codigo) => codigo.startsWith(marca));
+}
+
+/**
+ * Enriquece un préstamo con título, lector y texto de búsqueda a partir de
+ * los mapas en memoria. Si faltan, deja el código y «(no encontrado)» (P-43).
+ */
+export function enriquecerPrestamo(prestamo, { librosPorCodigo = new Map(), lectoresPorId = new Map() } = {}) {
+  const libro = librosPorCodigo.get(prestamo.libro) ?? null;
+  const lector = lectoresPorId.get(prestamo.lector) ?? null;
+  const titulo = libro?.titulo ?? `${prestamo.libro} (no encontrado)`;
+  const nombreLector = lector?.nombre ?? `${prestamo.lector} (no encontrado)`;
+  const numero = prestamo.numero != null ? `P${prestamo.numero}` : '';
+  return {
+    ...prestamo,
+    titulo,
+    nombreLector,
+    telefonoLector: lector?.telefono ?? null,
+    busqueda: {
+      texto: normalizarBusqueda(`${titulo} ${nombreLector} ${prestamo.libro ?? ''} ${numero}`),
+      codigo: normalizarCodigo(prestamo.libro ?? '').toLowerCase(),
+    },
+  };
+}
+
+/** ¿El préstamo abierto está atrasado respecto de `ahora`? */
+export function estaAtrasado(prestamo, ahora) {
+  if (!prestamo?.venceEl || !ahora) return false;
+  const vence = prestamo.venceEl?.toDate?.() ?? new Date(prestamo.venceEl);
+  return ahora.getTime() > vence.getTime();
+}
+
+/** En curso: abiertos no atrasados, ordenados por vencimiento. */
+export function prestamosEnCurso(prestamos, ahora) {
+  return (prestamos ?? [])
+    .filter((p) => p.estado === 'abierto' && !estaAtrasado(p, ahora))
+    .sort((a, b) => instanteMs(a.venceEl) - instanteMs(b.venceEl));
+}
+
+/** Atrasados: del más antiguo al más reciente; en recordatorios, nunca recordados primero. */
+export function prestamosAtrasados(prestamos, ahora, { priorizarSinRecordatorio = false } = {}) {
+  const lista = (prestamos ?? []).filter((p) => p.estado === 'abierto' && estaAtrasado(p, ahora));
+  return lista.sort((a, b) => {
+    if (priorizarSinRecordatorio) {
+      const aRec = a.recordadoEn == null ? 0 : 1;
+      const bRec = b.recordadoEn == null ? 0 : 1;
+      if (aRec !== bRec) return aRec - bRec;
+    }
+    return instanteMs(a.venceEl) - instanteMs(b.venceEl);
+  });
+}
+
+/** Vuelven un día concreto (vencen ese sábado). */
+export function prestamosQueVuelven(prestamos, diaVence) {
+  return (prestamos ?? [])
+    .filter((p) => {
+      if (p.estado !== 'abierto' || !p.venceEl) return false;
+      const vence = p.venceEl?.toDate?.() ?? new Date(p.venceEl);
+      return diaEnChile(vence) === diaVence;
+    })
+    .sort((a, b) => instanteMs(a.venceEl) - instanteMs(b.venceEl));
+}
+
+function instanteMs(valor) {
+  if (valor == null) return 0;
+  if (typeof valor?.toMillis === 'function') return valor.toMillis();
+  if (valor?.toDate) return valor.toDate().getTime();
+  return new Date(valor).getTime();
+}
+
+export function filtrarPrestamos(prestamos, consulta = '') {
+  return (prestamos ?? []).filter((p) => coincideBusqueda(p.busqueda, consulta));
+}
+
+export function etiquetaAtraso(prestamo, ahora) {
+  return textoAtraso(prestamo.venceEl, ahora);
 }
 
 /**

@@ -17,7 +17,9 @@ import {
   porTandas,
   prepararLectores,
   prepararLibros,
+  prestamosQueVuelven,
 } from '../../docs/js/listas.js';
+import { finDelDiaEnChile } from '../../docs/js/fechas.js';
 
 const CATEGORIAS = [
   { nombre: 'Infantil', prefijo: 'INF' },
@@ -244,4 +246,32 @@ test('preparar cinco mil libros se mide en decenas de milisegundos, y filtrar en
   assert.equal(encontrados.length, 1);
   assert.ok(preparar < 500, `preparar 5.000 libros tardó ${preparar.toFixed(0)} ms`);
   assert.ok(filtrar < 60, `filtrar 5.000 libros tardó ${filtrar.toFixed(0)} ms`);
+});
+
+test('R-14 y R-15 «Vencen el sábado» son los de ese sábado, nunca los de hoy', () => {
+  // Tres préstamos abiertos: uno vence este sábado 10, otro el 17 y otro el 24.
+  const abiertos = ['2026-10-10', '2026-10-17', '2026-10-24'].map((dia, i) => ({
+    id: `p${i}`,
+    estado: 'abierto',
+    venceEl: finDelDiaEnChile(dia),
+  }));
+  // Más uno devuelto, que no aparece en ninguna lista.
+  abiertos.push({ id: 'pd', estado: 'devuelto', venceEl: finDelDiaEnChile('2026-10-17') });
+
+  // R-14: un jueves, la lista es la del sábado que viene.
+  assert.deepEqual(
+    prestamosQueVuelven(abiertos, '2026-10-17').map((p) => p.id),
+    ['p1'],
+  );
+
+  // R-15: un sábado, la lista es la del sábado SIGUIENTE, no la de hoy.
+  assert.deepEqual(
+    prestamosQueVuelven(abiertos, '2026-10-24').map((p) => p.id),
+    ['p2'],
+  );
+  assert.deepEqual(
+    prestamosQueVuelven(abiertos, '2026-10-10').map((p) => p.id),
+    ['p0'],
+    'la del propio sábado existe, pero es la que Inicio llama «Vuelven hoy»',
+  );
 });

@@ -99,3 +99,23 @@ test('las lecturas de una apertura de sesión se cuentan y son pocas', async ({ 
   expect(contadores).toHaveProperty('lecturasDeTransaccion');
   expect(contadores).toHaveProperty('reintentosDeTransaccion');
 });
+
+test('una pantalla pintada sin hora se repinta cuando la hora del servidor llega', async ({ page }) => {
+  // El fallo que esta prueba fija: Inicio se monta antes de que vuelva la
+  // sincronización, pinta «Hora pendiente», y nadie lo repintaba al llegar la
+  // hora. Con una base pequeña las escuchas llegan antes que el reloj, así que
+  // la pantalla se quedaba así hasta navegar a otra parte y volver.
+  await abrirYEntrar(page);
+  await expect(page.getByTestId('encabezado-inicio')).toBeVisible();
+
+  // Sin hora y recién montada: la pantalla no puede decidir el día.
+  await page.evaluate(() => globalThis.__biblioteca.invalidarReloj('prueba'));
+  await page.getByRole('button', { name: 'Préstamos' }).click();
+  await page.getByRole('button', { name: 'Inicio' }).click();
+  await expect(page.getByTestId('hora-pendiente')).toBeVisible();
+
+  // Llega la hora: la pantalla montada tiene que enterarse.
+  await page.evaluate(() => globalThis.__biblioteca.sincronizarReloj());
+  await expect(page.getByTestId('encabezado-inicio')).toBeVisible();
+  await expect(page.getByTestId('hora-pendiente')).toHaveCount(0);
+});

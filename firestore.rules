@@ -1,6 +1,7 @@
 rules_version = '2';
 
-// Reglas de seguridad de la biblioteca — Etapas 1 y 2.
+// Reglas de seguridad de la biblioteca — Etapas 1, 2 y entrega Préstamos
+// (specs/03 + specs/04).
 //
 // Negación por defecto: lo que no está escrito aquí está denegado.
 //
@@ -12,8 +13,7 @@ rules_version = '2';
 // Cuentas conservadoras, contando cada `get()` y cada `getAfter()` como un
 // acceso aunque repita documento. El techo real está medido aparte, en
 // `tests/reglas/presupuesto.test.mjs`: el emulador cobra documentos DISTINTOS
-// y no cobra los que la propia transacción escribe, de modo que el alta ocupa
-// 2 de los 20 y deja 18 libres. Lo que se promete aquí es esta cuenta:
+// y no cobra los que la propia transacción escribe. Lo que se promete aquí:
 //
 //   lectura de cualquier colección → 1 (el propio voluntario)
 //   sincronización de hora         → 1 (el propio voluntario)
@@ -29,6 +29,20 @@ rules_version = '2';
 //     · `config/contadores`     3 = voluntario + control + getAfter(lector)
 //   cambio de nombre de lector     → 6 como máximo (3 del lector + 3 de la
 //                                     clave nueva, si hay que crearla)
+//   prestar (3 documentos)         → 14 en la transacción, máximo 6 por
+//                                     operación:
+//     · `prestamos/{id}`       6 = voluntario + control + calendario
+//                                                       + getAfter(libro)
+//                                                       + getAfter(contadores)
+//                                                       + get(lector)
+//     · `libros/{codigo}`      4 = voluntario + control + getAfter(préstamo)
+//                                                       + getAfter(contadores)
+//     · `config/contadores`    4 = voluntario + control + getAfter(préstamo)
+//                                                       + getAfter(libro)
+//   devolver / anular / reabrir    → 4 (voluntario + control + getAfter libro
+//                                     + getAfter préstamo en el lado del libro)
+//   recordar por WhatsApp          → 2 (voluntario + control)
+//   corregir «a tiempo»            → 2 (voluntario/admin + control)
 //
 // Lo que estas reglas NO garantizan (declarado a propósito):
 //   · No reproducen la normalización Unicode del cliente: de la `clave`
@@ -38,6 +52,9 @@ rules_version = '2';
 //     lenguaje de reglas no puede recorrer una lista de mapas. Lo validan el
 //     cliente y el script de carga.
 //   · No recalculan agregados.
+//   · No demuestran que `salidaDia` sea sábado por aritmética civil: lo
+//     demuestran al exigir el documento `calendario/{salidaDia}`, que solo
+//     el script del dueño escribe y solo para sábados.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -188,12 +205,36 @@ service cloud.firestore {
       return getAfter(/databases/$(database)/documents/bibliotecas/$(bib)/lectoresClave/$(clave));
     }
 
+    function prestamoDespues(bib, id) {
+      return getAfter(/databases/$(database)/documents/bibliotecas/$(bib)/prestamos/$(id));
+    }
+
+    function libroDespues(bib, codigo) {
+      return getAfter(/databases/$(database)/documents/bibliotecas/$(bib)/libros/$(codigo));
+    }
+
+    function docCalendario(bib, salidaDia) {
+      return get(/databases/$(database)/documents/bibliotecas/$(bib)/calendario/$(salidaDia));
+    }
+
+    function docLector(bib, idLector) {
+      return get(/databases/$(database)/documents/bibliotecas/$(bib)/lectores/$(idLector));
+    }
+
     /** El contador quedó en el número de este identificador y lo enlaza. */
     function contadorEnlaza(doc, idLector) {
       return doc != null
         && doc.data.get('ultimoLectorId', null) == idLector
         && doc.data.get('ultimoLector', 0) is int
         && idDeLector(doc.data.ultimoLector) == idLector;
+    }
+
+    /** Contador de préstamos: N→N+1 enlazando este documento nuevo. */
+    function contadorEnlazaPrestamo(doc, idPrestamo, numero) {
+      return doc != null
+        && doc.data.get('ultimoPrestamoId', null) == idPrestamo
+        && doc.data.get('ultimoPrestamo', 0) is int
+        && doc.data.ultimoPrestamo == numero;
     }
 
     /** El documento de clave quedó apuntando a este lector. */
@@ -214,6 +255,85 @@ service cloud.firestore {
      */
     function lectorRecienCreado(doc) {
       return doc != null && doc.data.get('creadoEn', null) == request.time;
+    }
+
+    /** El préstamo enlazado es NUEVO: `creadoEn` es la hora de esta petición. */
+    function prestamoRecienCreado(doc) {
+      return doc != null && doc.data.get('creadoEn', null) == request.time;
+    }
+
+    function prestamoNuevoEnlazado(doc, idPrestamo, numero) {
+      return prestamoRecienCreado(doc)
+        && doc.data.get('numero', 0) == numero
+        && doc.data.get('estado', '') == 'abierto'
+        && formatoId(idPrestamo);
+    }
+
+    function metadatosDeOperacion() {
+      return request.resource.data.keys().hasAll(['ultimaOperacionId', 'modificadoEn'])
+        && formatoId(request.resource.data.ultimaOperacionId)
+        && horaDelServidor(request.resource.data.modificadoEn);
+    }
+
+    function dentroDeDiezMinutos(desde) {
+      return desde is timestamp && request.time < desde + duration.value(10, 'm');
+    }
+
+    /**
+     * Calendario de confianza: temporada y vencimiento exactos; ventana del
+     * sábado para el flujo normal; diferido solo administrador con motivo.
+     */
+    function calendarioCoincide(cal, datos) {
+      return cal != null
+        && cal.data.keys().hasAll(['inicio', 'finExclusivo', 'temporada', 'vencimientos'])
+        && datos.plazoSabados is int
+        && datos.plazoSabados >= 1
+        && datos.plazoSabados <= 4
+        && cal.data.vencimientos.size() == 4
+        && datos.venceEl == cal.data.vencimientos[datos.plazoSabados - 1]
+        && datos.temporada == cal.data.temporada
+        && (
+          (datos.registroDiferido == false
+            && datos.motivoRegistroDiferido == null
+            && cal.data.inicio <= request.time
+            && request.time < cal.data.finExclusivo)
+          || (datos.registroDiferido == true
+            && datos.motivoRegistroDiferido is string
+            && datos.motivoRegistroDiferido.size() >= 10
+            && datos.motivoRegistroDiferido.size() <= 200
+            && cal.data.inicio <= request.time)
+        );
+    }
+
+    function lectorPrestable(doc) {
+      return doc != null && doc.data.get('fusionadoEn', null) == null;
+    }
+
+    function libroQuedoPrestado(docLibro, idPrestamo, vecesAntes) {
+      return docLibro != null
+        && docLibro.data.get('baja', true) == false
+        && docLibro.data.get('prestamoAbierto', null) == idPrestamo
+        && docLibro.data.get('vecesPrestado', -1) == vecesAntes + 1;
+    }
+
+    function libroQuedoLibreTrasDevolver(docLibro, vecesAntes) {
+      return docLibro != null
+        && docLibro.data.get('prestamoAbierto', 'x') == null
+        && docLibro.data.get('vecesPrestado', -1) == vecesAntes;
+    }
+
+    // En anular, vecesPrestado baja exactamente uno y no queda negativo.
+    function libroQuedoLibreTrasAnular(docLibro, vecesAntes) {
+      return docLibro != null
+        && docLibro.data.get('prestamoAbierto', 'x') == null
+        && docLibro.data.get('vecesPrestado', -1) == vecesAntes - 1
+        && vecesAntes >= 1;
+    }
+
+    function libroQuedoReabierto(docLibro, idPrestamo, vecesAntes) {
+      return docLibro != null
+        && docLibro.data.get('prestamoAbierto', null) == idPrestamo
+        && docLibro.data.get('vecesPrestado', -1) == vecesAntes;
     }
 
     // ------------------------------------------------------------ biblioteca
@@ -335,16 +455,12 @@ service cloud.firestore {
         allow create, delete: if false;
       }
 
-      // Los contadores se leen siempre. De escritura, esta etapa abre UNA
-      // rendija: `ultimoLector` de N a N+1 dentro del alta de un lector.
-      // `ultimoPrestamo` y su enlace siguen cerrados hasta la Etapa 3.
+      // Los contadores se leen siempre. Dos rendijas de escritura: `ultimoLector`
+      // en el alta de un lector y `ultimoPrestamo` al crear un préstamo. Cada
+      // una exige el enlace bidireccional del contrato §3 y no toca la otra.
       match /config/contadores {
         allow read: if esVoluntario(bib);
 
-        // El enlace bidireccional del contrato §3: el contador exige que el
-        // lector enlazado sea nuevo y tenga el número correcto; el lector, por
-        // su lado, exige que el contador lo enlace a él. Subir el contador
-        // solo queda denegado porque `getAfter` del lector no encuentra nada.
         allow update: if cambia(['ultimoLector', 'ultimoLectorId'])
           && request.resource.data.ultimoLector is int
           && request.resource.data.ultimoLector == resource.data.ultimoLector + 1
@@ -353,7 +469,19 @@ service cloud.firestore {
           && sinBloqueo(bib)
           && lectorRecienCreado(lectorDespues(bib, request.resource.data.ultimoLectorId));
 
-        // Los crea y los borra solo el script del dueño, que no pasa por reglas.
+        allow update: if cambia(['ultimoPrestamo', 'ultimoPrestamoId'])
+          && request.resource.data.ultimoPrestamo is int
+          && request.resource.data.ultimoPrestamo == resource.data.ultimoPrestamo + 1
+          && request.resource.data.ultimoPrestamoId is string
+          && formatoId(request.resource.data.ultimoPrestamoId)
+          && esVoluntario(bib)
+          && sinBloqueo(bib)
+          && prestamoNuevoEnlazado(
+               prestamoDespues(bib, request.resource.data.ultimoPrestamoId),
+               request.resource.data.ultimoPrestamoId,
+               request.resource.data.ultimoPrestamo
+             );
+
         allow create, delete: if false;
       }
 
@@ -404,8 +532,7 @@ service cloud.firestore {
 
         // Al editar, el administrador cambia solo estos cuatro campos. El
         // código es el identificador y no se renombra; `prestamoAbierto` y
-        // `vecesPrestado` los mueven los préstamos de la Etapa 3, nunca una
-        // edición (C-07).
+        // `vecesPrestado` los mueven los préstamos, nunca una edición (C-07).
         allow update: if cambia(['titulo', 'autor', 'categoria', 'baja',
                                  'ultimaOperacionId', 'modificadoEn'])
           && request.resource.data.keys().hasAll(['ultimaOperacionId', 'modificadoEn'])
@@ -418,7 +545,48 @@ service cloud.firestore {
           && esAdmin(bib)
           && sinBloqueo(bib);
 
-        // Un libro no se borra: se da de baja (C-08).
+        // Prestar: nulo → id, vecesPrestado +1; el préstamo nuevo debe
+        // apuntar a este libro y el contador debe enlazarlo.
+        allow update: if cambia(['prestamoAbierto', 'vecesPrestado'])
+          && resource.data.prestamoAbierto == null
+          && formatoId(request.resource.data.prestamoAbierto)
+          && request.resource.data.vecesPrestado == resource.data.vecesPrestado + 1
+          && resource.data.baja == false
+          && esVoluntario(bib)
+          && sinBloqueo(bib)
+          && prestamoDespues(bib, request.resource.data.prestamoAbierto).data.libro == codigo
+          && prestamoDespues(bib, request.resource.data.prestamoAbierto).data.creadoEn == request.time
+          && prestamoDespues(bib, request.resource.data.prestamoAbierto).data.estado == 'abierto'
+          && contadoresDespues(bib).data.ultimoPrestamoId == request.resource.data.prestamoAbierto
+          && contadoresDespues(bib).data.ultimoPrestamo
+               == prestamoDespues(bib, request.resource.data.prestamoAbierto).data.numero;
+
+        // Devolver: libro libre, vecesPrestado igual. Anular: libre y −1.
+        allow update: if cambia(['prestamoAbierto', 'vecesPrestado'])
+          && resource.data.prestamoAbierto is string
+          && request.resource.data.prestamoAbierto == null
+          && esVoluntario(bib)
+          && sinBloqueo(bib)
+          && prestamoDespues(bib, resource.data.prestamoAbierto).data.libro == codigo
+          && (
+            (prestamoDespues(bib, resource.data.prestamoAbierto).data.estado == 'devuelto'
+              && request.resource.data.vecesPrestado == resource.data.vecesPrestado)
+            || (prestamoDespues(bib, resource.data.prestamoAbierto).data.estado == 'anulado'
+              && request.resource.data.vecesPrestado == resource.data.vecesPrestado - 1
+              && resource.data.vecesPrestado >= 1)
+          );
+
+        // Reabrir: libre → este préstamo; vecesPrestado no cambia.
+        allow update: if cambia(['prestamoAbierto'])
+          && resource.data.prestamoAbierto == null
+          && formatoId(request.resource.data.prestamoAbierto)
+          && request.resource.data.vecesPrestado == resource.data.vecesPrestado
+          && esVoluntario(bib)
+          && sinBloqueo(bib)
+          && prestamoDespues(bib, request.resource.data.prestamoAbierto).data.estado == 'abierto'
+          && prestamoDespues(bib, request.resource.data.prestamoAbierto).data.libro == codigo
+          && prestamoDespues(bib, request.resource.data.prestamoAbierto).data.devueltoEn == null;
+
         allow delete: if false;
       }
 
@@ -524,6 +692,149 @@ service cloud.firestore {
         // regla, que exigirá una unión válida hacia la raíz. Y una clave no se
         // borra: un nombre antiguo queda reservado (contrato §7).
         allow update, delete: if false;
+      }
+
+      // --- calendario de confianza -----------------------------------------
+
+      match /calendario/{salidaDia} {
+        allow read: if esVoluntario(bib);
+        // Solo el script administrativo del dueño escribe aquí (contrato §4).
+        allow create, update, delete: if false;
+      }
+
+      // --- préstamos -------------------------------------------------------
+
+      match /prestamos/{idPrestamo} {
+
+        allow read: if esVoluntario(bib);
+
+        // Crear: forma + calendario + lector + libro apuntando aquí + contador.
+        allow create: if formatoId(idPrestamo)
+          && request.resource.data.keys().hasOnly([
+               'numero', 'libro', 'lector',
+               'prestadoEn', 'salidaDia', 'plazoSabados',
+               'registroDiferido', 'motivoRegistroDiferido',
+               'venceEl', 'temporada', 'estado',
+               'devueltoEn', 'devueltoATiempo', 'correccionATiempo', 'devueltoPor',
+               'anuladoEn', 'anuladoPor',
+               'recordadoEn', 'recordadoPor',
+               'creadoEn', 'creadoPor', 'creacionId', 'origen'
+             ])
+          && request.resource.data.numero is int
+          && request.resource.data.libro.matches('^[A-Z]{2,4}[0-9]{3,4}[A-Z]?$')
+          && formatoIdLector(request.resource.data.lector)
+          && horaDelServidor(request.resource.data.prestadoEn)
+          && horaDelServidor(request.resource.data.creadoEn)
+          && request.resource.data.creadoPor == correo()
+          && formatoId(request.resource.data.creacionId)
+          && request.resource.data.salidaDia.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && request.resource.data.estado == 'abierto'
+          && request.resource.data.origen == 'app'
+          && request.resource.data.devueltoEn == null
+          && request.resource.data.devueltoATiempo == null
+          && request.resource.data.correccionATiempo == null
+          && request.resource.data.devueltoPor == null
+          && request.resource.data.anuladoEn == null
+          && request.resource.data.anuladoPor == null
+          && request.resource.data.recordadoEn == null
+          && request.resource.data.recordadoPor == null
+          && request.resource.data.registroDiferido is bool
+          && (request.resource.data.registroDiferido == false || esAdmin(bib))
+          && esVoluntario(bib)
+          && sinBloqueo(bib)
+          && calendarioCoincide(docCalendario(bib, request.resource.data.salidaDia), request.resource.data)
+          && lectorPrestable(docLector(bib, request.resource.data.lector))
+          && contadoresDespues(bib).data.ultimoPrestamo == request.resource.data.numero
+          && contadoresDespues(bib).data.ultimoPrestamoId == idPrestamo
+          && libroDespues(bib, request.resource.data.libro).data.prestamoAbierto == idPrestamo
+          && libroDespues(bib, request.resource.data.libro).data.baja == false;
+
+        // Devolver: abierto → devuelto; a tiempo nulo; libro libre.
+        allow update: if cambia([
+               'estado', 'devueltoEn', 'devueltoATiempo', 'correccionATiempo',
+               'devueltoPor', 'ultimaOperacionId', 'modificadoEn'
+             ])
+          && metadatosDeOperacion()
+          && resource.data.estado == 'abierto'
+          && request.resource.data.estado == 'devuelto'
+          && horaDelServidor(request.resource.data.devueltoEn)
+          && request.resource.data.devueltoPor == correo()
+          && request.resource.data.devueltoATiempo == null
+          && request.resource.data.correccionATiempo == null
+          && esVoluntario(bib)
+          && sinBloqueo(bib)
+          && libroDespues(bib, resource.data.libro).data.prestamoAbierto == null;
+
+        // Reabrir: limpia devolución/corrección; libro apunta aquí.
+        allow update: if cambia([
+               'estado', 'devueltoEn', 'devueltoATiempo', 'correccionATiempo',
+               'devueltoPor', 'ultimaOperacionId', 'modificadoEn'
+             ])
+          && metadatosDeOperacion()
+          && resource.data.estado == 'devuelto'
+          && request.resource.data.estado == 'abierto'
+          && request.resource.data.devueltoEn == null
+          && request.resource.data.devueltoATiempo == null
+          && request.resource.data.correccionATiempo == null
+          && request.resource.data.devueltoPor == null
+          && (esAdmin(bib)
+              || (resource.data.devueltoPor == correo()
+                  && dentroDeDiezMinutos(resource.data.devueltoEn)))
+          && esVoluntario(bib)
+          && sinBloqueo(bib)
+          && libroDespues(bib, resource.data.libro).data.prestamoAbierto == idPrestamo;
+
+        // Anular: abierto → anulado; libro libre (veces −1 lo exige el libro).
+        allow update: if cambia([
+               'estado', 'anuladoEn', 'anuladoPor',
+               'ultimaOperacionId', 'modificadoEn'
+             ])
+          && metadatosDeOperacion()
+          && resource.data.estado == 'abierto'
+          && request.resource.data.estado == 'anulado'
+          && horaDelServidor(request.resource.data.anuladoEn)
+          && request.resource.data.anuladoPor == correo()
+          && (esAdmin(bib)
+              || (resource.data.creadoPor == correo()
+                  && dentroDeDiezMinutos(resource.data.prestadoEn)))
+          && esVoluntario(bib)
+          && sinBloqueo(bib)
+          && libroDespues(bib, resource.data.libro).data.prestamoAbierto == null;
+
+        // Corregir «a tiempo»: solo admin, solo en devuelto.
+        allow update: if cambia([
+               'devueltoATiempo', 'correccionATiempo',
+               'ultimaOperacionId', 'modificadoEn'
+             ])
+          && metadatosDeOperacion()
+          && resource.data.estado == 'devuelto'
+          && request.resource.data.estado == 'devuelto'
+          && request.resource.data.devueltoATiempo is bool
+          && request.resource.data.correccionATiempo is map
+          && request.resource.data.correccionATiempo.keys().hasOnly(['por', 'en', 'motivo'])
+          && request.resource.data.correccionATiempo.keys().hasAll(['por', 'en', 'motivo'])
+          && request.resource.data.correccionATiempo.por == correo()
+          && horaDelServidor(request.resource.data.correccionATiempo.en)
+          && request.resource.data.correccionATiempo.motivo is string
+          && request.resource.data.correccionATiempo.motivo.size() >= 10
+          && request.resource.data.correccionATiempo.motivo.size() <= 200
+          && esAdmin(bib)
+          && sinBloqueo(bib);
+
+        // Recordar por WhatsApp: solo en abierto; solo recordadoEn/Por + meta.
+        allow update: if cambia([
+               'recordadoEn', 'recordadoPor',
+               'ultimaOperacionId', 'modificadoEn'
+             ])
+          && metadatosDeOperacion()
+          && resource.data.estado == 'abierto'
+          && request.resource.data.estado == 'abierto'
+          && horaDelServidor(request.resource.data.recordadoEn)
+          && request.resource.data.recordadoPor == correo()
+          && esVoluntario(bib)
+          && sinBloqueo(bib);
+
+        allow delete: if false;
       }
     }
 

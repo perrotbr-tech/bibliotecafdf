@@ -12,10 +12,11 @@ import { elegirAmbiente } from './ambiente.js';
 import { NOMBRE_ENTRADA, rutas } from './config-publica.js';
 import { clasificarResultado, crearDatos, intencionPendiente, olvidarIntencion } from './datos.js';
 import { arrancar } from './firebase.js';
+import { crearMemoria } from './memoria.js';
 import { crearReloj, crearRelojDePrueba, instanteDeParametro, vigilarReloj } from './reloj.js';
 import { entrarConGoogle, permisoDe, salir, vigilarPermiso } from './acceso.js';
 import { normalizarCorreo, nuevoId } from './texto.js';
-import { inscribirLector } from './operaciones.js';
+import { devolverPrestamo, inscribirLector, prestarLibro } from './operaciones.js';
 
 import { avisar, limpiarAvisos } from './ui/avisos.js';
 import { dibujarBarraInferior, esDestino, ocultarBarraInferior } from './ui/barra-inferior.js';
@@ -32,7 +33,12 @@ import { pantallaCatalogo } from './vistas/catalogo.js';
 import { pantallaLectores } from './vistas/lectores.js';
 import { pantallaMas } from './vistas/mas.js';
 import { pantallaVoluntarios } from './vistas/voluntarios.js';
+import { pantallaParaRecordar } from './vistas/para-recordar.js';
+import { pantallaMensajes } from './vistas/mensajes-admin.js';
+import { pantallaPapel } from './vistas/papel.js';
 import { cerrarHoja } from './ui/hoja.js';
+import { abrirHoja } from './ui/hoja.js';
+import { formularioDeInscripcion } from './vistas/inscribir-lector.js';
 
 const VISTA_INICIAL = 'inicio';
 
@@ -41,11 +47,15 @@ const app = {
   firebase: null,
   datos: null,
   reloj: null,
+  memoria: null,
   sesion: null,
   permiso: { estado: 'sin-sesion', correo: null, rol: null, nombre: null },
   categorias: [],
+  plantillas: { mensajeAtraso: '', mensajePrevio: '' },
+  plazoPorDefecto: 2,
   vista: VISTA_INICIAL,
   vistaActual: null,
+  opcionesVista: {},
   desmontarVista: () => {},
   soltarPermiso: () => {},
   soltarConfig: () => {},
@@ -62,7 +72,7 @@ function pantalla() {
  * Voluntarios, no Inicio con la dirección mintiendo. Lo que no se reconoce cae
  * en Inicio y la dirección se corrige.
  */
-const VISTAS_DE_MAS = ['voluntarios', 'lectores'];
+const VISTAS_DE_MAS = ['voluntarios', 'lectores', 'para-recordar', 'mensajes', 'papel'];
 
 function vistaDeLaDireccion() {
   const pedida = (globalThis.location?.hash ?? '').replace(/^#/u, '');
@@ -234,6 +244,11 @@ function alEntrar() {
   app.soltarConfig();
   app.soltarConfig = app.datos.escucharDocumento(rutas.configApp(), (configuracion) => {
     ponerNombreBiblioteca(configuracion?.nombreBiblioteca ?? NOMBRE_ENTRADA);
+    if (configuracion?.mensajeAtraso) app.plantillas.mensajeAtraso = configuracion.mensajeAtraso;
+    if (configuracion?.mensajePrevio) app.plantillas.mensajePrevio = configuracion.mensajePrevio;
+    if (configuracion?.plazoSabadosPorDefecto) {
+      app.plazoPorDefecto = configuracion.plazoSabadosPorDefecto;
+    }
     // Las categorías las necesita el catálogo para sus fichas y sus tejuelos.
     // La escucha avisa también por cambios de metadatos —al perder o recuperar
     // la conexión—, así que se compara antes de avisar: repintar los filtros
@@ -245,6 +260,9 @@ function alEntrar() {
     app.categorias = configuracion.categorias;
     app.vistaActual?.alCambiarCategorias?.(app.categorias);
   });
+
+  app.memoria ??= crearMemoria();
+  app.memoria.escuchar(app.datos);
 
   app.soltarReloj();
   app.soltarReloj = app.reloj.esDePrueba ? () => {} : vigilarReloj(app.reloj);
@@ -284,6 +302,10 @@ async function revisarIntencionPendiente() {
 async function sincronizarYMostrarHora() {
   if (!app.reloj.esDePrueba) await app.reloj.sincronizar();
   ponerFecha(app.reloj.ahora());
+  // La vista ya está montada cuando la hora llega: sin este aviso, una pantalla
+  // que se pintó sin hora se queda en «Hora pendiente» para siempre. Pasa de
+  // verdad en Inicio, que se monta antes de que vuelva la sincronización.
+  app.vistaActual?.alCambiarHora?.();
 
   if (app.reloj.hayDesfaseAvisable() && !app.avisoDesfaseMostrado) {
     app.avisoDesfaseMostrado = true;
@@ -304,6 +326,7 @@ function olvidarTodo({ conservarPermiso = false } = {}) {
   app.soltarConfig = () => {};
   app.soltarReloj();
   app.soltarReloj = () => {};
+  app.memoria?.soltar();
   app.datos?.cancelarEscuchas();
   // La intención es de la cuenta que la dejó: no puede reaparecerle a quien
   // entre después en esta misma pestaña.
@@ -314,13 +337,15 @@ function olvidarTodo({ conservarPermiso = false } = {}) {
   ponerNombreBiblioteca(NOMBRE_ENTRADA);
   ponerFecha(null);
   app.vista = VISTA_INICIAL;
+  app.opcionesVista = {};
   limpiarAvisos();
 }
 
 // ---------------------------------------------------------------- navegación
 
-function ir(vista, { reemplazar = false } = {}) {
+function ir(vista, { reemplazar = false, opciones = {} } = {}) {
   app.vista = vista;
+  app.opcionesVista = opciones;
   const estado = { vista };
   if (reemplazar) history.replaceState(estado, '', `#${vista}`);
   else history.pushState(estado, '', `#${vista}`);
@@ -391,20 +416,86 @@ function dibujar() {
 }
 
 function construirVista() {
+  const opts = app.opcionesVista ?? {};
   switch (app.vista) {
     case 'prestar':
-      return pantallaPrestar();
+      return pantallaPrestar({
+        datos: app.datos,
+        permiso: app.permiso,
+        reloj: app.reloj,
+        memoria: app.memoria,
+        plazoPorDefecto: app.plazoPorDefecto,
+        lectorInicial: opts.lector ?? null,
+        alInscribirLector: ({ alInscribir }) => {
+          abrirHoja({
+            titulo: 'Inscribir lector',
+            prueba: 'hoja-inscribir-desde-prestar',
+            contenido: formularioDeInscripcion({
+              datos: app.datos,
+              permiso: app.permiso,
+              alGuardar: (nuevo) => {
+                cerrarHoja();
+                alInscribir?.(nuevo);
+              },
+            }),
+          });
+        },
+        alVolverInicio: () => ir('inicio', { reemplazar: true }),
+        // «Prestar otro a (nombre)» del aviso: vuelve a Prestar con ese lector
+        // ya elegido, sin pasar por Inicio.
+        alPrestarOtro: (lector) => ir('prestar', { opciones: { lector }, reemplazar: true }),
+      });
     case 'prestamos':
-      return pantallaPrestamos();
+      return pantallaPrestamos({
+        datos: app.datos,
+        permiso: app.permiso,
+        reloj: app.reloj,
+        memoria: app.memoria,
+        plantillas: app.plantillas,
+        vistaInicial: opts.vista ?? 'curso',
+        enfocarBusqueda: opts.enfocarBusqueda === true,
+      });
     case 'catalogo':
-      return pantallaCatalogo({ datos: app.datos, permiso: app.permiso, categorias: app.categorias });
+      return pantallaCatalogo({
+        datos: app.datos,
+        permiso: app.permiso,
+        categorias: app.categorias,
+        reloj: app.reloj,
+        memoria: app.memoria,
+      });
     case 'lectores':
-      return pantallaLectores({ datos: app.datos, permiso: app.permiso });
+      return pantallaLectores({ datos: app.datos, permiso: app.permiso, reloj: app.reloj, memoria: app.memoria });
+    case 'para-recordar':
+      return pantallaParaRecordar({
+        datos: app.datos,
+        permiso: app.permiso,
+        reloj: app.reloj,
+        memoria: app.memoria,
+        plantillas: app.plantillas,
+      });
+    case 'mensajes':
+      return pantallaMensajes({
+        datos: app.datos,
+        mensajeAtraso: app.plantillas.mensajeAtraso,
+        mensajePrevio: app.plantillas.mensajePrevio,
+      });
+    case 'papel':
+      return pantallaPapel({
+        datos: app.datos,
+        permiso: app.permiso,
+        reloj: app.reloj,
+        memoria: app.memoria,
+        plazoPorDefecto: app.plazoPorDefecto,
+        alVolver: () => ir('inicio', { reemplazar: true }),
+      });
     case 'mas':
       return pantallaMas({
         permiso: app.permiso,
         alIrALectores: () => ir('lectores'),
         alIrAVoluntarios: () => ir('voluntarios'),
+        alIrAParaRecordar: () => ir('para-recordar'),
+        alIrAMensajes: () => ir('mensajes'),
+        alIrAPapel: () => ir('papel'),
         alSalir: async () => {
           await salir(app.firebase);
         },
@@ -413,7 +504,16 @@ function construirVista() {
       return pantallaVoluntarios({ datos: app.datos, permiso: app.permiso });
     case 'inicio':
     default:
-      return pantallaInicio();
+      return pantallaInicio({
+        datos: app.datos,
+        permiso: app.permiso,
+        reloj: app.reloj,
+        memoria: app.memoria,
+        plantillas: app.plantillas,
+        alPrestar: () => ir('prestar'),
+        alPrestamos: (opciones) => ir('prestamos', { opciones }),
+        alRegistrarPapel: () => ir('papel'),
+      });
   }
 }
 
@@ -485,6 +585,59 @@ function exponerAyudasDePrueba() {
         };
       } catch (error) {
         return { esExito: false, estado: 'rechazado', mensaje: error.message, operacionId, valor: null };
+      }
+    },
+    prestarLibro: async ({
+      libroCodigo,
+      lectorId,
+      plazoSabados = 2,
+      operacionId = null,
+      prestamoId = null,
+      registroDiferido = false,
+      motivoRegistroDiferido = null,
+      salidaDia = null,
+    } = {}) => {
+      try {
+        const resultado = await prestarLibro({
+          datos: app.datos,
+          permiso: app.permiso,
+          libroCodigo,
+          lectorId,
+          plazoSabados,
+          ahora: app.reloj.ahora(),
+          operacionId: operacionId ?? nuevoId(),
+          prestamoId,
+          registroDiferido,
+          motivoRegistroDiferido,
+          salidaDia,
+        });
+        return {
+          esExito: resultado.esExito === true,
+          estado: resultado.estado,
+          mensaje: resultado.mensaje,
+          operacionId: resultado.operacionId,
+          valor: resultado.valor ?? null,
+        };
+      } catch (error) {
+        return { esExito: false, estado: 'rechazado', mensaje: error.message, valor: null };
+      }
+    },
+    devolverPrestamo: async ({ prestamoId, operacionId = null } = {}) => {
+      try {
+        const resultado = await devolverPrestamo({
+          datos: app.datos,
+          permiso: app.permiso,
+          prestamoId,
+          operacionId: operacionId ?? nuevoId(),
+        });
+        return {
+          esExito: resultado.esExito === true,
+          estado: resultado.estado,
+          mensaje: resultado.mensaje,
+          valor: resultado.valor ?? null,
+        };
+      } catch (error) {
+        return { esExito: false, estado: 'rechazado', mensaje: error.message, valor: null };
       }
     },
     contadores: () => app.datos.contadores.valores(),

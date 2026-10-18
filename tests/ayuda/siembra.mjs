@@ -43,7 +43,14 @@ export async function limpiarBase() {
   for (const ruta of [rutas.configApp(), rutas.configContadores(), rutas.configControl()]) {
     await base.doc(ruta).delete();
   }
-  for (const coleccion of [rutas.voluntarios(), rutas.libros(), rutas.lectores(), rutas.lectoresClave()]) {
+  for (const coleccion of [
+    rutas.voluntarios(),
+    rutas.libros(),
+    rutas.lectores(),
+    rutas.lectoresClave(),
+    rutas.prestamos(),
+    rutas.calendario(),
+  ]) {
     const documentos = await base.collection(coleccion).get();
     await Promise.all(documentos.docs.map((uno) => uno.ref.delete()));
   }
@@ -157,6 +164,12 @@ export async function listarLectores() {
   return documentos.docs.map((uno) => ({ id: uno.id, ...uno.data() }));
 }
 
+export async function listarPrestamos() {
+  const { db: base } = await baseDemo();
+  const documentos = await base.collection(rutas.prestamos()).get();
+  return documentos.docs.map((uno) => ({ id: uno.id, ...uno.data() }));
+}
+
 export async function contarLibros() {
   const { db: base } = await baseDemo();
   return (await base.collection(rutas.libros()).count().get()).data().count;
@@ -193,13 +206,29 @@ export async function cambiarActivo(correo, activo) {
 }
 
 /**
+ * Código del libro número `i` de la siembra masiva. Lo usan `sembrarVolumen` y
+ * `sembrarPrestamos`: los préstamos tienen que apuntar a libros que existen, o
+ * las listas mostrarían «(no encontrado)» y la medición no sería la real.
+ */
+export function codigoDeVolumen(i) {
+  const categorias = CONFIG_APP_INICIAL.categorias;
+  const categoria = categorias[i % categorias.length];
+  return `${categoria.prefijo}${String(i).padStart(4, '0')}`;
+}
+
+/** Identificador de 32 cifras hexadecimales, el formato que exigen las reglas. */
+export function idDeVolumen(numero, inicial = '0') {
+  return `${inicial}${String(numero).padStart(31, '0')}`;
+}
+
+/**
  * Siembra masiva para las pruebas de carga: libros y lectores generados.
  *
  * Usa `BulkWriter` porque son once mil documentos: con lotes de 500 tardaría
  * minutos. Los nombres son sintéticos y numerados a propósito: en este
  * repositorio no hay nombres de lectores reales (AGENTS.md).
  */
-export async function sembrarVolumen({ libros = 0, lectores = 0 } = {}) {
+export async function sembrarVolumen({ libros = 0, lectores = 0, prestamosFalsos = true } = {}) {
   const { db: base, FieldValue: campos } = await baseDemo();
   const { claveDeNombre } = await import('../../docs/js/texto.js');
   const escritor = base.bulkWriter();
@@ -209,14 +238,18 @@ export async function sembrarVolumen({ libros = 0, lectores = 0 } = {}) {
   const categorias = CONFIG_APP_INICIAL.categorias;
   for (let i = 1; i <= libros; i += 1) {
     const categoria = categorias[i % categorias.length];
-    const codigo = `${categoria.prefijo}${String(i).padStart(4, '0')}`;
+    const codigo = codigoDeVolumen(i);
     void escritor.set(base.doc(rutas.libro(codigo)), {
       codigo,
       titulo: `Título número ${i} de la biblioteca`,
       autor: `Autor ${i % 300}`,
       categoria: categoria.nombre,
       baja: i % 97 === 0,
-      prestamoAbierto: i % 11 === 0 ? `prestamo-${i}` : null,
+      // Marca de «prestado» sin préstamo detrás: a las pruebas de catálogo les
+      // basta para filtrar y contar. Las de préstamos la apagan, porque un
+      // libro marcado sin su documento es un estado que no puede existir y
+      // haría fallar un préstamo real sobre ese libro.
+      prestamoAbierto: prestamosFalsos && i % 11 === 0 ? `prestamo-${i}` : null,
       vecesPrestado: i % 7,
       ...comunes,
     });
@@ -252,4 +285,258 @@ export async function sembrarVolumen({ libros = 0, lectores = 0 } = {}) {
 export async function cambiarCategorias(categorias) {
   const { db: base } = await baseDemo();
   await base.doc(rutas.configApp()).update({ categorias });
+}
+
+/**
+ * Calendario sintético cuya ventana incluye `ahora` (contrato §2). Solo demo.
+ * Si `salidaDia` es sábado usa vencimientos canónicos; si no, inventa cuatro.
+ */
+export async function sembrarCalendarioSintetico(salidaDia, { ahora = new Date() } = {}) {
+  const { db: base, FieldValue: _fv } = await baseDemo();
+  const { Timestamp } = await import('firebase-admin/firestore');
+  const { documentoDeCalendario, esSabado, temporadaDe, venceElDe } = await import('../../docs/js/fechas.js');
+  const inicio = new Date(ahora.getTime() - 12 * 60 * 60 * 1000);
+  const finExclusivo = new Date(ahora.getTime() + 12 * 60 * 60 * 1000);
+  let vencimientos;
+  let temporada;
+  if (esSabado(salidaDia)) {
+    const doc = documentoDeCalendario(salidaDia);
+    vencimientos = doc.vencimientos;
+    temporada = doc.temporada;
+  } else {
+    temporada = temporadaDe(salidaDia);
+    vencimientos = [1, 2, 3, 4].map((k) => {
+      try {
+        return venceElDe(salidaDia, k);
+      } catch {
+        return new Date(ahora.getTime() + k * 7 * 86_400_000);
+      }
+    });
+  }
+  await base.doc(rutas.diaCalendario(salidaDia)).set({
+    inicio: Timestamp.fromDate(inicio),
+    finExclusivo: Timestamp.fromDate(finExclusivo),
+    temporada,
+    vencimientos: vencimientos.map((v) => Timestamp.fromDate(v instanceof Date ? v : new Date(v))),
+    sintetico: true,
+  });
+}
+
+/**
+ * Borra los préstamos con `BulkWriter`.
+ *
+ * `limpiarBase` borra documento por documento, que con veinte mil préstamos
+ * tardaría minutos. Se llama ANTES de `sembrarBaseDemo` para que esa limpieza
+ * encuentre la colección vacía.
+ */
+/**
+ * Operaciones por lote. El límite de Firestore son 500; se deja margen porque
+ * un préstamo abierto escribe además la actualización de su libro.
+ */
+const POR_LOTE = 400;
+
+/**
+ * Escribe las operaciones en lotes secuenciales, uno detrás de otro.
+ *
+ * `BulkWriter` no sirve para esto en el emulador: encola mil peticiones a la
+ * vez, el emulador se atrasa y algunas pasan de los sesenta segundos de plazo
+ * —`DEADLINE_EXCEEDED`— sin que frenarlo con `throttling` lo arregle. Un lote
+ * esperado antes del siguiente tarda más pero siempre termina.
+ *
+ * @param {Array<(lote: object) => void>} operaciones
+ */
+async function escribirPorLotes(base, operaciones, porLote = POR_LOTE) {
+  for (let desde = 0; desde < operaciones.length; desde += porLote) {
+    const lote = base.batch();
+    for (const poner of operaciones.slice(desde, desde + porLote)) poner(lote);
+    await lote.commit();
+  }
+}
+
+export async function limpiarPrestamos() {
+  const { db: base } = await baseDemo();
+  const coleccion = base.collection(rutas.prestamos());
+  // Por páginas y en lotes esperados: `recursiveDelete` falla a este volumen
+  // con «580 deletes failed» por el mismo plazo agotado.
+  for (;;) {
+    const pagina = await coleccion.select().limit(POR_LOTE).get();
+    if (pagina.empty) return;
+    const lote = base.batch();
+    for (const uno of pagina.docs) lote.delete(uno.ref);
+    await lote.commit();
+  }
+}
+
+/**
+ * Siembra masiva de préstamos para las pruebas de carga de specs/03 y specs/04.
+ *
+ * Los abiertos apuntan a libros que existen y dejan el libro con
+ * `prestamoAbierto`, porque es ese enlace el que la pantalla sigue y el que las
+ * reglas comprueban al devolver. Los atrasados son un subconjunto de los
+ * abiertos: su vencimiento queda en el pasado respecto de `ahora`, que es la
+ * hora simulada con la que la prueba abre la app.
+ *
+ * Los devueltos no tocan el libro: existen para probar justo lo contrario, que
+ * abrir la app NO los lee (specs/03 §Carga).
+ */
+export async function sembrarPrestamos({
+  abiertos = 0,
+  devueltos = 0,
+  atrasados = 0,
+  libros = 0,
+  lectores = 0,
+  ahora = new Date(),
+} = {}) {
+  const { db: base, FieldValue: campos } = await baseDemo();
+  const { Timestamp } = await import('firebase-admin/firestore');
+  const { diaDesplazado, diaEnChile, finDelDiaEnChile, sabadoDeJornada, sabadoSiguiente, temporadaDe } = await import(
+    '../../docs/js/fechas.js'
+  );
+  /** @type {Array<(lote: object) => void>} */
+  const operaciones = [];
+  const hoy = diaEnChile(ahora);
+  const sabadoDeHoy = sabadoDeJornada(hoy);
+  const sabadoProximo = sabadoSiguiente(hoy);
+  const comunes = { creadoEn: campos.serverTimestamp(), creadoPor: VOLUNTARIA, origen: 'app' };
+
+  /** Libros sin baja: un libro de baja no puede tener un préstamo abierto. */
+  const disponibles = [];
+  for (let i = 1; i <= libros && disponibles.length < abiertos; i += 1) {
+    if (i % 97 !== 0) disponibles.push(i);
+  }
+  const lectorDe = (n) => `L${String(lectores === 0 ? 1 : ((n - 1) % lectores) + 1).padStart(4, '0')}`;
+
+  let numero = 0;
+  let ultimoId = null;
+  let vencenHoy = 0;
+  let vencenElProximo = 0;
+
+  for (const [indice, iLibro] of disponibles.entries()) {
+    numero += 1;
+    const id = idDeVolumen(numero);
+    const codigo = codigoDeVolumen(iLibro);
+    const atrasado = indice < atrasados;
+    // Los que no están atrasados se reparten: la mitad vence el sábado de esta
+    // jornada —lo que Inicio cuenta como «Vuelven hoy»— y la mitad el
+    // siguiente, que es la lista «Vencen el sábado» de specs/04.
+    let diaVence;
+    if (atrasado) {
+      diaVence = diaDesplazado(hoy, -7 - (indice % 21));
+    } else if (indice % 2 === 0) {
+      diaVence = sabadoDeHoy;
+      vencenHoy += 1;
+    } else {
+      diaVence = sabadoProximo;
+      vencenElProximo += 1;
+    }
+    const salidaDia = diaDesplazado(diaVence, -14);
+    const datos = {
+      numero,
+      libro: codigo,
+      lector: lectorDe(numero),
+      prestadoEn: Timestamp.fromDate(new Date(finDelDiaEnChile(salidaDia).getTime() - 9 * 3_600_000)),
+      salidaDia,
+      plazoSabados: 2,
+      registroDiferido: false,
+      motivoRegistroDiferido: null,
+      venceEl: Timestamp.fromDate(finDelDiaEnChile(diaVence)),
+      temporada: temporadaDe(salidaDia),
+      estado: 'abierto',
+      devueltoEn: null,
+      devueltoATiempo: null,
+      correccionATiempo: null,
+      devueltoPor: null,
+      anuladoEn: null,
+      anuladoPor: null,
+      // La mitad de los atrasados ya fue recordada: así «Para recordar» ordena
+      // de verdad por «sin recordatorio primero» (specs/04).
+      recordadoEn: atrasado && indice % 2 === 1 ? Timestamp.fromDate(new Date(ahora.getTime() - 3 * 86_400_000)) : null,
+      recordadoPor: atrasado && indice % 2 === 1 ? VOLUNTARIA : null,
+      creacionId: id,
+      ...comunes,
+    };
+    // Una operación por entrada, para que ningún lote pase de 500: la siembra
+    // no necesita que el préstamo y su libro vayan en la misma petición, porque
+    // no pasa por reglas.
+    operaciones.push((lote) => lote.set(base.doc(rutas.prestamo(id)), datos));
+    operaciones.push((lote) => lote.update(base.doc(rutas.libro(codigo)), { prestamoAbierto: id }));
+    ultimoId = id;
+  }
+
+  for (let n = 1; n <= devueltos; n += 1) {
+    numero += 1;
+    const id = idDeVolumen(numero, 'd');
+    const codigo = codigoDeVolumen(libros === 0 ? 1 : ((n * 7) % libros) + 1);
+    const salidaDia = diaDesplazado(hoy, -14 - 7 * (n % 52));
+    const diaVence = diaDesplazado(salidaDia, 14);
+    const datos = {
+      numero,
+      libro: codigo,
+      lector: lectorDe(numero),
+      prestadoEn: Timestamp.fromDate(new Date(finDelDiaEnChile(salidaDia).getTime() - 9 * 3_600_000)),
+      salidaDia,
+      plazoSabados: 2,
+      registroDiferido: false,
+      motivoRegistroDiferido: null,
+      venceEl: Timestamp.fromDate(finDelDiaEnChile(diaVence)),
+      temporada: temporadaDe(salidaDia),
+      estado: 'devuelto',
+      devueltoEn: Timestamp.fromDate(new Date(finDelDiaEnChile(diaVence).getTime() - 2 * 86_400_000)),
+      devueltoATiempo: null,
+      correccionATiempo: null,
+      devueltoPor: VOLUNTARIA,
+      anuladoEn: null,
+      anuladoPor: null,
+      recordadoEn: null,
+      recordadoPor: null,
+      creacionId: id,
+      ...comunes,
+    };
+    operaciones.push((lote) => lote.set(base.doc(rutas.prestamo(id)), datos));
+    ultimoId = id;
+  }
+
+  await escribirPorLotes(base, operaciones);
+  if (numero > 0) {
+    await base.doc(rutas.configContadores()).update({ ultimoPrestamo: numero, ultimoPrestamoId: ultimoId });
+  }
+  return {
+    abiertos: disponibles.length,
+    atrasados: Math.min(atrasados, disponibles.length),
+    vencenHoy,
+    vencenElProximo,
+    devueltos,
+    numero,
+  };
+}
+
+export async function ponerPrestamo(id, campos = {}) {
+  const { db: base, FieldValue: camposFv } = await baseDemo();
+  const ahora = new Date();
+  await base.doc(rutas.prestamo(id)).set({
+    numero: 1,
+    libro: 'INF001',
+    lector: 'L001',
+    prestadoEn: ahora,
+    salidaDia: '2026-10-10',
+    plazoSabados: 2,
+    registroDiferido: false,
+    motivoRegistroDiferido: null,
+    venceEl: new Date(ahora.getTime() + 14 * 86_400_000),
+    temporada: '2026-5',
+    estado: 'abierto',
+    devueltoEn: null,
+    devueltoATiempo: null,
+    correccionATiempo: null,
+    devueltoPor: null,
+    anuladoEn: null,
+    anuladoPor: null,
+    recordadoEn: null,
+    recordadoPor: null,
+    creadoEn: camposFv.serverTimestamp(),
+    creadoPor: VOLUNTARIA,
+    creacionId: 'p'.repeat(32),
+    origen: 'app',
+    ...campos,
+  });
 }

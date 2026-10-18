@@ -26,7 +26,7 @@ import { abrirHoja, cerrarHoja } from '../ui/hoja.js';
 import { abrirFichaDeLibro } from './libro.js';
 import { formularioDeLibro } from './libro-formulario.js';
 
-export function pantallaCatalogo({ datos, permiso, categorias: categoriasIniciales = [] }) {
+export function pantallaCatalogo({ datos, permiso, categorias: categoriasIniciales = [], reloj, memoria }) {
   let categorias = categoriasIniciales;
   let libros = [];
   let hayDatos = false;
@@ -199,7 +199,7 @@ export function pantallaCatalogo({ datos, permiso, categorias: categoriasInicial
           clase: 'fila-boton',
           type: 'button',
           'data-prueba': `libro-${libro.codigo}`,
-          al: { click: () => abrirFichaDeLibro({ datos, permiso, categorias, libros, libro }) },
+          al: { click: () => abrirFichaDeLibro({ datos, permiso, categorias, libros, libro, reloj, memoria }) },
         },
         [
           el('span', { clase: claseDeTejuelo(libro.categoria, categorias), texto: libro.codigo }),

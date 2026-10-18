@@ -1,5 +1,4 @@
-// Más: lo que no cabe en la barra. En esta etapa, Lectores (cualquier
-// voluntario), Voluntarios (solo administrador) y Cerrar sesión.
+// Más: lo que no cabe en la barra.
 import { el } from '../ui/dom.js';
 
 function opcion({ nombre, detalle, prueba, alAbrir }) {
@@ -18,7 +17,15 @@ function opcion({ nombre, detalle, prueba, alAbrir }) {
   ]);
 }
 
-export function pantallaMas({ permiso, alIrALectores, alIrAVoluntarios, alSalir }) {
+export function pantallaMas({
+  permiso,
+  alIrALectores,
+  alIrAVoluntarios,
+  alIrAParaRecordar,
+  alIrAMensajes,
+  alIrAPapel,
+  alSalir,
+}) {
   const opciones = [
     opcion({
       nombre: 'Lectores',
@@ -26,10 +33,28 @@ export function pantallaMas({ permiso, alIrALectores, alIrAVoluntarios, alSalir 
       prueba: 'abrir-lectores',
       alAbrir: alIrALectores,
     }),
+    opcion({
+      nombre: 'Para recordar',
+      detalle: 'Quienes vencen el sábado y los atrasados',
+      prueba: 'abrir-para-recordar',
+      alAbrir: alIrAParaRecordar,
+    }),
   ];
 
   if (permiso.rol === 'admin') {
     opciones.push(
+      opcion({
+        nombre: 'Mensajes',
+        detalle: 'Plantillas de WhatsApp',
+        prueba: 'abrir-mensajes',
+        alAbrir: alIrAMensajes,
+      }),
+      opcion({
+        nombre: 'Registrar desde papel',
+        detalle: 'Anotar un préstamo de un sábado anterior',
+        prueba: 'abrir-papel',
+        alAbrir: alIrAPapel,
+      }),
       opcion({
         nombre: 'Voluntarios',
         detalle: 'Quién puede entrar a la app',

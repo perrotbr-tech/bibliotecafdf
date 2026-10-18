@@ -535,8 +535,8 @@ cambio futuro que gaste accesos de verdad se note en esa prueba.
 ### Índices
 
 Ninguno compuesto en esta etapa, como dice el documento.
-`firestore.indexes.json` sigue con el único índice declarado en la Etapa 1, que
-es de la Etapa 3.
+`firestore.indexes.json` sigue vacío (`indexes: []`), igual que en la Etapa 1:
+el primer índice compuesto lo declara la entrega de Préstamos.
 
 ## 5. Telemetría, que no es facturación
 

@@ -4,17 +4,29 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  VENTANA_DE_DESHACER_MS,
+  dentroDeDiezMinutos,
+  diaDeVencimiento,
   diaDesplazado,
   diaEnChile,
+  documentoDeCalendario,
   esDiaValido,
+  esSabado,
   finDelDiaEnChile,
+  fueATiempo,
   instanteEnChile,
   mediodiaEnChile,
   primerInstanteEnChile,
+  sabadoDeJornada,
+  sabadoSiguiente,
+  sabadosEnRango,
   sabadosEntre,
   temporadaDe,
   temporadaDeInstante,
+  textoAtraso,
   textoFechaLarga,
+  textoFechaVencimiento,
+  venceElDe,
 } from '../../docs/js/fechas.js';
 
 test('el día de la biblioteca es la fecha en Chile, no en UTC', () => {
@@ -144,4 +156,134 @@ test('sabadosEntre corta en el tope: una fecha disparatada no camina el calendar
   // Sin alcanzar el tope, la cuenta es exacta.
   assert.equal(sabadosEntre('2026-10-03', '2026-10-24', 5), 3);
   assert.equal(sabadosEntre('2026-10-03', '2026-10-10'), 1);
+});
+
+// ---------------------------------------------------------------------------
+// Etapa 3: sábados, vencimientos y atrasos.
+// ---------------------------------------------------------------------------
+
+test('P-14 préstamo a las 23:30 de un sábado en Chile sigue siendo ese sábado', () => {
+  assert.equal(diaEnChile(new Date('2026-10-10T23:30:00-03:00')), '2026-10-10');
+  assert.equal(esSabado('2026-10-10'), true);
+});
+
+test('P-13 vencimientos: sábado, martes, viernes y fin de año', () => {
+  assert.equal(diaDeVencimiento('2026-10-10', 1), '2026-10-17');
+  assert.equal(diaDeVencimiento('2026-10-10', 2), '2026-10-24');
+  assert.equal(diaDeVencimiento('2026-10-10', 4), '2026-11-07');
+  assert.equal(diaDeVencimiento('2026-10-13', 1), '2026-10-17');
+  assert.equal(diaDeVencimiento('2026-10-16', 1), '2026-10-17');
+  assert.equal(diaDeVencimiento('2026-12-26', 2), '2027-01-09');
+});
+
+test('P-12 préstamo del sábado 07-03-2026 a 4 sábados vence el 04-04 con cambio de hora', () => {
+  assert.equal(diaDeVencimiento('2026-03-07', 4), '2026-04-04');
+  const prestamo = new Date('2026-03-07T00:30:00-03:00');
+  const vence = venceElDe('2026-03-07', 4);
+  assert.equal(diaEnChile(vence), '2026-04-04');
+  assert.equal(diaEnChile(vence.getTime() + 1), '2026-04-05');
+  // 29 días y 30 minutos menos un milisegundo desde el préstamo.
+  const esperadoMs = 29 * 86_400_000 + 30 * 60_000 - 1;
+  assert.equal(vence.getTime() - prestamo.getTime(), esperadoMs);
+});
+
+test('P-15 cada sábado de 2026 y 2027 vence en sábado y termina un ms antes del domingo', () => {
+  for (const anio of [2026, 2027]) {
+    for (const salida of sabadosEnRango(`${anio}-01-01`, `${anio}-12-31`)) {
+      for (const plazo of [1, 2, 3, 4]) {
+        const dia = diaDeVencimiento(salida, plazo);
+        assert.equal(esSabado(dia), true, `${salida} plazo ${plazo} → ${dia}`);
+        const vence = venceElDe(salida, plazo);
+        assert.equal(diaEnChile(vence), dia, `${salida} plazo ${plazo}`);
+        assert.equal(diaEnChile(vence.getTime() + 1), diaDesplazado(dia, 1));
+      }
+    }
+  }
+});
+
+test('P-16 temporada al borde de octubre y noviembre en Chile', () => {
+  assert.equal(temporadaDeInstante(new Date('2026-10-31T23:30:00-03:00')), '2026-5');
+  assert.equal(temporadaDeInstante(new Date('2026-11-01T00:10:00-03:00')), '2026-6');
+});
+
+test('P-42 texto de atraso a 3, 7, 15 y 70 días', () => {
+  const vence = finDelDiaEnChile('2026-10-10');
+  assert.equal(textoAtraso(vence, mediodiaEnChile('2026-10-13')), 'Venció el sábado');
+  assert.equal(textoAtraso(vence, mediodiaEnChile('2026-10-17')), 'Atrasado 1 sábado');
+  assert.equal(textoAtraso(vence, mediodiaEnChile('2026-10-25')), 'Atrasado 2 sábados');
+  assert.equal(textoAtraso(vence, mediodiaEnChile('2026-12-19')), 'Atrasado 2 meses');
+});
+
+test('sabadoSiguiente y sabadoDeJornada', () => {
+  assert.equal(sabadoSiguiente('2026-10-10'), '2026-10-17');
+  assert.equal(sabadoSiguiente('2026-10-09'), '2026-10-10');
+  assert.equal(sabadoDeJornada('2026-10-10'), '2026-10-10');
+  assert.equal(sabadoDeJornada('2026-10-13'), '2026-10-17');
+});
+
+test('fueATiempo usa el booleano si existe y si no compara timestamps', () => {
+  const vence = finDelDiaEnChile('2026-10-10');
+  assert.equal(fueATiempo({ devueltoATiempo: true, devueltoEn: mediodiaEnChile('2026-10-20'), venceEl: vence }), true);
+  assert.equal(fueATiempo({ devueltoATiempo: false, devueltoEn: mediodiaEnChile('2026-10-09'), venceEl: vence }), false);
+  assert.equal(fueATiempo({ devueltoEn: mediodiaEnChile('2026-10-10'), venceEl: vence }), true);
+  assert.equal(fueATiempo({ devueltoEn: mediodiaEnChile('2026-10-11'), venceEl: vence }), false);
+});
+
+test('P-17 y P-18 devolver a las 23:00 del vencimiento es a tiempo; al día siguiente, no', () => {
+  // El vencimiento termina un milisegundo antes del domingo, así que las 23:00
+  // del sábado entran y la mañana del domingo no. Sin booleano adelantado: la
+  // decisión sale de los dos timestamps ya confirmados.
+  const vence = finDelDiaEnChile('2026-10-10');
+  assert.equal(
+    fueATiempo({ devueltoEn: instanteEnChile('2026-10-10', 23, 0), venceEl: vence, devueltoATiempo: null }),
+    true,
+  );
+  assert.equal(
+    fueATiempo({ devueltoEn: instanteEnChile('2026-10-11', 9, 0), venceEl: vence, devueltoATiempo: null }),
+    false,
+  );
+});
+
+test('textoFechaVencimiento omite el año en curso y lo pone si no lo es', () => {
+  assert.equal(
+    textoFechaVencimiento('2026-10-24', { anioDeReferencia: 2026 }),
+    'sábado 24 de octubre',
+  );
+  assert.equal(
+    textoFechaVencimiento('2025-06-21', { anioDeReferencia: 2026 }),
+    'sábado 21 de junio de 2025',
+  );
+});
+
+test('documentoDeCalendario solo admite sábados y trae cuatro vencimientos', () => {
+  const doc = documentoDeCalendario('2026-10-10');
+  assert.equal(doc.temporada, '2026-5');
+  assert.equal(doc.vencimientos.length, 4);
+  assert.equal(diaEnChile(doc.vencimientos[1]), '2026-10-24');
+  assert.throws(() => documentoDeCalendario('2026-10-13'), RangeError);
+});
+
+test('P-22 la ventana de deshacer es estricta: a los diez minutos justos ya está cerrada', () => {
+  // La regla dice `request.time < desde + duration.value(10, 'm')`. El botón
+  // tiene que usar la misma cota: con `<=`, en el instante exacto se mostraba y
+  // el servidor denegaba la escritura (H-06 de la contraprueba).
+  const prestadoEn = new Date('2026-10-10T18:00:00.000Z');
+  const enMs = (ms) => new Date(prestadoEn.getTime() + ms);
+
+  assert.equal(dentroDeDiezMinutos(prestadoEn, prestadoEn), true, 'el instante mismo cuenta');
+  assert.equal(dentroDeDiezMinutos(prestadoEn, enMs(VENTANA_DE_DESHACER_MS - 1)), true, 'un ms antes, dentro');
+  assert.equal(dentroDeDiezMinutos(prestadoEn, enMs(VENTANA_DE_DESHACER_MS)), false, 'el borde ya está fuera');
+  assert.equal(dentroDeDiezMinutos(prestadoEn, enMs(VENTANA_DE_DESHACER_MS + 1)), false);
+
+  // Una hora estimada que va DETRÁS de la marca no abre la ventana por atrás.
+  assert.equal(dentroDeDiezMinutos(prestadoEn, enMs(-1000)), false);
+
+  // Acepta la marca de Firestore, que es lo que llega en un préstamo leído.
+  const comoFirestore = { toDate: () => prestadoEn };
+  assert.equal(dentroDeDiezMinutos(comoFirestore, enMs(60_000)), true);
+  assert.equal(dentroDeDiezMinutos(comoFirestore, enMs(VENTANA_DE_DESHACER_MS)), false);
+
+  // Sin marca o sin hora verificada, no se ofrece.
+  assert.equal(dentroDeDiezMinutos(null, prestadoEn), false);
+  assert.equal(dentroDeDiezMinutos(prestadoEn, null), false);
 });
