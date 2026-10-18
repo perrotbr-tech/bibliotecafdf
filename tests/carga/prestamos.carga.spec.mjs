@@ -194,10 +194,18 @@ async function medirTecleo(page, prueba, texto) {
 
 test.describe.configure({ timeout: 900_000 });
 
+/**
+ * Plazo de las siembras. `describe.configure` fija el de las PRUEBAS, no el de
+ * los `beforeAll`, que se quedan con los 180 s de la configuración: veinte mil
+ * préstamos en lotes esperados no entran ahí.
+ */
+const TIEMPO_DE_SIEMBRA = 900_000;
+
 test.describe('al tamaño real de la biblioteca', () => {
   let sembrado;
 
   test.beforeAll(async () => {
+    test.setTimeout(TIEMPO_DE_SIEMBRA);
     sembrado = await sembrar(REAL);
   });
 
@@ -386,6 +394,7 @@ test.describe('al volumen que pide specs/03', () => {
   let sembrado;
 
   test.beforeAll(async () => {
+    test.setTimeout(TIEMPO_DE_SIEMBRA);
     sembrado = await sembrar(VOLUMEN);
   });
 
@@ -458,6 +467,7 @@ test.describe('al volumen que pide specs/04', () => {
   let sembrado;
 
   test.beforeAll(async () => {
+    test.setTimeout(TIEMPO_DE_SIEMBRA);
     sembrado = await sembrar(RECORDAR);
   });
 

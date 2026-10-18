@@ -97,11 +97,12 @@ navegador y están listados uno por uno en §6.
 | unidad | **175** pass / 0 fail |
 | reglas | **104** pass / 0 fail |
 | scripts | **26** pass / 0 fail |
-| e2e | **86** pass / 0 fail |
+| e2e | **87** pass / 0 fail |
 | carga | PENDIENTE-CARGA |
 
 La entrega anterior declaraba 143 / 72 / 25 / 81 / 6. El crecimiento de unidad y
-reglas son las pruebas que faltaban; el de e2e, P-03 y la regresión del reloj.
+reglas son las pruebas que faltaban; el de e2e, P-03, la regresión del reloj y la
+paginación de Para recordar.
 
 En este contenedor `www.gstatic.com` está bloqueado, así que las pruebas de
 navegador sirven el SDK `12.19.0` desde `node_modules/firebase`, el mismo paquete
@@ -175,8 +176,8 @@ red, con el procesador a 1/4:
 
 | Qué | Mediana (mín.–máx.) | Límite | |
 |---|---|---|---|
-| Prestar | 52 ms (44–425) | < 200 ms | Cumple |
-| Devolver | **283 ms (266–457)** | < 200 ms | **No cumple** |
+| Prestar | 49 ms (40–449) | < 200 ms | Cumple |
+| Devolver | **~300 ms** (283 y 331 ms de mediana en dos corridas) | < 200 ms | **No cumple** |
 
 **Devolver no cumple el límite del documento, y la causa es la misma que
 encarece las lecturas del sábado:** una devolución desde Inicio dispara dos
@@ -197,15 +198,15 @@ real de la biblioteca:
 
 | | Medido | Cuota diaria | |
 |---|---|---|---|
-| Lecturas | 7.280 | 50.000 | 14,6 % |
+| Lecturas | 7.509 | 50.000 | 15,0 % |
 | Escrituras | 100 | 20.000 | 0,5 % |
 
 Las escrituras se cuentan por operación: prestar toca préstamo, libro y
 contador; devolver toca préstamo y libro. Lo que domina las lecturas no es el
 catálogo —que se lee una vez por apertura— sino la **consulta de «movimientos de
 hoy», que se relanza en cada evento de escucha**: unos 2.000 de los 2.400
-documentos que cada teléfono leyó. Es la misma causa de los 283 ms al devolver.
-Con 150 libros cabe de sobra —un 14,6 % de la cuota del día— y es el número que
+documentos que cada teléfono leyó. Es la misma causa de los ~300 ms al devolver.
+Con 150 libros cabe de sobra —un 15 % de la cuota del día— y es el número que
 hay que volver a mirar cuando el catálogo crezca.
 
 ### Al volumen que pide specs/03 (5.000 libros, 3.000 lectores, 600 abiertos, 20.000 devueltos)
@@ -239,9 +240,9 @@ manda evaluar, y ahí se cumple; a cinco mil libros no.
 
 | Qué | Medido | Límite | |
 |---|---|---|---|
-| Abrir Atrasados | 100 ms (70–121) | < 1 s | Cumple |
+| Abrir Atrasados | 73 ms (67–85) | < 1 s | Cumple |
 | Abrir Para recordar, **antes** de paginar | 1.676 ms (1.533–1.688) | < 1 s | No cumplía |
-| Abrir Para recordar, **ya paginada** | PENDIENTE-RECORDAR | < 1 s | |
+| Abrir Para recordar, **ya paginada** | **340 ms** (289–398) | < 1 s | Cumple |
 | Lecturas nuevas al abrir las dos pantallas | **0** (1.602 antes, 1.602 después) | ninguna | Cumple |
 
 Las dos pantallas leen de memoria y no piden nada al servidor, que es lo que el
