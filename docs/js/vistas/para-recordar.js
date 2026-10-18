@@ -16,8 +16,8 @@ export function pantallaParaRecordar({ datos, permiso, reloj, memoria, plantilla
    * Son las listas más largas de la app: todos los atrasados juntos, y cada
    * fila con sus botones de recordatorio. Pintarlas enteras tardaba 1.676 ms
    * con 400 atrasados, sobre el segundo que pide specs/04; por tandas, como el
-   * resto de las listas largas, son unos 100 ms. El título sigue mostrando el
-   * TOTAL del grupo, no lo que se ve.
+   * resto de las listas largas, son 284 ms. El título sigue mostrando el TOTAL
+   * del grupo, no lo que se ve.
    */
   const mostrados = { previo: FILAS_POR_TANDA, atraso: FILAS_POR_TANDA };
 

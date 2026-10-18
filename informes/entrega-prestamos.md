@@ -147,8 +147,11 @@ de carga.
 ## 3. Tiempos y lecturas medidas
 
 Todo con el procesador reducido a un cuarto, contra el emulador y en este
-contenedor: no es una garantía de rendimiento en producción (base §3). La
-prueba es `tests/carga/prestamos.carga.spec.mjs`.
+contenedor: no es una garantía de rendimiento en producción (base §3). La prueba
+es `tests/carga/prestamos.carga.spec.mjs`, y los números son los de la corrida
+de `npm run prueba:carga` de esta sesión —12 pass / 0 fail—. Este contenedor
+comparte procesador, así que la misma medida varía entre corridas; donde la
+variación importa queda anotada.
 
 ### Abrir las pantallas, al tamaño real de la biblioteca (150 libros, 100 lectores, 20 préstamos abiertos, 200 devueltos)
 
@@ -157,17 +160,17 @@ con la segunda:
 
 | Qué | Mediana (mín.–máx.) | Límite | |
 |---|---|---|---|
-| Arranque en frío hasta la jornada pintada | 765 ms (517–1.139) | — | Entrar sincroniza el reloj con el servidor y levanta las tres escuchas. El documento no pone límite a esto |
-| Abrir Inicio con la app ya abierta | 181 ms (162–183) | < 1 s | Cumple |
-| Abrir Prestar | 180 ms (166–190) | < 1 s | Cumple |
-| Abrir Préstamos (En curso) | 175 ms (151–192) | < 1 s | Cumple |
+| Arranque en frío hasta la jornada pintada | 687 ms (535–972) | — | Entrar sincroniza el reloj con el servidor y levanta las tres escuchas. El documento no pone límite a esto |
+| Abrir Inicio con la app ya abierta | 147 ms (143–150) | < 1 s | Cumple |
+| Abrir Prestar | 157 ms (142–164) | < 1 s | Cumple |
+| Abrir Préstamos (En curso) | 167 ms (166–223) | < 1 s | Cumple |
 
 Abrir una pantalla es navegar a ella, que es como la Etapa 2 midió el catálogo.
 El arranque en frío se declara aparte porque es lo primero que ve la persona del
 sábado y no es comparable con las otras tres: incluye la sincronización del
-reloj. Varía bastante entre corridas en este contenedor —765 ms de mediana aquí,
-1.219 ms en la corrida anterior, con picos de 1,7 s—, así que el número que
-importa es el orden de magnitud: alrededor de un segundo.
+reloj. Es la medida que más varía en este contenedor —687, 765 y 1.219 ms de
+mediana en tres corridas, con picos de 1,7 s—, así que lo que vale es el orden de
+magnitud: alrededor de un segundo, y el documento no le pone límite.
 
 ### El trabajo del teléfono al prestar y al devolver
 
@@ -176,8 +179,11 @@ red, con el procesador a 1/4:
 
 | Qué | Mediana (mín.–máx.) | Límite | |
 |---|---|---|---|
-| Prestar | 49 ms (40–449) | < 200 ms | Cumple |
-| Devolver | **~300 ms** (283 y 331 ms de mediana en dos corridas) | < 200 ms | **No cumple** |
+| Prestar | 64 ms (28–328) | < 200 ms | Cumple |
+| Devolver | **330 ms** (236–479) | < 200 ms | **No cumple** |
+
+La mediana al devolver dio 283, 330 y 331 ms en tres corridas: el incumplimiento
+no es un pico, es el número.
 
 **Devolver no cumple el límite del documento, y la causa es la misma que
 encarece las lecturas del sábado:** una devolución desde Inicio dispara dos
@@ -198,7 +204,7 @@ real de la biblioteca:
 
 | | Medido | Cuota diaria | |
 |---|---|---|---|
-| Lecturas | 7.509 | 50.000 | 15,0 % |
+| Lecturas | 7.497 | 50.000 | 15,0 % |
 | Escrituras | 100 | 20.000 | 0,5 % |
 
 Las escrituras se cuentan por operación: prestar toca préstamo, libro y
@@ -225,24 +231,24 @@ Préstamos:
 
 | Qué | Medido | Límite | |
 |---|---|---|---|
-| Cada tecla en el buscador de libros de Prestar | 15 ms (10–36) | < 100 ms | Cumple |
-| Cada tecla en el buscador de Préstamos | 14 ms (5–25) | < 100 ms | Cumple |
-| Abrir Prestar | 183 ms | < 1 s | Cumple |
-| Abrir Inicio | 12.081 ms | < 1 s | **No cumple a este volumen** |
+| Cada tecla en el buscador de libros de Prestar | 13 ms (8–29) | < 100 ms | Cumple |
+| Cada tecla en el buscador de Préstamos | 15 ms (7–21) | < 100 ms | Cumple |
+| Abrir Prestar | 249 ms | < 1 s | Cumple |
+| Abrir Inicio | 10.498 ms | < 1 s | **No cumple a este volumen** |
 
-Abrir Inicio a 5.000 libros cuesta doce segundos, y no es nuevo: es la misma
+Abrir Inicio a 5.000 libros cuesta diez segundos, y no es nuevo: es la misma
 forma que la Etapa 2 ya había medido en el catálogo —la apertura crece con el
 número de documentos, porque la pantalla los lee en vivo—. Al tamaño real de la
-biblioteca son 167 ms. La paginación sobre el tamaño real es lo que base §12
+biblioteca son 147 ms. La paginación sobre el tamaño real es lo que base §12
 manda evaluar, y ahí se cumple; a cinco mil libros no.
 
 ### Al volumen que pide specs/04 (700 libros, 300 lectores, 600 abiertos, 400 atrasados)
 
 | Qué | Medido | Límite | |
 |---|---|---|---|
-| Abrir Atrasados | 73 ms (67–85) | < 1 s | Cumple |
+| Abrir Atrasados | 73 ms (70–83) | < 1 s | Cumple |
 | Abrir Para recordar, **antes** de paginar | 1.676 ms (1.533–1.688) | < 1 s | No cumplía |
-| Abrir Para recordar, **ya paginada** | **340 ms** (289–398) | < 1 s | Cumple |
+| Abrir Para recordar, **ya paginada** | **284 ms** (274–352) | < 1 s | Cumple |
 | Lecturas nuevas al abrir las dos pantallas | **0** (1.602 antes, 1.602 después) | ninguna | Cumple |
 
 Las dos pantallas leen de memoria y no piden nada al servidor, que es lo que el
