@@ -173,6 +173,34 @@ test('A-34 cuando la segunda muestra sí es propia, se acepta', async () => {
   assert.notEqual(verificado.ahora(), null);
 });
 
+test('A-34 la lectura que trae el identificador del intento anterior sí es propia', async () => {
+  // El caso real del proyecto de ensayo: la escucha del voluntario sirve la
+  // lectura desde su vista ya sincronizada, que todavía no incorporó la
+  // escritura recién confirmada. Cada intento lee el identificador del intento
+  // ANTERIOR. Sin aceptar los identificadores propios, los tres intentos se
+  // descartan y la app se queda sin hora para siempre.
+  const reloj = monotonicoDeMentira();
+  let anterior = 'de'.repeat(16); // lo que dejó la sesión pasada
+  let intentos = 0;
+  const verificado = crearReloj({
+    tomarMuestra: async (id) => {
+      intentos += 1;
+      const loQueSeLee = anterior;
+      anterior = id;
+      reloj.avanzar(20);
+      return { instante: SERVIDOR, sincronizacionId: loQueSeLee };
+    },
+    monotonico: reloj.leer,
+  });
+
+  assert.equal(await verificado.sincronizar(), true, 'tiene que haber hora');
+  assert.equal(intentos, 2, 'el segundo intento ya lee el identificador del primero');
+  assert.notEqual(verificado.ahora(), null);
+  // La muestra aceptada es la del PRIMER intento: su incertidumbre es la ida y
+  // vuelta de esa escritura, no la del intento que la encontró.
+  assert.equal(verificado.incertidumbreMs(), 20);
+});
+
 test('una muestra en vuelo no resucita después de invalidar', async () => {
   const reloj = monotonicoDeMentira();
   let soltar;

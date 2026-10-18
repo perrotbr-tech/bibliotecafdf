@@ -6,6 +6,15 @@
 //     aleatorio en el propio voluntario, y leyendo desde el servidor. Si otro
 //     dispositivo sobrescribió la muestra, el identificador no coincide: se
 //     descarta y se repite un número acotado de veces.
+//   - Se acepta el identificador de CUALQUIERA de las escrituras que este
+//     dispositivo hizo en esta sincronización, no solo el del último intento.
+//     La lectura puede traer el anterior —en el proyecto real la escucha del
+//     voluntario sirve esa lectura desde su vista ya sincronizada, que todavía
+//     no incorporó la escritura recién confirmada—, y entonces cada intento
+//     leería el identificador del intento previo: una noria que nunca cierra.
+//     Esa hora sigue siendo del servidor y sigue siendo de este dispositivo,
+//     así que la muestra se ancla a la ida y vuelta de SU propia escritura, no
+//     a la del intento que la encontró.
 //   - La muestra se ancla a un reloj monotónico, no a Date.now(). Un cambio
 //     manual de la hora del teléfono no la altera.
 //   - Una ida y vuelta de más de 4 segundos se descarta. La incertidumbre
@@ -64,13 +73,21 @@ export function crearReloj({
     return transcurrido < 0 || transcurrido > vigenciaMs;
   }
 
-  async function unIntento() {
+  /**
+   * Un intento: escribe una muestra con su identificador y mira qué devolvió
+   * la lectura.
+   *
+   * @param {Map<string, {ancla:number, idaVuelta:number}>} mios
+   *   Identificadores que este dispositivo escribió en esta sincronización,
+   *   cada uno con la ida y vuelta de su propia escritura.
+   */
+  async function unIntento(mios) {
     const miEpoca = epoca;
     const identificador = nuevoId();
     const antes = monotonico();
     const resultado = await tomarMuestra(identificador);
     const despues = monotonico();
-    const idaVuelta = despues - antes;
+    mios.set(identificador, { ancla: despues, idaVuelta: despues - antes });
 
     if (miEpoca !== epoca) {
       // Mientras esta muestra viajaba, algo la invalidó: suspensión, cambio de
@@ -78,13 +95,16 @@ export function crearReloj({
       anotarDescarte({ motivo: 'la muestra quedó obsoleta antes de llegar' });
       return false;
     }
-    if (idaVuelta > maxIdaVueltaMs) {
-      anotarDescarte({ motivo: 'ida y vuelta mayor que el máximo', idaVuelta });
+
+    // La escritura que corresponde a lo que se leyó. Si no es de este
+    // dispositivo, no se le atribuye.
+    const propia = resultado ? mios.get(resultado.sincronizacionId) : null;
+    if (!propia) {
+      anotarDescarte({ motivo: 'identificador de otra muestra' });
       return false;
     }
-    if (!resultado || resultado.sincronizacionId !== identificador) {
-      // La muestra es de otro dispositivo: no se le atribuye a este.
-      anotarDescarte({ motivo: 'identificador de otra muestra' });
+    if (propia.idaVuelta > maxIdaVueltaMs) {
+      anotarDescarte({ motivo: 'ida y vuelta mayor que el máximo', idaVuelta: propia.idaVuelta });
       return false;
     }
     const instante = resultado.instante instanceof Date ? resultado.instante : new Date(resultado.instante);
@@ -95,9 +115,12 @@ export function crearReloj({
 
     muestra = {
       instanteMs: instante.getTime(),
-      ancla: despues,
-      incertidumbreMs: idaVuelta,
-      desfaseMs: relojTelefono() - instante.getTime(),
+      ancla: propia.ancla,
+      incertidumbreMs: propia.idaVuelta,
+      // El desfase se compara contra el reloj del teléfono EN EL ANCLA, no
+      // ahora: si la muestra aceptada es de un intento anterior, el teléfono
+      // ya avanzó desde entonces y esa diferencia no es desfase.
+      desfaseMs: relojTelefono() - (monotonico() - propia.ancla) - instante.getTime(),
     };
     ultimoMotivo = null;
     return true;
@@ -113,9 +136,12 @@ export function crearReloj({
     if (sincronizando && sincronizando.epoca === epoca) return await sincronizando.promesa;
     const deEstaEpoca = epoca;
     const promesa = (async () => {
+      // Las escrituras de ESTA sincronización. Se olvidan al terminar: una
+      // muestra de una sincronización anterior ya no se acepta.
+      const mios = new Map();
       for (let intento = 1; intento <= maxIntentos; intento += 1) {
         try {
-          if (await unIntento()) return true;
+          if (await unIntento(mios)) return true;
         } catch (error) {
           anotarDescarte({
             motivo: 'error al pedir la muestra',
