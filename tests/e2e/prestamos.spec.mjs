@@ -1,7 +1,16 @@
 // Préstamos: flujo feliz y Devueltos rotulados (orden por registro).
 import { expect, test } from '@playwright/test';
 
-import { ADMIN, VOLUNTARIA, ponerLibro, ponerPrestamo, sembrarBaseDemo, sembrarCalendarioSintetico } from '../ayuda/siembra.mjs';
+import {
+  ADMIN,
+  VOLUNTARIA,
+  ponerLibro,
+  ponerPrestamo,
+  sembrarBaseDemo,
+  sembrarCalendarioSintetico,
+  sembrarPrestamos,
+  sembrarVolumen,
+} from '../ayuda/siembra.mjs';
 import { abrir, entrar } from '../ayuda/navegador.mjs';
 
 test.beforeEach(async () => {
@@ -47,4 +56,32 @@ test('P-44 Devueltos muestra rotulado orden por registro', async ({ page }) => {
   await page.getByRole('button', { name: 'Préstamos' }).click();
   await page.getByTestId('pestana-devueltos').click();
   await expect(page.getByTestId('rotulo-orden')).toHaveText('Orden por registro');
+});
+
+test('Para recordar muestra 40 atrasados por tanda y el resto tras «Mostrar más»', async ({ page }) => {
+  // Con 45 atrasados, pintarlos todos de golpe pasaba del segundo que pide
+  // specs/04 (se midió 1.676 ms con 400). La pantalla pagina como el resto de
+  // las listas largas, y el título sigue diciendo el total.
+  await sembrarVolumen({ libros: 60, lectores: 20, prestamosFalsos: false });
+  const sembrado = await sembrarPrestamos({
+    libros: 60,
+    lectores: 20,
+    abiertos: 45,
+    atrasados: 45,
+    ahora: new Date('2026-10-10T15:00:00-03:00'),
+  });
+  await sembrarCalendarioSintetico('2026-10-10');
+
+  await abrir(page, '/?ahora=2026-10-10T15:00:00-03:00');
+  await entrar(page, ADMIN);
+  await page.getByRole('button', { name: 'Más' }).click();
+  await page.getByTestId('abrir-para-recordar').click();
+
+  const grupo = page.getByTestId('grupo-atraso');
+  await expect(grupo).toContainText(`Atrasados (${sembrado.atrasados})`);
+  await expect(grupo.getByTestId('fila-recordar')).toHaveCount(40);
+
+  await grupo.getByTestId('mostrar-mas-atraso').click();
+  await expect(grupo.getByTestId('fila-recordar')).toHaveCount(sembrado.atrasados);
+  await expect(grupo.getByTestId('mostrar-mas-atraso')).toHaveCount(0);
 });

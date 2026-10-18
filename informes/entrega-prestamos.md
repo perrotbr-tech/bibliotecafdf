@@ -108,7 +108,7 @@ navegador sirven el SDK `12.19.0` desde `node_modules/firebase`, el mismo paquet
 del mismo proveedor. Lo que queda sin probar aquí es la descarga real desde
 gstatic; la cubre la prueba de humo del dueño en un teléfono.
 
-### Dos correcciones sobre el SHA que fue a contraprueba
+### Tres correcciones sobre el SHA que fue a contraprueba
 
 **1. La suite e2e estaba roja y el informe no lo decía.** El informe anterior
 declaraba la regresión de las etapas 1 y 2 sobre unidad, reglas y scripts, y no
@@ -134,6 +134,14 @@ Criterio falla/pasa comprobado en esta sesión: con la línea de aviso desactiva
 `tests/e2e/reloj.spec.mjs` «una pantalla pintada sin hora se repinta cuando la
 hora del servidor llega» y `acceso.spec.mjs` fallan (2 failed / 21 passed); con
 la línea puesta, 23 passed.
+
+**3. «Para recordar» pintaba todas sus filas de golpe y pasaba del segundo.**
+Lo encontró la medición de §3: 1.676 ms con 400 atrasados, contra el límite de 1
+segundo de specs/04. Era la única lista larga de la app sin tandas. Corregido con
+el `porTandas` que ya usan el catálogo, los lectores, Préstamos y Atrasados: 40
+filas por grupo y «Mostrar más (N)», con el total en el título del grupo. La
+prueba del cambio está en `tests/e2e/prestamos.spec.mjs`, y la del tiempo en la
+de carga.
 
 ## 3. Tiempos y lecturas medidas
 
@@ -202,11 +210,46 @@ hay que volver a mirar cuando el catálogo crezca.
 
 ### Al volumen que pide specs/03 (5.000 libros, 3.000 lectores, 600 abiertos, 20.000 devueltos)
 
-PENDIENTE-VOLUMEN
+**Abrir la app no lee el historial de devueltos.** Es la medición que el
+documento pide con el contador de lecturas, y es la que acredita el diseño de
+`memoria.js` —escuchar solo `estado == 'abierto'`—. Tras abrir Inicio, Prestar y
+Préstamos:
 
-### Al volumen que pide specs/04 (600 abiertos, 400 atrasados)
+| | Documentos |
+|---|---|
+| Por escucha (catálogo + lectores + préstamos abiertos) | 8.600 = 5.000 + 3.000 + 600 |
+| Lecturas puntuales (configuración y movimientos de hoy) | 2 |
+| **Total leído** | **8.602** |
+| De los 20.000 devueltos sembrados | **0** |
 
-PENDIENTE-RECORDAR
+| Qué | Medido | Límite | |
+|---|---|---|---|
+| Cada tecla en el buscador de libros de Prestar | 15 ms (10–36) | < 100 ms | Cumple |
+| Cada tecla en el buscador de Préstamos | 14 ms (5–25) | < 100 ms | Cumple |
+| Abrir Prestar | 183 ms | < 1 s | Cumple |
+| Abrir Inicio | 12.081 ms | < 1 s | **No cumple a este volumen** |
+
+Abrir Inicio a 5.000 libros cuesta doce segundos, y no es nuevo: es la misma
+forma que la Etapa 2 ya había medido en el catálogo —la apertura crece con el
+número de documentos, porque la pantalla los lee en vivo—. Al tamaño real de la
+biblioteca son 167 ms. La paginación sobre el tamaño real es lo que base §12
+manda evaluar, y ahí se cumple; a cinco mil libros no.
+
+### Al volumen que pide specs/04 (700 libros, 300 lectores, 600 abiertos, 400 atrasados)
+
+| Qué | Medido | Límite | |
+|---|---|---|---|
+| Abrir Atrasados | 100 ms (70–121) | < 1 s | Cumple |
+| Abrir Para recordar, **antes** de paginar | 1.676 ms (1.533–1.688) | < 1 s | No cumplía |
+| Abrir Para recordar, **ya paginada** | PENDIENTE-RECORDAR | < 1 s | |
+| Lecturas nuevas al abrir las dos pantallas | **0** (1.602 antes, 1.602 después) | ninguna | Cumple |
+
+Las dos pantallas leen de memoria y no piden nada al servidor, que es lo que el
+documento exige. El que no cumplía era el tiempo de Para recordar, y la causa
+estaba a la vista: era la única lista larga de la app que pintaba todas sus filas
+de golpe —400 atrasados más 100 que vencen, cada una con sus botones de
+recordatorio— mientras el catálogo, los lectores, Préstamos y Atrasados paginan
+de 40 en 40. Corregido aplicándole el mismo `porTandas` que usan las demás.
 
 ## 4. Accesos de reglas e índices
 
@@ -263,6 +306,10 @@ acredita.
 - El «trabajo del teléfono» de specs/03 se mide como **tiempo de tarea del hilo
   principal** (`Performance.TaskDuration` por CDP), que no cuenta la espera de la
   red. Es la lectura literal de «sin contar la red» del documento.
+- **«Para recordar» pagina de 40 en 40 por grupo**, con el total en el título.
+  specs/04 no dice nada de tandas en esa pantalla; se le aplica la convención del
+  repositorio porque sin ella no cumplía su propio límite de 1 segundo. Lo que
+  cambia para quien la usa es que aparece «Mostrar más (N)».
 
 ## 6. Pendiente para el dueño
 

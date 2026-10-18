@@ -309,12 +309,17 @@ test.describe('al tamaño real de la biblioteca', () => {
   });
 
   test('carga: un sábado de 40 movimientos con 3 teléfonos cabe en las cuotas del día', async ({ browser }) => {
+    // Un sábado empieza con la jornada entera por delante, así que esta prueba
+    // siembra de nuevo: las pruebas anteriores de este grupo ya prestaron y
+    // devolvieron, y las cifras de Inicio no serían las sembradas.
+    const jornada = await sembrar(REAL);
+
     const contextos = await Promise.all([browser.newContext(), browser.newContext(), browser.newContext()]);
     const paginas = [];
     for (const contexto of contextos) {
       const page = await contexto.newPage();
       await entrarEnLaApp(page);
-      await abrirInicio(page, sembrado);
+      await abrirInicio(page, jornada);
       paginas.push(page);
     }
 
