@@ -330,19 +330,41 @@ export async function sembrarCalendarioSintetico(salidaDia, { ahora = new Date()
  * encuentre la colección vacía.
  */
 /**
- * Ritmo sostenible para el emulador. Sin frenarlo, `BulkWriter` acelera hasta
- * donde le dejan y el emulador empieza a devolver `DEADLINE_EXCEEDED` a los
- * sesenta segundos: veinte mil escrituras no entran a su velocidad máxima.
+ * Operaciones por lote. El límite de Firestore son 500; se deja margen porque
+ * un préstamo abierto escribe además la actualización de su libro.
  */
-function escritorFrenado(base) {
-  return base.bulkWriter({ throttling: { initialOpsPerSecond: 100, maxOpsPerSecond: 300 } });
+const POR_LOTE = 400;
+
+/**
+ * Escribe las operaciones en lotes secuenciales, uno detrás de otro.
+ *
+ * `BulkWriter` no sirve para esto en el emulador: encola mil peticiones a la
+ * vez, el emulador se atrasa y algunas pasan de los sesenta segundos de plazo
+ * —`DEADLINE_EXCEEDED`— sin que frenarlo con `throttling` lo arregle. Un lote
+ * esperado antes del siguiente tarda más pero siempre termina.
+ *
+ * @param {Array<(lote: object) => void>} operaciones
+ */
+async function escribirPorLotes(base, operaciones, porLote = POR_LOTE) {
+  for (let desde = 0; desde < operaciones.length; desde += porLote) {
+    const lote = base.batch();
+    for (const poner of operaciones.slice(desde, desde + porLote)) poner(lote);
+    await lote.commit();
+  }
 }
 
 export async function limpiarPrestamos() {
   const { db: base } = await baseDemo();
-  // Por lotes y a ritmo frenado: borrar veinte mil documentos de una tanda
-  // agota el plazo del emulador.
-  await base.recursiveDelete(base.collection(rutas.prestamos()), escritorFrenado(base));
+  const coleccion = base.collection(rutas.prestamos());
+  // Por páginas y en lotes esperados: `recursiveDelete` falla a este volumen
+  // con «580 deletes failed» por el mismo plazo agotado.
+  for (;;) {
+    const pagina = await coleccion.select().limit(POR_LOTE).get();
+    if (pagina.empty) return;
+    const lote = base.batch();
+    for (const uno of pagina.docs) lote.delete(uno.ref);
+    await lote.commit();
+  }
 }
 
 /**
@@ -370,7 +392,8 @@ export async function sembrarPrestamos({
   const { diaDesplazado, diaEnChile, finDelDiaEnChile, sabadoDeJornada, sabadoSiguiente, temporadaDe } = await import(
     '../../docs/js/fechas.js'
   );
-  const escritor = escritorFrenado(base);
+  /** @type {Array<(lote: object) => void>} */
+  const operaciones = [];
   const hoy = diaEnChile(ahora);
   const sabadoDeHoy = sabadoDeJornada(hoy);
   const sabadoProximo = sabadoSiguiente(hoy);
@@ -407,7 +430,7 @@ export async function sembrarPrestamos({
       vencenElProximo += 1;
     }
     const salidaDia = diaDesplazado(diaVence, -14);
-    void escritor.set(base.doc(rutas.prestamo(id)), {
+    const datos = {
       numero,
       libro: codigo,
       lector: lectorDe(numero),
@@ -431,10 +454,13 @@ export async function sembrarPrestamos({
       recordadoPor: atrasado && indice % 2 === 1 ? VOLUNTARIA : null,
       creacionId: id,
       ...comunes,
-    });
-    void escritor.update(base.doc(rutas.libro(codigo)), { prestamoAbierto: id });
+    };
+    // Una operación por entrada, para que ningún lote pase de 500: la siembra
+    // no necesita que el préstamo y su libro vayan en la misma petición, porque
+    // no pasa por reglas.
+    operaciones.push((lote) => lote.set(base.doc(rutas.prestamo(id)), datos));
+    operaciones.push((lote) => lote.update(base.doc(rutas.libro(codigo)), { prestamoAbierto: id }));
     ultimoId = id;
-    if (numero % 2000 === 0) await escritor.flush();
   }
 
   for (let n = 1; n <= devueltos; n += 1) {
@@ -443,7 +469,7 @@ export async function sembrarPrestamos({
     const codigo = codigoDeVolumen(libros === 0 ? 1 : ((n * 7) % libros) + 1);
     const salidaDia = diaDesplazado(hoy, -14 - 7 * (n % 52));
     const diaVence = diaDesplazado(salidaDia, 14);
-    void escritor.set(base.doc(rutas.prestamo(id)), {
+    const datos = {
       numero,
       libro: codigo,
       lector: lectorDe(numero),
@@ -465,14 +491,12 @@ export async function sembrarPrestamos({
       recordadoPor: null,
       creacionId: id,
       ...comunes,
-    });
+    };
+    operaciones.push((lote) => lote.set(base.doc(rutas.prestamo(id)), datos));
     ultimoId = id;
-    // Veinte mil documentos de una tanda agotan el plazo del emulador: se
-    // vacía el escritor cada mil.
-    if (numero % 1000 === 0) await escritor.flush();
   }
 
-  await escritor.close();
+  await escribirPorLotes(base, operaciones);
   if (numero > 0) {
     await base.doc(rutas.configContadores()).update({ ultimoPrestamo: numero, ultimoPrestamoId: ultimoId });
   }

@@ -94,11 +94,14 @@ navegador y están listados uno por uno en §6.
 | Suite | Resultado |
 |---|---|
 | `revisar` | sin hallazgos |
-| unidad | PENDIENTE-UNIDAD |
-| reglas | PENDIENTE-REGLAS |
-| scripts | PENDIENTE-SCRIPTS |
-| e2e | PENDIENTE-E2E |
+| unidad | **175** pass / 0 fail |
+| reglas | **104** pass / 0 fail |
+| scripts | **26** pass / 0 fail |
+| e2e | **86** pass / 0 fail |
 | carga | PENDIENTE-CARGA |
+
+La entrega anterior declaraba 143 / 72 / 25 / 81 / 6. El crecimiento de unidad y
+reglas son las pruebas que faltaban; el de e2e, P-03 y la regresión del reloj.
 
 En este contenedor `www.gstatic.com` está bloqueado, así que las pruebas de
 navegador sirven el SDK `12.19.0` desde `node_modules/firebase`, el mismo paquete
