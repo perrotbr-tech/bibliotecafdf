@@ -37,3 +37,11 @@ El informe de cada entrega vive en `informes/` y cabe en una página. Seis apart
 El revisor recibe ese mismo SHA. No etiquetar lista para producción sin ensayo real de ese candidato.
 
 En la revisión, el revisor no modifica la rama: describe hallazgo, reproducción, gravedad y criterio de corrección. La corrección vuelve al implementador y se contraprueba de nuevo.
+
+## Cursor Cloud specific instructions
+
+Los comandos canónicos están en el README. Lo que no se deduce de ahí:
+
+- `npm start` ocupa los emuladores de Auth (9099) y Firestore (8080) y sirve `docs/` solo en `http://127.0.0.1:5173`. No corras `npm test` ni `prueba:reglas`, `prueba:scripts`, `prueba:e2e` o `prueba:carga` mientras ese proceso sigue arriba: esas suites levantan sus propios emuladores.
+- Para entrar en el navegador sin una cuenta de Google, con la página ya cargada contra el emulador, ejecuta `__biblioteca.entrarSimulado('admin@demo.cl')`. `npm start` crea ese administrador de prueba. El botón «Entrar con Google» abre el popup real y aquí no sirve.
+- Node 22 y OpenJDK 21 alcanzan. Antes de las pruebas de navegador: `npx playwright install --with-deps chromium`. El jar del emulador de Firestore se baja con `npx firebase setup:emulators:firestore`.
