@@ -1,7 +1,8 @@
 # Encargo de contraprueba — entrega Préstamos (specs/03 + specs/04)
 
-Para pegar en una sesión NUEVA, sobre un clon limpio del repositorio. No la hace
-quien escribió el código: eso es justamente lo que falta.
+Para pegar en una sesión NUEVA —la contraprueba la hace Codex en otra sesión,
+no el implementador (AGENTS.md)— sobre un clon limpio del repositorio. Que no la
+haga quien escribió el código es justamente el punto.
 
 Es **una sola** contraprueba. Se repite solo si un hallazgo viene calificado
 «antes de producción»; los menores se corrigen y quedan declarados en el informe

@@ -143,17 +143,41 @@ prueba es `tests/carga/prestamos.carga.spec.mjs`.
 Se miden dos cosas distintas, y el límite de 1 segundo del documento se compara
 con la segunda:
 
-| Qué | Mediana | Límite | |
+| Qué | Mediana (mín.–máx.) | Límite | |
 |---|---|---|---|
-| Arranque en frío hasta la jornada pintada | 1.219 ms (677–1.720) | — | Entrar sincroniza el reloj con el servidor y levanta las tres escuchas. El documento no pone límite a esto |
-| Abrir Inicio con la app ya abierta | 163 ms | < 1 s | Cumple |
-| Abrir Prestar | 240 ms | < 1 s | Cumple |
-| Abrir Préstamos (En curso) | 181 ms | < 1 s | Cumple |
+| Arranque en frío hasta la jornada pintada | 765 ms (517–1.139) | — | Entrar sincroniza el reloj con el servidor y levanta las tres escuchas. El documento no pone límite a esto |
+| Abrir Inicio con la app ya abierta | 181 ms (162–183) | < 1 s | Cumple |
+| Abrir Prestar | 180 ms (166–190) | < 1 s | Cumple |
+| Abrir Préstamos (En curso) | 175 ms (151–192) | < 1 s | Cumple |
 
 Abrir una pantalla es navegar a ella, que es como la Etapa 2 midió el catálogo.
-El arranque en frío se declara aparte con su número porque es lo primero que ve
-la persona del sábado y pasa del segundo: 1,2 segundos de mediana, con picos de
-1,7.
+El arranque en frío se declara aparte porque es lo primero que ve la persona del
+sábado y no es comparable con las otras tres: incluye la sincronización del
+reloj. Varía bastante entre corridas en este contenedor —765 ms de mediana aquí,
+1.219 ms en la corrida anterior, con picos de 1,7 s—, así que el número que
+importa es el orden de magnitud: alrededor de un segundo.
+
+### El trabajo del teléfono al prestar y al devolver
+
+Medido como tiempo de tarea del hilo principal, que no cuenta la espera de la
+red, con el procesador a 1/4:
+
+| Qué | Mediana (mín.–máx.) | Límite | |
+|---|---|---|---|
+| Prestar | 52 ms (44–425) | < 200 ms | Cumple |
+| Devolver | **283 ms (266–457)** | < 200 ms | **No cumple** |
+
+**Devolver no cumple el límite del documento, y la causa es la misma que
+encarece las lecturas del sábado:** una devolución desde Inicio dispara dos
+repintados completos de la pantalla —uno por el evento de escucha del préstamo y
+otro por el del libro— y cada repintado relanza la consulta de «movimientos de
+hoy». No es el guardado lo que cuesta: es pintar Inicio dos veces.
+
+Queda declarado, no corregido: coalescer los repintados o dejar de relanzar esa
+consulta en cada evento es un cambio en el arranque de la pantalla, más de lo que
+una corrección de informe debería mover. La prueba fija un techo de 500 ms sobre
+lo medido para que el número no empeore sin que nadie se entere, y el límite de
+200 ms sigue escrito en la prueba sin tocar.
 
 ### Un sábado de 40 movimientos con 3 teléfonos
 
@@ -162,15 +186,16 @@ real de la biblioteca:
 
 | | Medido | Cuota diaria | |
 |---|---|---|---|
-| Lecturas | 7.254 | 50.000 | 14,5 % |
+| Lecturas | 7.280 | 50.000 | 14,6 % |
 | Escrituras | 100 | 20.000 | 0,5 % |
 
 Las escrituras se cuentan por operación: prestar toca préstamo, libro y
 contador; devolver toca préstamo y libro. Lo que domina las lecturas no es el
 catálogo —que se lee una vez por apertura— sino la **consulta de «movimientos de
-hoy», que se repite en cada cambio**: unos 2.000 de los 2.400 documentos que cada
-teléfono leyó. Con 150 libros cabe de sobra; es el número que hay que volver a
-mirar cuando el catálogo crezca.
+hoy», que se relanza en cada evento de escucha**: unos 2.000 de los 2.400
+documentos que cada teléfono leyó. Es la misma causa de los 283 ms al devolver.
+Con 150 libros cabe de sobra —un 14,6 % de la cuota del día— y es el número que
+hay que volver a mirar cuando el catálogo crezca.
 
 ### Al volumen que pide specs/03 (5.000 libros, 3.000 lectores, 600 abiertos, 20.000 devueltos)
 
