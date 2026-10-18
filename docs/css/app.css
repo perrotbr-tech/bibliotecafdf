@@ -261,6 +261,30 @@ p {
   font-size: 0.9375rem;
 }
 
+/* Aviso que ofrece acciones: «Deshacer» y «Prestar otro a (nombre)». Los
+   botones van debajo del texto y no se encogen, para que entren en 320 px. */
+.aviso--con-acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aviso__texto {
+  margin: 0;
+}
+
+.aviso__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.boton--en-aviso {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: inherit;
+}
+
 .aviso--exito {
   background: var(--accent-soft);
   color: var(--fg);

@@ -441,6 +441,9 @@ function construirVista() {
           });
         },
         alVolverInicio: () => ir('inicio', { reemplazar: true }),
+        // «Prestar otro a (nombre)» del aviso: vuelve a Prestar con ese lector
+        // ya elegido, sin pasar por Inicio.
+        alPrestarOtro: (lector) => ir('prestar', { opciones: { lector }, reemplazar: true }),
       });
     case 'prestamos':
       return pantallaPrestamos({
@@ -453,9 +456,15 @@ function construirVista() {
         enfocarBusqueda: opts.enfocarBusqueda === true,
       });
     case 'catalogo':
-      return pantallaCatalogo({ datos: app.datos, permiso: app.permiso, categorias: app.categorias });
+      return pantallaCatalogo({
+        datos: app.datos,
+        permiso: app.permiso,
+        categorias: app.categorias,
+        reloj: app.reloj,
+        memoria: app.memoria,
+      });
     case 'lectores':
-      return pantallaLectores({ datos: app.datos, permiso: app.permiso });
+      return pantallaLectores({ datos: app.datos, permiso: app.permiso, reloj: app.reloj, memoria: app.memoria });
     case 'para-recordar':
       return pantallaParaRecordar({
         datos: app.datos,

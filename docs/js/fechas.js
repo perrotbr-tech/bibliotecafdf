@@ -343,6 +343,26 @@ export function fueATiempo(prestamo) {
   return a.getTime() <= b.getTime();
 }
 
+/** La ventana de arrepentimiento de las reglas: diez minutos. */
+export const VENTANA_DE_DESHACER_MS = 10 * 60 * 1000;
+
+/**
+ * ¿`marca` está dentro de la ventana de diez minutos contada desde `ahora`?
+ *
+ * La cota es ESTRICTA, igual que la regla:
+ * `request.time < desde + duration.value(10, 'm')`. Con `<=`, justo en el
+ * minuto diez el botón de deshacer aparecía y el servidor denegaba la
+ * escritura (H-06 de la contraprueba de Préstamos). Vive aquí, y no en la
+ * ficha, porque es la misma clase de regla de fecha que el resto de este
+ * archivo y así se puede fijar el borde al milisegundo.
+ */
+export function dentroDeDiezMinutos(marca, ahora) {
+  if (!marca || !ahora) return false;
+  const desde = marca instanceof Date ? marca : marca?.toDate?.() ?? new Date(marca);
+  const transcurrido = ahora.getTime() - desde.getTime();
+  return transcurrido >= 0 && transcurrido < VENTANA_DE_DESHACER_MS;
+}
+
 /**
  * Documento de calendario para un sábado: inicio, finExclusivo, temporada y
  * los cuatro vencimientos (plazo 1..4). Lo escribe el script del dueño.

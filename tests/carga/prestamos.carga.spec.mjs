@@ -300,16 +300,25 @@ test.describe('al tamaño real de la biblioteca', () => {
     // Prestar cumple el límite del documento con holgura.
     expect(trabajoAlPrestar.mediana, 'prestar').toBeLessThan(LIMITE_DE_TRABAJO);
 
-    // Devolver NO lo cumple, y el informe lo declara: una devolución desde
-    // Inicio dispara dos repintados completos de la pantalla —uno por el
-    // evento del préstamo y otro por el del libro— y cada uno relanza la
-    // consulta de «movimientos de hoy». Son unos 280 ms de hilo principal con
-    // el procesador a 1/4, frente a los 200 que pide specs/03. Lo que esta
-    // prueba fija es un techo sobre lo medido, para que no empeore sin que se
-    // note; el límite del documento sigue escrito arriba, sin tocar.
+    // Devolver está en el filo, y en qué lado cae depende del host: en el
+    // contenedor de la entrega la mediana fue 330 ms y en el del revisor 139.
+    // La causa es la misma en los dos: una devolución desde Inicio dispara dos
+    // repintados completos de la pantalla —uno por el evento del préstamo y
+    // otro por el del libro— y cada uno relanza la consulta de «movimientos de
+    // hoy». Eso crece con los movimientos del día y con los repintados, no con
+    // el tamaño del catálogo.
+    //
+    // El mensaje dice lo que la comparación dio, no lo que dio una vez: antes
+    // afirmaba siempre «NO cumple», así que un verde de 139 ms quedaba escrito
+    // como incumplimiento (H-07 de la contraprueba). Lo que la prueba exige es
+    // el techo sobre lo medido, para que no empeore sin que se note; el límite
+    // del documento se compara y se imprime, y el informe declara de qué lado
+    // cayó el host de la entrega.
+    const cumpleAlDevolver = trabajoAlDevolver.mediana < LIMITE_DE_TRABAJO;
     process.stdout.write(
-      `[carga] devolver NO cumple el límite de ${LIMITE_DE_TRABAJO} ms del documento: ` +
-        `mediana ${trabajoAlDevolver.mediana} ms\n`,
+      `[carga] devolver ${cumpleAlDevolver ? 'cumple' : 'NO cumple'} el límite de ` +
+        `${LIMITE_DE_TRABAJO} ms del documento: mediana ${trabajoAlDevolver.mediana} ms ` +
+        `(mínimo ${trabajoAlDevolver.minimo} ms, máximo ${trabajoAlDevolver.maximo} ms)\n`,
     );
     expect(trabajoAlDevolver.mediana, 'devolver, techo sobre lo medido').toBeLessThan(TECHO_AL_DEVOLVER);
 

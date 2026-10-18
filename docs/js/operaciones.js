@@ -537,8 +537,14 @@ export async function prestarLibro({
     // Conflicto de negocio (libro ya prestado, etc.): no reintentar.
     if (resultado.estado === 'conflicto') return resolverIntencion(resultado);
 
-    // Denegación: puede ser carrera de contador/libro o falta de calendario.
+    // Una denegación en un préstamo puede ser cuatro cosas, y se distinguen
+    // mirando los datos, igual que en el alta de lector.
+    //
+    // 1. El libro ya salió prestado: carrera de libro, y es un conflicto. Si
+    //    ni el libro se puede leer, la cuenta perdió el permiso: la denegación
+    //    se devuelve tal cual, sin pasar por los otros caminos.
     const libro = await datos.leerDelServidor(rutas.libro(codigo));
+    if (libro.estado === 'denegada') return resolverIntencion(resultado);
     if (libro.estado === 'ok' && libro.existe && libro.datos?.prestamoAbierto) {
       return resolverIntencion({
         ...resultado,
@@ -547,6 +553,8 @@ export async function prestarLibro({
         mensaje: MENSAJES_DE_OPERACION.libroPrestado,
       });
     }
+
+    // 2. Falta el calendario de ese sábado.
     const cal = await datos.leerDelServidor(rutas.diaCalendario(diaSalida));
     if (cal.estado === 'ok' && !cal.existe) {
       return resolverIntencion({
@@ -554,6 +562,31 @@ export async function prestarLibro({
         mensaje: MENSAJES_DE_OPERACION.faltaCalendario,
       });
     }
+
+    // 3. El contador no se puede ni leer, o no se movió: entonces no hubo
+    //    carrera y el permiso está denegado de verdad —cuenta desactivada a
+    //    mitad de la operación, mantenimiento puesto—. Hasta que la
+    //    contraprueba de esta entrega lo encontró, cualquiera de esas dos
+    //    cosas acababa en «Hay mucho movimiento», que invita a repetir algo
+    //    que no puede funcionar. La denegación se devuelve tal cual.
+    const contadores = await datos.leerDelServidor(rutas.configContadores());
+    if (contadores.estado === 'denegada') return resolverIntencion(resultado);
+
+    const sigueIgual =
+      contadores.estado === 'ok' &&
+      registro.ultimoPrestamoLeido !== undefined &&
+      Number(contadores.datos?.ultimoPrestamo ?? -1) === registro.ultimoPrestamoLeido;
+    if (sigueIgual) {
+      const control = await datos.leerDelServidor(rutas.configControl());
+      const bloqueado = control.estado === 'ok' && (control.datos?.bloqueo ?? null) !== null;
+      return resolverIntencion({
+        ...resultado,
+        mensaje: bloqueado ? MENSAJES_DE_OPERACION.enMantenimiento : resultado.mensaje,
+      });
+    }
+
+    // 4. Se movió el contador: fue una carrera. Se reintenta con el mismo
+    //    `operacionId` y un contador recién leído.
     if (intento === INTENTOS_DE_PRESTAMO) {
       return resolverIntencion({
         ...resultado,

@@ -13,7 +13,7 @@ import { abrirHoja, cerrarHoja } from '../ui/hoja.js';
 import { abrirFichaDeLector } from './lector.js';
 import { formularioDeInscripcion } from './inscribir-lector.js';
 
-export function pantallaLectores({ datos, permiso }) {
+export function pantallaLectores({ datos, permiso, reloj, memoria }) {
   let lectores = [];
   let hayDatos = false;
   let consulta = '';
@@ -106,7 +106,7 @@ export function pantallaLectores({ datos, permiso }) {
           clase: 'fila-boton',
           type: 'button',
           'data-prueba': `lector-${lector.id}`,
-          al: { click: () => abrirFichaDeLector({ datos, permiso, lector }) },
+          al: { click: () => abrirFichaDeLector({ datos, permiso, lector, reloj, memoria }) },
         },
         [
           el('span', { clase: 'lista__principal' }, [

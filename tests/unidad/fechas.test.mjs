@@ -4,6 +4,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  VENTANA_DE_DESHACER_MS,
+  dentroDeDiezMinutos,
   diaDeVencimiento,
   diaDesplazado,
   diaEnChile,
@@ -259,4 +261,29 @@ test('documentoDeCalendario solo admite sábados y trae cuatro vencimientos', ()
   assert.equal(doc.vencimientos.length, 4);
   assert.equal(diaEnChile(doc.vencimientos[1]), '2026-10-24');
   assert.throws(() => documentoDeCalendario('2026-10-13'), RangeError);
+});
+
+test('P-22 la ventana de deshacer es estricta: a los diez minutos justos ya está cerrada', () => {
+  // La regla dice `request.time < desde + duration.value(10, 'm')`. El botón
+  // tiene que usar la misma cota: con `<=`, en el instante exacto se mostraba y
+  // el servidor denegaba la escritura (H-06 de la contraprueba).
+  const prestadoEn = new Date('2026-10-10T18:00:00.000Z');
+  const enMs = (ms) => new Date(prestadoEn.getTime() + ms);
+
+  assert.equal(dentroDeDiezMinutos(prestadoEn, prestadoEn), true, 'el instante mismo cuenta');
+  assert.equal(dentroDeDiezMinutos(prestadoEn, enMs(VENTANA_DE_DESHACER_MS - 1)), true, 'un ms antes, dentro');
+  assert.equal(dentroDeDiezMinutos(prestadoEn, enMs(VENTANA_DE_DESHACER_MS)), false, 'el borde ya está fuera');
+  assert.equal(dentroDeDiezMinutos(prestadoEn, enMs(VENTANA_DE_DESHACER_MS + 1)), false);
+
+  // Una hora estimada que va DETRÁS de la marca no abre la ventana por atrás.
+  assert.equal(dentroDeDiezMinutos(prestadoEn, enMs(-1000)), false);
+
+  // Acepta la marca de Firestore, que es lo que llega en un préstamo leído.
+  const comoFirestore = { toDate: () => prestadoEn };
+  assert.equal(dentroDeDiezMinutos(comoFirestore, enMs(60_000)), true);
+  assert.equal(dentroDeDiezMinutos(comoFirestore, enMs(VENTANA_DE_DESHACER_MS)), false);
+
+  // Sin marca o sin hora verificada, no se ofrece.
+  assert.equal(dentroDeDiezMinutos(null, prestadoEn), false);
+  assert.equal(dentroDeDiezMinutos(prestadoEn, null), false);
 });

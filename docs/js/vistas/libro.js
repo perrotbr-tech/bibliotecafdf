@@ -1,6 +1,7 @@
 // Ficha de un libro, en una hoja: código, categoría, autor, estado y veces
-// prestado. Para el administrador, «Editar» y «Dar de baja», esta última con
-// su propia confirmación.
+// prestado; si está prestado, a quién y hasta cuándo, con «Devolver»; y sus
+// últimos préstamos (specs/03 §Pantallas). Para el administrador, «Editar» y
+// «Dar de baja», esta última con su propia confirmación.
 
 import { TEXTO_DE_ESTADO, claseDeTejuelo, estadoDeLibro } from '../listas.js';
 import { darDeBajaLibro } from '../operaciones.js';
@@ -11,11 +12,12 @@ import { el } from '../ui/dom.js';
 import { abrirHoja, cerrarHoja, datoDeFicha } from '../ui/hoja.js';
 
 import { formularioDeLibro } from './libro-formulario.js';
+import { prestamosDeFicha } from './prestamos-de-ficha.js';
 
 const AVISO = 'libro';
 
 /** Abre la ficha de un libro. */
-export function abrirFichaDeLibro({ datos, permiso, categorias, libros, libro }) {
+export function abrirFichaDeLibro({ datos, permiso, categorias, libros, libro, reloj, memoria }) {
   const estado = estadoDeLibro(libro);
   const esAdmin = permiso.rol === 'admin';
 
@@ -79,6 +81,7 @@ export function abrirFichaDeLibro({ datos, permiso, categorias, libros, libro })
     datoDeFicha('Categoría', libro.categoria ?? '', { prueba: 'categoria-libro' }),
     datoDeFicha('Veces prestado', String(libro.vecesPrestado ?? 0), { prueba: 'veces-prestado' }),
     acciones.length > 0 && el('div', { clase: 'ficha__acciones' }, acciones),
+    memoria && prestamosDeFicha({ datos, permiso, memoria, reloj, modo: 'libro', valor: libro.codigo }),
   ]);
 
   return abrirHoja({ titulo: libro.titulo ?? libro.codigo, prueba: 'hoja-libro', contenido });

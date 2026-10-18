@@ -9,6 +9,8 @@ import { prepararBotonGuardar } from '../ui/boton-guardar.js';
 import { el, pintar } from '../ui/dom.js';
 import { vacio } from '../ui/estados.js';
 
+import { avisarDevuelto, avisarPrestado } from './avisos-de-prestamo.js';
+
 export function pantallaPrestar({
   datos,
   permiso,
@@ -18,6 +20,7 @@ export function pantallaPrestar({
   lectorInicial = null,
   alInscribirLector,
   alVolverInicio,
+  alPrestarOtro,
 }) {
   const ahora = () => reloj.ahora();
   let libro = null;
@@ -38,12 +41,19 @@ export function pantallaPrestar({
       pintar(raiz, el('p', { clase: 'lista__detalle', texto: 'Hora pendiente', 'data-prueba': 'hora-pendiente' }));
       return;
     }
-    if (!esSabado(dia) && permiso.rol !== 'admin') {
+    // Fuera de sábado esta pantalla está cerrada para todos, el administrador
+    // incluido: `prestarLibro` sin diferido rechaza el día y las reglas también,
+    // así que dejarle llenar los tres pasos solo servía para negarle el último
+    // toque. Lo suyo es «Registrar desde papel», que es otra pantalla y pide el
+    // motivo (H-09 de la contraprueba).
+    if (!esSabado(dia)) {
       pintar(raiz, el('div', {}, [
         el('p', { clase: 'titulo-seccion', texto: 'Prestar un libro' }),
         el('p', {
           clase: 'lista__detalle',
-          texto: 'Solo se presta en sábado. Vuelve el próximo sábado o pide al administrador registrar desde papel.',
+          texto: permiso.rol === 'admin'
+            ? 'Solo se presta en sábado. Para lo anotado en papel, usa «Registrar desde papel».'
+            : 'Solo se presta en sábado. Vuelve el próximo sábado o pide al administrador registrar desde papel.',
           'data-prueba': 'bloqueado-no-sabado',
         }),
       ]));
@@ -143,7 +153,7 @@ export function pantallaPrestar({
               });
               if (resultado.esExito) {
                 libro = { ...l, prestamoAbierto: null, estado: 'disponible' };
-                avisar(`Devuelto: ${l.titulo}`, 'exito', { id: 'prestar', duracionMs: 4000 });
+                avisarDevuelto({ datos, permiso, titulo: l.titulo, prestamoId: prestamoIdAbierto, id: 'prestar' });
                 dibujar();
               } else {
                 avisar(resultado.mensaje, 'error', { id: 'prestar' });
@@ -289,16 +299,20 @@ export function pantallaPrestar({
             const vence = textoFechaVencimiento(diaDeVencimiento(dia, plazo), {
               anioDeReferencia: Number(dia.slice(0, 4)),
             });
-            avisar(`Prestado a ${nombre} hasta el ${vence}`, 'exito', { id: 'prestar', duracionMs: 10_000 });
+            const lectorParaOtro = lector;
+            avisarPrestado({
+              datos,
+              permiso,
+              texto: `Prestado a ${nombre} hasta el ${vence}`,
+              prestamoId: resultado.valor?.prestamoId ?? prestamoId,
+              lector: lectorParaOtro,
+              alPrestarOtro,
+            });
             operacionId = nuevoId();
             prestamoId = nuevoId();
-            const lectorParaOtro = lector;
             libro = null;
             lector = null;
-            alVolverInicio?.({
-              deshacer: resultado.valor?.prestamoId,
-              prestarOtro: lectorParaOtro,
-            });
+            alVolverInicio?.();
           } else {
             avisar(resultado.mensaje, 'error', { id: 'prestar' });
             if (resultado.estado === 'conflicto') {

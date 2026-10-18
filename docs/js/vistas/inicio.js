@@ -20,6 +20,7 @@ import { prepararBotonGuardar } from '../ui/boton-guardar.js';
 import { el, pintar } from '../ui/dom.js';
 import { cargando } from '../ui/estados.js';
 
+import { avisarDevuelto } from './avisos-de-prestamo.js';
 import { abrirFichaDePrestamo } from './prestamo.js';
 import { botonesDeRecordatorio } from './recordatorio.js';
 
@@ -61,7 +62,12 @@ export function pantallaInicio({
           type: 'button',
           texto: 'Prestar un libro',
           'data-prueba': 'ir-prestar',
-          disabled: !esSab && permiso.rol !== 'admin',
+          // Fuera de sábado el flujo normal no se ofrece a NADIE. El
+          // administrador tampoco: su camino es «Registrar desde papel», que
+          // está más abajo y pide el motivo. Antes la excepción de rol lo
+          // dejaba entrar a los tres pasos para que el servidor le negara el
+          // día al final (H-09 de la contraprueba).
+          disabled: !esSab,
           al: { click: () => alPrestar?.() },
         }),
         el('button', {
@@ -224,7 +230,7 @@ function filaPrestamoInicio({
         alTardar: (t) => avisar(t, 'atencion', { id: 'devolver' }),
       });
       if (resultado.esExito) {
-        avisar(`Devuelto: ${prestamo.titulo}`, 'exito', { id: 'devolver', duracionMs: 10_000 });
+        avisarDevuelto({ datos, permiso, titulo: prestamo.titulo, prestamoId: prestamo.id });
       } else {
         avisar(resultado.mensaje, 'error', { id: 'devolver' });
       }

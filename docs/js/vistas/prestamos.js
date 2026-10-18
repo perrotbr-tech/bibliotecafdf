@@ -17,6 +17,7 @@ import { prepararBotonGuardar } from '../ui/boton-guardar.js';
 import { el, pintar } from '../ui/dom.js';
 import { cargando, vacio } from '../ui/estados.js';
 
+import { avisarDevuelto } from './avisos-de-prestamo.js';
 import { abrirFichaDePrestamo } from './prestamo.js';
 import { botonesDeRecordatorio } from './recordatorio.js';
 
@@ -186,8 +187,11 @@ export function pantallaPrestamos({
           operacionId: nuevoId(),
           alTardar: (t) => avisar(t, 'atencion', { id: 'devolver' }),
         });
-        if (resultado.esExito) avisar(`Devuelto: ${prestamo.titulo}`, 'exito', { id: 'devolver', duracionMs: 10_000 });
-        else avisar(resultado.mensaje, 'error', { id: 'devolver' });
+        if (resultado.esExito) {
+          avisarDevuelto({ datos, permiso, titulo: prestamo.titulo, prestamoId: prestamo.id });
+        } else {
+          avisar(resultado.mensaje, 'error', { id: 'devolver' });
+        }
         return resultado;
       }, { deshabilitadoAlTerminar: () => !datos.hayRed() });
       acciones.push(boton);

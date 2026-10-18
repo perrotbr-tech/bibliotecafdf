@@ -1,8 +1,7 @@
-// Ficha de un lector, en una hoja: nombre, teléfono y lo que se puede
-// cambiar. El teléfono lo cambia cualquier voluntario; el nombre, solo el
-// administrador.
-//
-// Los préstamos del lector llegan en la Etapa 3: aquí no se adelantan.
+// Ficha de un lector, en una hoja: nombre, teléfono, lo que se puede cambiar,
+// sus préstamos abiertos con «Devolver» y sus últimos devueltos
+// (specs/03 §Pantallas). El teléfono lo cambia cualquier voluntario; el
+// nombre, solo el administrador.
 
 import { ErrorDeNegocio } from '../datos.js';
 import { cambiarNombre, cambiarTelefono } from '../operaciones.js';
@@ -13,9 +12,11 @@ import { campoTexto, errorDeFormulario } from '../ui/campos.js';
 import { el } from '../ui/dom.js';
 import { abrirHoja, cerrarHoja, datoDeFicha } from '../ui/hoja.js';
 
+import { prestamosDeFicha } from './prestamos-de-ficha.js';
+
 const AVISO = 'lector';
 
-export function abrirFichaDeLector({ datos, permiso, lector }) {
+export function abrirFichaDeLector({ datos, permiso, lector, reloj, memoria }) {
   const tieneTelefono = (lector.telefono ?? null) !== null;
 
   const acciones = [
@@ -64,6 +65,7 @@ export function abrirFichaDeLector({ datos, permiso, lector }) {
       prueba: 'telefono-lector',
     }),
     el('div', { clase: 'ficha__acciones' }, acciones),
+    memoria && prestamosDeFicha({ datos, permiso, memoria, reloj, modo: 'lector', valor: lector.id }),
   ]);
 
   return abrirHoja({ titulo: lector.nombre ?? 'Lector', prueba: 'hoja-lector', contenido });

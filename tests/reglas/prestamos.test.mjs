@@ -128,19 +128,34 @@ test('P-07 número saltado o ya usado se deniega', async () => {
   await assertFails(lote.commit());
 });
 
-test('P-08 libro de baja o ya prestado se deniega', async () => {
-  await sembrarLibro(entorno, 'INF002', { baja: true });
+test('P-08 libro de baja, inexistente o ya prestado se deniega', async () => {
+  // Los tres caminos del caso. El «mensaje claro» que pide P-08 es del cliente
+  // y está en `tests/unidad/operaciones.test.mjs`: una regla no devuelve texto.
   const db = comoCuenta(entorno, VOLUNTARIA);
-  const id = ID('c');
   const cal = await getDoc(doc(db, RUTAS.calendario('2026-10-10')));
-  const lote = writeBatch(db);
-  lote.set(doc(db, RUTAS.prestamo(id)), datosPrestamo(VOLUNTARIA, {
-    libro: 'INF002',
-    venceEl: cal.data().vencimientos[1],
-  }));
-  lote.update(doc(db, RUTAS.libro('INF002')), { prestamoAbierto: id, vecesPrestado: 1 });
-  lote.update(doc(db, RUTAS.contadores), { ultimoPrestamo: 1, ultimoPrestamoId: id });
-  await assertFails(lote.commit());
+  const venceEl = cal.data().vencimientos[1];
+
+  /** Alta atómica contra `libro`, como la haría la app. */
+  const intentar = async (libro, id, numero) => {
+    const lote = writeBatch(db);
+    lote.set(doc(db, RUTAS.prestamo(id)), datosPrestamo(VOLUNTARIA, { libro, venceEl, numero }));
+    lote.update(doc(db, RUTAS.libro(libro)), { prestamoAbierto: id, vecesPrestado: 1 });
+    lote.update(doc(db, RUTAS.contadores), { ultimoPrestamo: numero, ultimoPrestamoId: id });
+    await assertFails(lote.commit());
+  };
+
+  // De baja.
+  await sembrarLibro(entorno, 'INF002', { baja: true });
+  await intentar('INF002', ID('c'), 1);
+
+  // Inexistente: el libro nunca se sembró, así que el `update` del lote no
+  // tiene a qué aplicarse y la regla del enlace no se cumple.
+  await intentar('INF404', ID('d'), 1);
+
+  // Ya prestado: INF001 sale en un alta buena y el segundo intento lo pide
+  // encima.
+  await prestarOk(VOLUNTARIA, { id: ID('a'), numero: 1, libro: 'INF001' });
+  await intentar('INF001', ID('e'), 2);
 });
 
 test('P-09 lector fusionado se deniega', async () => {
@@ -178,7 +193,22 @@ test('P-29 borrar un préstamo se deniega', async () => {
   await assertFails(deleteDoc(doc(comoCuenta(entorno, ADMIN), RUTAS.prestamo(id))));
 });
 
-test('P-55 el cliente no escribe el calendario', async () => {
+test('P-55 sin el calendario de ese sábado el préstamo se deniega, y el cliente no lo escribe', async () => {
+  // Las dos mitades del caso. Primero el préstamo bloqueado: el 17-10-2026 es
+  // sábado y su día NO está sembrado, así que la regla no encuentra con qué
+  // comparar el vencimiento.
+  const db = comoCuenta(entorno, VOLUNTARIA);
+  const id = ID('f');
+  const lote = writeBatch(db);
+  lote.set(doc(db, RUTAS.prestamo(id)), datosPrestamo(VOLUNTARIA, {
+    salidaDia: '2026-10-17',
+    venceEl: new Date('2026-11-01T02:59:59.999Z'),
+  }));
+  lote.update(doc(db, RUTAS.libro('INF001')), { prestamoAbierto: id, vecesPrestado: 1 });
+  lote.update(doc(db, RUTAS.contadores), { ultimoPrestamo: 1, ultimoPrestamoId: id });
+  await assertFails(lote.commit());
+
+  // Y la escritura del propio calendario, denegada hasta para el administrador.
   await assertFails(
     setDoc(doc(comoCuenta(entorno, ADMIN), RUTAS.calendario('2026-10-17')), {
       inicio: new Date(),
@@ -221,15 +251,27 @@ test('P-19 voluntario no puede enviar booleano de corrección al devolver', asyn
   await assertFails(lote.commit());
 });
 
-test('R-09 anotar recordatorio en abierto', async () => {
+test('R-09 anotar recordatorio en abierto guarda la hora del servidor y quién', async () => {
   const id = await prestarOk();
+  const db = comoCuenta(entorno, VOLUNTARIA);
+  const antes = Date.now();
   await assertSucceeds(
-    updateDoc(doc(comoCuenta(entorno, VOLUNTARIA), RUTAS.prestamo(id)), {
+    updateDoc(doc(db, RUTAS.prestamo(id)), {
       recordadoEn: serverTimestamp(),
       recordadoPor: VOLUNTARIA,
       ...meta(),
     }),
   );
+
+  // Lo que el caso escribe: la marca es del servidor —no un valor que el
+  // teléfono pudo elegir— y queda quién la abrió. La fila que lo cuenta está
+  // en la prueba de navegador R-09.
+  const guardado = (await getDoc(doc(db, RUTAS.prestamo(id)))).data();
+  assert.equal(guardado.recordadoPor, VOLUNTARIA);
+  assert.ok(guardado.recordadoEn, 'quedó la marca');
+  const marca = guardado.recordadoEn.toDate().getTime();
+  assert.ok(marca >= antes - 60_000 && marca <= Date.now() + 60_000, 'la marca es de ahora, no de un futuro elegido');
+  assert.equal(guardado.estado, 'abierto', 'anotar la apertura no cierra el préstamo');
 });
 
 test('R-10 no se puede cambiar venceEl junto con recordadoEn', async () => {

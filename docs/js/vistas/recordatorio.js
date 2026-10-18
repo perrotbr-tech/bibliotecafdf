@@ -40,6 +40,19 @@ export function botonesDeRecordatorio({
 
   const reciente = recordadoReciente(prestamo.recordadoEn, ahora);
   const fila = [];
+  const caja = el('div', { clase: 'fila-btn', 'data-prueba': 'botones-recordatorio' });
+
+  /** R-12: el enlace se abrió, pero la apertura no se pudo anotar. */
+  function mostrarErrorDeApertura() {
+    if (caja.querySelector('[data-prueba="error-apertura"]')) return;
+    caja.append(
+      el('p', {
+        clase: 'lista__detalle',
+        texto: 'No se pudo anotar la apertura',
+        'data-prueba': 'error-apertura',
+      }),
+    );
+  }
 
   if (armado.sinTelefono) {
     fila.push(el('span', { clase: 'lista__detalle', texto: 'Sin teléfono', 'data-prueba': 'sin-telefono' }));
@@ -60,7 +73,13 @@ export function botonesDeRecordatorio({
             prestamoId: prestamo.id,
             operacionId: nuevoId(),
           }).then((resultado) => {
+            // La fila lo dice ella misma. Antes solo se avisaba por
+            // `alActualizar`, que nadie escuchaba: el enlace se abría y la
+            // persona no se enteraba de que la apertura no quedó anotada
+            // (R-12). La app nunca afirma que el mensaje se envió; esto habla
+            // solo del registro.
             if (!resultado.esExito) {
+              mostrarErrorDeApertura();
               alActualizar?.({ errorApertura: true, prestamoId: prestamo.id });
             } else {
               alActualizar?.({ ok: true, prestamoId: prestamo.id });
@@ -115,5 +134,6 @@ export function botonesDeRecordatorio({
     );
   }
 
-  return el('div', { clase: 'fila-btn', 'data-prueba': 'botones-recordatorio' }, fila);
+  caja.append(...fila);
+  return caja;
 }

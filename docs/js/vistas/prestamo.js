@@ -1,6 +1,12 @@
 // Ficha del préstamo: devolver, anular, reabrir, corregir a tiempo.
 
-import { diaEnChile, fueATiempo, textoFechaLarga, textoFechaVencimiento } from '../fechas.js';
+import {
+  dentroDeDiezMinutos,
+  diaEnChile,
+  fueATiempo,
+  textoFechaLarga,
+  textoFechaVencimiento,
+} from '../fechas.js';
 import { anularPrestamo, corregirATiempo, devolverPrestamo, reabrirPrestamo } from '../operaciones.js';
 import { nuevoId } from '../texto.js';
 import { avisar } from '../ui/avisos.js';
@@ -8,8 +14,6 @@ import { prepararBotonGuardar } from '../ui/boton-guardar.js';
 import { campoTexto, errorDeFormulario } from '../ui/campos.js';
 import { el } from '../ui/dom.js';
 import { abrirHoja, cerrarHoja, datoDeFicha } from '../ui/hoja.js';
-
-const DIEZ_MIN_MS = 10 * 60 * 1000;
 
 export function abrirFichaDePrestamo({ datos, permiso, prestamo, ahora }) {
   const anio = ahora ? Number(diaEnChile(ahora).slice(0, 4)) : null;
@@ -30,7 +34,7 @@ export function abrirFichaDePrestamo({ datos, permiso, prestamo, ahora }) {
 
     const puedeAnular = esAdmin || (
       prestamo.creadoPor === permiso.correo
-      && dentroDeDiez(prestamo.prestadoEn, ahora)
+      && dentroDeDiezMinutos(prestamo.prestadoEn, ahora)
     );
     if (puedeAnular) {
       acciones.push(el('button', {
@@ -66,7 +70,7 @@ export function abrirFichaDePrestamo({ datos, permiso, prestamo, ahora }) {
   if (prestamo.estado === 'devuelto') {
     const puedeReabrir = esAdmin || (
       prestamo.devueltoPor === permiso.correo
-      && dentroDeDiez(prestamo.devueltoEn, ahora)
+      && dentroDeDiezMinutos(prestamo.devueltoEn, ahora)
     );
     if (puedeReabrir) {
       acciones.push(el('button', {
@@ -131,12 +135,6 @@ export function abrirFichaDePrestamo({ datos, permiso, prestamo, ahora }) {
     prueba: 'hoja-prestamo',
     contenido,
   });
-}
-
-function dentroDeDiez(marca, ahora) {
-  if (!marca || !ahora) return false;
-  const t = marca.toDate?.() ?? new Date(marca);
-  return ahora.getTime() - t.getTime() <= DIEZ_MIN_MS && ahora.getTime() >= t.getTime();
 }
 
 function textoDeMarca(marca) {
