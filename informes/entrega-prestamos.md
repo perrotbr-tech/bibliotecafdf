@@ -22,8 +22,8 @@ contenedor:
 ## 2. Casos de prueba
 
 Los 82 casos de los dos documentos, cada uno con su estado. Salida de la
-ejecución: `npm test` completo en este contenedor, cuyos totales están al final
-de la tabla.
+ejecución: un `npm test` completo en el terminal de esta sesión, de una sola
+pasada y con las seis suites en verde; sus totales están al final de la tabla.
 
 ### specs/03 — Prestar y devolver (58 casos)
 
@@ -97,8 +97,8 @@ navegador y están listados uno por uno en §6.
 | unidad | **175** pass / 0 fail |
 | reglas | **104** pass / 0 fail |
 | scripts | **26** pass / 0 fail |
-| e2e | **87** pass / 0 fail |
-| carga | PENDIENTE-CARGA |
+| e2e | **87** passed / 0 failed |
+| carga | **12** passed / 0 failed |
 
 La entrega anterior declaraba 143 / 72 / 25 / 81 / 6. El crecimiento de unidad y
 reglas son las pruebas que faltaban; el de e2e, P-03, la regresión del reloj y la
