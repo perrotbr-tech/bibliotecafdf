@@ -54,5 +54,5 @@ export function pantallaParaRecordar({ datos, permiso, reloj, memoria, plantilla
 
   const soltar = memoria.alCambiar(() => dibujar());
   dibujar();
-  return { nodo: raiz, desmontar: () => soltar() };
+  return { nodo: raiz, desmontar: () => soltar(), alCambiarHora: () => dibujar() };
 }

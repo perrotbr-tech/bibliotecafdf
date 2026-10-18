@@ -302,6 +302,10 @@ async function revisarIntencionPendiente() {
 async function sincronizarYMostrarHora() {
   if (!app.reloj.esDePrueba) await app.reloj.sincronizar();
   ponerFecha(app.reloj.ahora());
+  // La vista ya está montada cuando la hora llega: sin este aviso, una pantalla
+  // que se pintó sin hora se queda en «Hora pendiente» para siempre. Pasa de
+  // verdad en Inicio, que se monta antes de que vuelva la sincronización.
+  app.vistaActual?.alCambiarHora?.();
 
   if (app.reloj.hayDesfaseAvisable() && !app.avisoDesfaseMostrado) {
     app.avisoDesfaseMostrado = true;

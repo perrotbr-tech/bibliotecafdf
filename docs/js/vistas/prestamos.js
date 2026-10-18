@@ -263,5 +263,6 @@ export function pantallaPrestamos({
     nodo: raiz,
     desmontar: () => soltar(),
     alCambiarRed: () => pintarLista(),
+    alCambiarHora: () => pintarLista(),
   };
 }

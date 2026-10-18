@@ -14,7 +14,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { rutas } from '../../docs/js/config-publica.js';
-import { MENSAJES_DE_OPERACION, inscribirLector } from '../../docs/js/operaciones.js';
+import { crearDatos } from '../../docs/js/datos.js';
+import { MENSAJES_DE_OPERACION, devolverPrestamo, inscribirLector } from '../../docs/js/operaciones.js';
 
 const PERMISO = { correo: 'voluntaria@correo.cl', rol: 'voluntario' };
 
@@ -140,6 +141,95 @@ test('H-02 con la clave ya tomada, el servidor manda y el resultado es conflicto
   assert.equal(resultado.esExito, false);
   assert.match(resultado.mensaje, /Rafaela Toledo/);
   assert.equal(datos.llamadas.guardar, 1, 'una clave tomada no se reintenta');
+});
+
+// ------------------------------------------------- P-54 y P-57
+//
+// Una devolución cuya respuesta se perdió. Aquí no se prueba ninguna regla: se
+// prueba qué decide el cliente DESPUÉS, y para eso la capa de datos es la de
+// verdad —`crearDatos`— sobre un SDK que se cae justo al confirmar. Lo que las
+// reglas deniegan está en `tests/reglas/prestamos.test.mjs`.
+
+const PRESTAMO = 'a'.repeat(32);
+const OPERACION = 'b'.repeat(32);
+
+/**
+ * SDK cuya transacción corre el cuerpo y después se cae con un código que deja
+ * el resultado en duda. `enServidor` es lo que se encuentra al releer.
+ */
+function sdkQueSeCaeAlConfirmar({ enServidor }) {
+  const lecturasDelServidor = [];
+  const prestamoAbierto = {
+    estado: 'abierto',
+    libro: 'INF001',
+    lector: 'L001',
+    ultimaOperacionId: null,
+  };
+  return {
+    lecturasDelServidor,
+    doc: (_db, ruta) => ({ ruta }),
+    collection: (_db, ruta) => ({ ruta }),
+    serverTimestamp: () => '«hora del servidor»',
+    onSnapshot: () => () => {},
+    getDocFromServer: async (ref) => {
+      lecturasDelServidor.push(ref.ruta);
+      return { exists: () => enServidor != null, data: () => enServidor };
+    },
+    runTransaction: async (_db, cuerpo) => {
+      await cuerpo({
+        get: async (ref) => {
+          const datos = ref.ruta === rutas.prestamo(PRESTAMO) ? prestamoAbierto : { titulo: 'Radical' };
+          return { exists: () => true, data: () => datos };
+        },
+        update: () => {},
+        set: () => {},
+      });
+      throw Object.assign(new Error('se cortó la red al confirmar'), { code: 'unavailable' });
+    },
+  };
+}
+
+test('P-54 que el préstamo exista no confirma una devolución que no se aplicó', async () => {
+  // Al releer, el préstamo está ahí —existe— pero sigue abierto y sin marca de
+  // ninguna operación: se comprobó que la devolución NO se guardó.
+  const sdk = sdkQueSeCaeAlConfirmar({
+    enServidor: { estado: 'abierto', ultimaOperacionId: null, libro: 'INF001' },
+  });
+  const datos = crearDatos({ db: {}, sdk, red: { onLine: true } });
+
+  const resultado = await devolverPrestamo({
+    datos,
+    permiso: PERMISO,
+    prestamoId: PRESTAMO,
+    operacionId: OPERACION,
+  });
+
+  assert.equal(resultado.esExito, false, 'la existencia del documento no es un éxito');
+  assert.equal(resultado.estado, 'ausencia-comprobada');
+});
+
+test('P-57 tras perder la respuesta se relee el servidor y no se reejecuta la intención', async () => {
+  // Con la marca de otra operación encima, no es atribuible: hay que revisar,
+  // no repetir solo. Y la comprobación va al servidor, no a la caché.
+  const sdk = sdkQueSeCaeAlConfirmar({
+    enServidor: { estado: 'devuelto', ultimaOperacionId: 'c'.repeat(32), libro: 'INF001' },
+  });
+  const datos = crearDatos({ db: {}, sdk, red: { onLine: true } });
+
+  const resultado = await devolverPrestamo({
+    datos,
+    permiso: PERMISO,
+    prestamoId: PRESTAMO,
+    operacionId: OPERACION,
+  });
+
+  assert.equal(resultado.esExito, false);
+  assert.equal(resultado.estado, 'no-atribuible');
+  assert.deepEqual(
+    sdk.lecturasDelServidor,
+    [rutas.prestamo(PRESTAMO)],
+    'se releyó el préstamo contra el servidor, una sola vez',
+  );
 });
 
 test('C-39 una carrera real se reintenta con el mismo operacionId y acaba en carrera-perdida', async () => {

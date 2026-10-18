@@ -164,6 +164,12 @@ export async function listarLectores() {
   return documentos.docs.map((uno) => ({ id: uno.id, ...uno.data() }));
 }
 
+export async function listarPrestamos() {
+  const { db: base } = await baseDemo();
+  const documentos = await base.collection(rutas.prestamos()).get();
+  return documentos.docs.map((uno) => ({ id: uno.id, ...uno.data() }));
+}
+
 export async function contarLibros() {
   const { db: base } = await baseDemo();
   return (await base.collection(rutas.libros()).count().get()).data().count;
@@ -200,13 +206,29 @@ export async function cambiarActivo(correo, activo) {
 }
 
 /**
+ * Código del libro número `i` de la siembra masiva. Lo usan `sembrarVolumen` y
+ * `sembrarPrestamos`: los préstamos tienen que apuntar a libros que existen, o
+ * las listas mostrarían «(no encontrado)» y la medición no sería la real.
+ */
+export function codigoDeVolumen(i) {
+  const categorias = CONFIG_APP_INICIAL.categorias;
+  const categoria = categorias[i % categorias.length];
+  return `${categoria.prefijo}${String(i).padStart(4, '0')}`;
+}
+
+/** Identificador de 32 cifras hexadecimales, el formato que exigen las reglas. */
+export function idDeVolumen(numero, inicial = '0') {
+  return `${inicial}${String(numero).padStart(31, '0')}`;
+}
+
+/**
  * Siembra masiva para las pruebas de carga: libros y lectores generados.
  *
  * Usa `BulkWriter` porque son once mil documentos: con lotes de 500 tardaría
  * minutos. Los nombres son sintéticos y numerados a propósito: en este
  * repositorio no hay nombres de lectores reales (AGENTS.md).
  */
-export async function sembrarVolumen({ libros = 0, lectores = 0 } = {}) {
+export async function sembrarVolumen({ libros = 0, lectores = 0, prestamosFalsos = true } = {}) {
   const { db: base, FieldValue: campos } = await baseDemo();
   const { claveDeNombre } = await import('../../docs/js/texto.js');
   const escritor = base.bulkWriter();
@@ -216,14 +238,18 @@ export async function sembrarVolumen({ libros = 0, lectores = 0 } = {}) {
   const categorias = CONFIG_APP_INICIAL.categorias;
   for (let i = 1; i <= libros; i += 1) {
     const categoria = categorias[i % categorias.length];
-    const codigo = `${categoria.prefijo}${String(i).padStart(4, '0')}`;
+    const codigo = codigoDeVolumen(i);
     void escritor.set(base.doc(rutas.libro(codigo)), {
       codigo,
       titulo: `Título número ${i} de la biblioteca`,
       autor: `Autor ${i % 300}`,
       categoria: categoria.nombre,
       baja: i % 97 === 0,
-      prestamoAbierto: i % 11 === 0 ? `prestamo-${i}` : null,
+      // Marca de «prestado» sin préstamo detrás: a las pruebas de catálogo les
+      // basta para filtrar y contar. Las de préstamos la apagan, porque un
+      // libro marcado sin su documento es un estado que no puede existir y
+      // haría fallar un préstamo real sobre ese libro.
+      prestamoAbierto: prestamosFalsos && i % 11 === 0 ? `prestamo-${i}` : null,
       vecesPrestado: i % 7,
       ...comunes,
     });
@@ -294,6 +320,170 @@ export async function sembrarCalendarioSintetico(salidaDia, { ahora = new Date()
     vencimientos: vencimientos.map((v) => Timestamp.fromDate(v instanceof Date ? v : new Date(v))),
     sintetico: true,
   });
+}
+
+/**
+ * Borra los préstamos con `BulkWriter`.
+ *
+ * `limpiarBase` borra documento por documento, que con veinte mil préstamos
+ * tardaría minutos. Se llama ANTES de `sembrarBaseDemo` para que esa limpieza
+ * encuentre la colección vacía.
+ */
+/**
+ * Ritmo sostenible para el emulador. Sin frenarlo, `BulkWriter` acelera hasta
+ * donde le dejan y el emulador empieza a devolver `DEADLINE_EXCEEDED` a los
+ * sesenta segundos: veinte mil escrituras no entran a su velocidad máxima.
+ */
+function escritorFrenado(base) {
+  return base.bulkWriter({ throttling: { initialOpsPerSecond: 100, maxOpsPerSecond: 300 } });
+}
+
+export async function limpiarPrestamos() {
+  const { db: base } = await baseDemo();
+  // Por lotes y a ritmo frenado: borrar veinte mil documentos de una tanda
+  // agota el plazo del emulador.
+  await base.recursiveDelete(base.collection(rutas.prestamos()), escritorFrenado(base));
+}
+
+/**
+ * Siembra masiva de préstamos para las pruebas de carga de specs/03 y specs/04.
+ *
+ * Los abiertos apuntan a libros que existen y dejan el libro con
+ * `prestamoAbierto`, porque es ese enlace el que la pantalla sigue y el que las
+ * reglas comprueban al devolver. Los atrasados son un subconjunto de los
+ * abiertos: su vencimiento queda en el pasado respecto de `ahora`, que es la
+ * hora simulada con la que la prueba abre la app.
+ *
+ * Los devueltos no tocan el libro: existen para probar justo lo contrario, que
+ * abrir la app NO los lee (specs/03 §Carga).
+ */
+export async function sembrarPrestamos({
+  abiertos = 0,
+  devueltos = 0,
+  atrasados = 0,
+  libros = 0,
+  lectores = 0,
+  ahora = new Date(),
+} = {}) {
+  const { db: base, FieldValue: campos } = await baseDemo();
+  const { Timestamp } = await import('firebase-admin/firestore');
+  const { diaDesplazado, diaEnChile, finDelDiaEnChile, sabadoDeJornada, sabadoSiguiente, temporadaDe } = await import(
+    '../../docs/js/fechas.js'
+  );
+  const escritor = escritorFrenado(base);
+  const hoy = diaEnChile(ahora);
+  const sabadoDeHoy = sabadoDeJornada(hoy);
+  const sabadoProximo = sabadoSiguiente(hoy);
+  const comunes = { creadoEn: campos.serverTimestamp(), creadoPor: VOLUNTARIA, origen: 'app' };
+
+  /** Libros sin baja: un libro de baja no puede tener un préstamo abierto. */
+  const disponibles = [];
+  for (let i = 1; i <= libros && disponibles.length < abiertos; i += 1) {
+    if (i % 97 !== 0) disponibles.push(i);
+  }
+  const lectorDe = (n) => `L${String(lectores === 0 ? 1 : ((n - 1) % lectores) + 1).padStart(4, '0')}`;
+
+  let numero = 0;
+  let ultimoId = null;
+  let vencenHoy = 0;
+  let vencenElProximo = 0;
+
+  for (const [indice, iLibro] of disponibles.entries()) {
+    numero += 1;
+    const id = idDeVolumen(numero);
+    const codigo = codigoDeVolumen(iLibro);
+    const atrasado = indice < atrasados;
+    // Los que no están atrasados se reparten: la mitad vence el sábado de esta
+    // jornada —lo que Inicio cuenta como «Vuelven hoy»— y la mitad el
+    // siguiente, que es la lista «Vencen el sábado» de specs/04.
+    let diaVence;
+    if (atrasado) {
+      diaVence = diaDesplazado(hoy, -7 - (indice % 21));
+    } else if (indice % 2 === 0) {
+      diaVence = sabadoDeHoy;
+      vencenHoy += 1;
+    } else {
+      diaVence = sabadoProximo;
+      vencenElProximo += 1;
+    }
+    const salidaDia = diaDesplazado(diaVence, -14);
+    void escritor.set(base.doc(rutas.prestamo(id)), {
+      numero,
+      libro: codigo,
+      lector: lectorDe(numero),
+      prestadoEn: Timestamp.fromDate(new Date(finDelDiaEnChile(salidaDia).getTime() - 9 * 3_600_000)),
+      salidaDia,
+      plazoSabados: 2,
+      registroDiferido: false,
+      motivoRegistroDiferido: null,
+      venceEl: Timestamp.fromDate(finDelDiaEnChile(diaVence)),
+      temporada: temporadaDe(salidaDia),
+      estado: 'abierto',
+      devueltoEn: null,
+      devueltoATiempo: null,
+      correccionATiempo: null,
+      devueltoPor: null,
+      anuladoEn: null,
+      anuladoPor: null,
+      // La mitad de los atrasados ya fue recordada: así «Para recordar» ordena
+      // de verdad por «sin recordatorio primero» (specs/04).
+      recordadoEn: atrasado && indice % 2 === 1 ? Timestamp.fromDate(new Date(ahora.getTime() - 3 * 86_400_000)) : null,
+      recordadoPor: atrasado && indice % 2 === 1 ? VOLUNTARIA : null,
+      creacionId: id,
+      ...comunes,
+    });
+    void escritor.update(base.doc(rutas.libro(codigo)), { prestamoAbierto: id });
+    ultimoId = id;
+    if (numero % 2000 === 0) await escritor.flush();
+  }
+
+  for (let n = 1; n <= devueltos; n += 1) {
+    numero += 1;
+    const id = idDeVolumen(numero, 'd');
+    const codigo = codigoDeVolumen(libros === 0 ? 1 : ((n * 7) % libros) + 1);
+    const salidaDia = diaDesplazado(hoy, -14 - 7 * (n % 52));
+    const diaVence = diaDesplazado(salidaDia, 14);
+    void escritor.set(base.doc(rutas.prestamo(id)), {
+      numero,
+      libro: codigo,
+      lector: lectorDe(numero),
+      prestadoEn: Timestamp.fromDate(new Date(finDelDiaEnChile(salidaDia).getTime() - 9 * 3_600_000)),
+      salidaDia,
+      plazoSabados: 2,
+      registroDiferido: false,
+      motivoRegistroDiferido: null,
+      venceEl: Timestamp.fromDate(finDelDiaEnChile(diaVence)),
+      temporada: temporadaDe(salidaDia),
+      estado: 'devuelto',
+      devueltoEn: Timestamp.fromDate(new Date(finDelDiaEnChile(diaVence).getTime() - 2 * 86_400_000)),
+      devueltoATiempo: null,
+      correccionATiempo: null,
+      devueltoPor: VOLUNTARIA,
+      anuladoEn: null,
+      anuladoPor: null,
+      recordadoEn: null,
+      recordadoPor: null,
+      creacionId: id,
+      ...comunes,
+    });
+    ultimoId = id;
+    // Veinte mil documentos de una tanda agotan el plazo del emulador: se
+    // vacía el escritor cada mil.
+    if (numero % 1000 === 0) await escritor.flush();
+  }
+
+  await escritor.close();
+  if (numero > 0) {
+    await base.doc(rutas.configContadores()).update({ ultimoPrestamo: numero, ultimoPrestamoId: ultimoId });
+  }
+  return {
+    abiertos: disponibles.length,
+    atrasados: Math.min(atrasados, disponibles.length),
+    vencenHoy,
+    vencenElProximo,
+    devueltos,
+    numero,
+  };
 }
 
 export async function ponerPrestamo(id, campos = {}) {

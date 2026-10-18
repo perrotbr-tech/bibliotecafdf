@@ -165,6 +165,7 @@ export function pantallaInicio({
       soltarMemoria();
     },
     alCambiarRed: () => pintarTodo(),
+    alCambiarHora: () => pintarTodo(),
   };
 }
 

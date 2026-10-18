@@ -322,6 +322,7 @@ export function pantallaPrestar({
     nodo: raiz,
     desmontar: () => soltar(),
     alCambiarRed: () => dibujar(),
+    alCambiarHora: () => dibujar(),
     // Al salir del flujo se limpia (P-37): el desmontaje basta porque el estado
     // vive en el cierre de esta función.
   };

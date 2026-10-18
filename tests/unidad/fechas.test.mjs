@@ -227,6 +227,21 @@ test('fueATiempo usa el booleano si existe y si no compara timestamps', () => {
   assert.equal(fueATiempo({ devueltoEn: mediodiaEnChile('2026-10-11'), venceEl: vence }), false);
 });
 
+test('P-17 y P-18 devolver a las 23:00 del vencimiento es a tiempo; al día siguiente, no', () => {
+  // El vencimiento termina un milisegundo antes del domingo, así que las 23:00
+  // del sábado entran y la mañana del domingo no. Sin booleano adelantado: la
+  // decisión sale de los dos timestamps ya confirmados.
+  const vence = finDelDiaEnChile('2026-10-10');
+  assert.equal(
+    fueATiempo({ devueltoEn: instanteEnChile('2026-10-10', 23, 0), venceEl: vence, devueltoATiempo: null }),
+    true,
+  );
+  assert.equal(
+    fueATiempo({ devueltoEn: instanteEnChile('2026-10-11', 9, 0), venceEl: vence, devueltoATiempo: null }),
+    false,
+  );
+});
+
 test('textoFechaVencimiento omite el año en curso y lo pone si no lo es', () => {
   assert.equal(
     textoFechaVencimiento('2026-10-24', { anioDeReferencia: 2026 }),

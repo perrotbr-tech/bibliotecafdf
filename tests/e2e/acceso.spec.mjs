@@ -63,7 +63,11 @@ test('una cuenta autorizada ve la cáscara con sus cinco destinos', async ({ pag
     await expect(page.getByRole('button', { name: nombre })).toBeVisible();
   }
   await expect(page.getByTestId('inicio')).toBeVisible();
-  await expect(page.getByText('Disponible pronto')).toBeVisible();
+  // Hasta la Etapa 2, Inicio era un destino en espera y aquí se comprobaba su
+  // «Disponible pronto». La entrega de Préstamos lo implementó, así que la
+  // cáscara se comprueba contra lo que Inicio pinta ahora: la jornada.
+  await expect(page.getByTestId('encabezado-inicio')).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId('cifra-atrasados')).toBeVisible();
 });
 
 test('A-25 el botón Atrás desde Voluntarios vuelve a Más y no sale de la app', async ({ page }) => {
